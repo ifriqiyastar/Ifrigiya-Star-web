@@ -1,26 +1,388 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-heading);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+  --color-viz-1: var(--viz-1);
+  --color-viz-2: var(--viz-2);
+  --color-brand-from: var(--brand-from);
+  --color-brand-to: var(--brand-to);
+  --color-surface: var(--surface);
+  --color-sidebar-pill: var(--sidebar-pill);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+:root {
+  /* Palette de marque — reprise a l'identique de Colors.light
+     (src/constants/theme.ts de l'app mobile ifriqiyastar). */
+  --background: #ffffff;
+  --foreground: #000000;
+  --card: #F0F0F3;
+  --card-foreground: #000000;
+  --popover: #ffffff;
+  --popover-foreground: #000000;
+  --primary: #8bcc00;            /* accentStrong */
+  --primary-foreground: #000000;
+  --secondary: #F0F0F3;          /* backgroundElement */
+  --secondary-foreground: #000000;
+  --muted: #F0F0F3;
+  --muted-foreground: #60646C;   /* textSecondary */
+  --accent: #E0E1E6;             /* backgroundSelected */
+  --accent-foreground: #000000;
+  --destructive: #D93636;
+  --border: #CCCCCC;
+  --input: #CCCCCC;
+  --ring: #8bcc00;
+
+  --brand: #8bcc00;
+  --brand-foreground: #000000;
+  --brand-from: #c3f53c;
+  --brand-to: #8bcc00;
+  --surface: #ffffff;
+  --sidebar-pill: #F0F0F3;
+  --success: #4B9E3F;
+  --warning: #C88A00;
+  --info: #3A7BD5;
+
+  /* Couleurs de series des graphiques. Distinctes de l'accent de marque :
+     l'accent est une couleur d'encre/d'etat (boutons, onglet actif), pas une
+     identite de serie. Ce couple est valide (bande de clarte, plancher de
+     chroma, separation daltonisme, contraste) sur fond blanc. */
+  --viz-1: #5f8a00;
+  --viz-2: #2E6FD0;
+
+  --chart-1: #8bcc00;
+  --chart-2: #60646C;
+  --chart-3: #3A7BD5;
+  --chart-4: #C88A00;
+  --chart-5: #D93636;
+  --radius: 1.25rem;             /* coins tres arrondis de la maquette */
+
+  --sidebar: #F0F0F3;
+  --sidebar-foreground: #000000;
+  --sidebar-primary: #8bcc00;
+  --sidebar-primary-foreground: #000000;
+  --sidebar-accent: #E0E1E6;
+  --sidebar-accent-foreground: #000000;
+  --sidebar-border: #CCCCCC;
+  --sidebar-ring: #8bcc00;
+}
+
+.dark {
+  /* Palette de la maquette de reference : un noir profond quasi uniforme,
+     des surfaces a peine plus claires (aucune bordure franche), et le lime
+     de la marque en unique couleur d'action. Le lime reste celui de l'app
+     mobile (#aff70f) — c'est la seule chose que la maquette et la charte
+     avaient deja en commun. */
+  --background: #0B0B0C;
+  --foreground: #FFFFFF;
+  --card: #171718;               /* cartes et panneaux */
+  --card-foreground: #FFFFFF;
+  --popover: #1B1B1D;
+  --popover-foreground: #FFFFFF;
+  --primary: #aff70f;
+  --primary-foreground: #0B0B0C;
+  --secondary: #1E1E20;          /* pills inactives, champs */
+  --secondary-foreground: #FFFFFF;
+  --muted: #1E1E20;
+  --muted-foreground: #8E8E93;
+  --accent: #26262A;             /* survol */
+  --accent-foreground: #FFFFFF;
+  --destructive: #F2476B;        /* le rose des pastilles « en attente » */
+  --border: #232326;
+  --input: #2A2A2E;
+  --ring: #aff70f;
+
+  --brand: #aff70f;
+  --brand-foreground: #0B0B0C;
+  --brand-from: #CBFB55;         /* degrade des boutons et de l'onglet actif */
+  --brand-to: #9AE80A;
+  --surface: #171718;
+  --sidebar-pill: #1E1E20;
+  --success: #7BD650;
+  --warning: #F5B942;
+  --info: #6BA8F5;
+
+  /* Couple valide sur la surface de carte sombre #171718. */
+  --viz-1: #74a600;
+  --viz-2: #4E90E8;
+
+  --chart-1: #aff70f;
+  --chart-2: #8bcc00;
+  --chart-3: #6BA8F5;
+  --chart-4: #F5B942;
+  --chart-5: #F2476B;
+
+  --sidebar: #101011;
+  --sidebar-foreground: #FFFFFF;
+  --sidebar-primary: #aff70f;
+  --sidebar-primary-foreground: #0B0B0C;
+  --sidebar-accent: #1E1E20;
+  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-border: #1D1D20;
+  --sidebar-ring: #aff70f;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-heading;
+  }
+  /* Les tables du back-office defilent horizontalement dans leur conteneur
+     plutot que d'elargir la page sur mobile. */
+  [data-slot="table-container"] {
+    scrollbar-width: thin;
   }
 }
 
-body {
+/* Le back-office utilise une densite mobile compacte et une lecture plus
+   confortable sur les ecrans de travail, sans agrandir artificiellement les
+   controles tactiles sur telephone. */
+@media (min-width: 1024px) {
+  .admin-content [data-slot="table"] {
+    font-size: 0.9375rem;
+  }
+
+  .admin-content [data-slot="card-description"] {
+    font-size: 0.9375rem;
+  }
+}
+
+@media (max-width: 767px) {
+  .admin-content [data-slot="table-head"],
+  .admin-content [data-slot="table-cell"] {
+    padding-inline: 0.625rem;
+  }
+
+  .admin-content [data-slot="table-head"]:first-child,
+  .admin-content [data-slot="table-cell"]:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--card);
+    box-shadow: 1px 0 0 var(--border);
+  }
+
+  .admin-content [data-slot="button"] {
+    min-height: 2.5rem;
+  }
+}
+
+.admin-content :focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Theme du back-office inspire des logiciels de gestion desktop : cadre gris,
+   espace de travail clair et rail lateral profond. Ces variables restent
+   scopees a /admin et ne modifient pas la vitrine ni la connexion. */
+.admin-dashboard-shell {
+  --background: #101010;
+  --foreground: #ffffff;
+  --card: #1b1b1b;
+  --card-foreground: #ffffff;
+  --popover: #1b1b1b;
+  --popover-foreground: #ffffff;
+  --muted: #242424;
+  --muted-foreground: #a9a9a9;
+  --accent: #292929;
+  --accent-foreground: #ffffff;
+  --border: #303030;
+  --input: #383838;
+  --sidebar: #1c1d1c;
+  --sidebar-foreground: #ffffff;
+  --sidebar-accent: #aff70f;
+  --sidebar-accent-foreground: #000000;
+  --sidebar-border: #303030;
+  position: relative;
+  width: 100%;
+  min-height: 100svh;
+  overflow: hidden;
+  color: var(--foreground);
+  background: var(--background);
+}
+
+.admin-dashboard-shell [data-slot="sidebar-inset"] {
+  margin: 0;
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  box-shadow: none;
+}
+
+.admin-dashboard-shell [data-slot="sidebar-inner"] {
+  color: var(--sidebar-foreground);
+}
+
+.admin-dashboard-shell [data-slot="sidebar-container"] {
+  padding: 0;
+}
+
+.admin-dashboard-shell [data-slot="sidebar-inner"] {
+  border-right: 1px solid rgb(255 255 255 / 0.055);
+  background:
+    radial-gradient(circle at 50% 100%, rgb(175 247 15 / 0.055), transparent 32%),
+    var(--sidebar);
+}
+
+.admin-dashboard-shell [data-slot="sidebar-content"] {
+  scrollbar-width: none;
+}
+
+.admin-dashboard-shell [data-slot="sidebar-content"]::-webkit-scrollbar {
+  display: none;
+}
+
+.admin-dashboard-shell [data-slot="sidebar-menu-button"] {
+  color: inherit;
+}
+
+body:has(.admin-dashboard-shell) {
+  background: #101010;
+}
+
+.admin-dashboard-shell [data-slot="sidebar-menu-button"][data-active="true"] {
+  color: #000000;
+}
+
+.admin-dashboard-shell [data-slot="sidebar-menu-button"]:not([data-active="true"]):hover {
+  background: #2b2b2b;
+  color: #ffffff;
+}
+
+.admin-dashboard-shell .dashboard-metric::after {
+  position: absolute;
+  right: -15%;
+  bottom: -65%;
+  width: 75%;
+  height: 115%;
+  border-radius: 999px;
+  background: #aff70f;
+  content: "";
+  filter: blur(38px);
+  opacity: 0.2;
+  pointer-events: none;
+}
+
+@media (min-width: 640px) {
+  .admin-dashboard-shell {
+    width: 100%;
+    min-height: 100svh;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .admin-dashboard-shell [data-slot="sidebar-inset"] {
+    overflow: hidden;
+    border: 0;
+    border-radius: 0;
+  }
+}
+
+@media (min-width: 768px) {
+  .admin-dashboard-shell [data-slot="sidebar-container"] {
+    position: absolute;
+    inset-block: 0;
+    left: 0;
+    height: 100%;
+  }
+
+  .admin-dashboard-shell [data-slot="sidebar-inner"] {
+    border-radius: 0;
+  }
+}
+
+@media (min-width: 1280px) {
+  .admin-dashboard-shell {
+    width: 100%;
+    max-width: none;
+    min-height: 100svh;
+    margin: 0;
+  }
+}
+
+@layer utilities {
+  /* Le degrade lime de la maquette : boutons primaires, onglet de navigation
+     actif, pastilles de variation. Declare une fois ici plutot qu'en classes
+     `bg-gradient-to-br from-… to-…` repetees partout. */
+  .bg-brand-gradient {
+    background-image: linear-gradient(135deg, var(--brand-from), var(--brand-to));
+  }
+
+  /* Halo diffus au fond des tuiles d'indicateurs. Deux teintes, comme la
+     maquette : vert pour les metriques de volume, turquoise pour la derniere
+     tuile de chaque rangee. */
+  .glow-lime {
+    background-image: radial-gradient(
+      130% 110% at 28% 130%,
+      color-mix(in oklch, var(--brand) 22%, transparent),
+      transparent 62%
+    );
+  }
+  .glow-teal {
+    background-image: radial-gradient(
+      130% 110% at 28% 130%,
+      color-mix(in oklch, #2DD4BF 20%, transparent),
+      transparent 62%
+    );
+  }
 }
