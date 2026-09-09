@@ -1,4 +1,6 @@
 import { AppSidebar } from "@/components/app-sidebar";
+import { AutoRefresh } from "@/components/admin/auto-refresh";
+import { AdminQueueProvider } from "@/components/admin/queue-live";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { getAdminAccess, requireAdmin } from "@/lib/auth";
@@ -25,43 +27,51 @@ export default async function AdminLayout({ children }: LayoutProps<"/admin">) {
   ]);
 
   return (
-    <SidebarProvider
-      className="admin-dashboard-shell"
-      style={
-        {
-          "--sidebar-width": "calc(var(--spacing) * 74)",
-          "--header-height": "calc(var(--spacing) * 12)",
-        } as React.CSSProperties
-      }
-    >
-      <AppSidebar
-        variant="sidebar"
-        user={{
-          name: admin.fullName ?? "Administrateur",
-          email: admin.email ?? "",
-          roleLabel: access.roleLabel,
-        }}
-        badges={badges}
-        permissions={access.permissions}
-        diagnostics={diagnostics}
-        tasks={tasks}
-        nextEvent={nextEvent}
-      />
-      <SidebarInset>
-        <SiteHeader
+    // Une seule source vivante pour la cloche et les pastilles : la lecture
+    // serveur ci-dessus amorce l'affichage, le fournisseur la reactualise
+    // ensuite sans rejouer la page.
+    <AdminQueueProvider initial={{ tasks, badges }}>
+      <SidebarProvider
+        className="admin-dashboard-shell"
+        style={
+          {
+            "--sidebar-width": "calc(var(--spacing) * 74)",
+            "--header-height": "calc(var(--spacing) * 12)",
+          } as React.CSSProperties
+        }
+      >
+        <AppSidebar
+          variant="sidebar"
           user={{
             name: admin.fullName ?? "Administrateur",
             email: admin.email ?? "",
             roleLabel: access.roleLabel,
           }}
-          tasks={tasks}
+          permissions={access.permissions}
+          diagnostics={diagnostics}
+          nextEvent={nextEvent}
         />
+        <SidebarInset>
+          <SiteHeader
+            user={{
+              name: admin.fullName ?? "Administrateur",
+              email: admin.email ?? "",
+              roleLabel: access.roleLabel,
+            }}
+          />
+          {/* La cloche se met a jour toute seule, mais l'ecran sous elle restait
+            celui du rendu initial : un signalement compte dans la pastille sans
+            apparaitre dans la liste, et il fallait recharger. `AutoRefresh`
+            rejoue le Server Component de la page courante — donc ses requetes —
+            sans rechargement ni perte de l'etat client. */}
+        <AutoRefresh intervalMs={30_000} />
         <div className="@container/main flex flex-1 flex-col">
-          <main className="admin-content flex flex-1 flex-col gap-4 p-3 sm:p-4 lg:gap-5 lg:p-5">
-            {children}
-          </main>
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+            <main className="admin-content flex flex-1 flex-col gap-4 p-3 sm:p-4 lg:gap-5 lg:p-5">
+              {children}
+            </main>
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
+    </AdminQueueProvider>
   );
 }

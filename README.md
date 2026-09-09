@@ -113,6 +113,7 @@ Dans cet ordre, sur le projet Supabase partage. Toutes sont idempotentes.
 | [`202608240005_admin_notification_reads.sql`](supabase/migrations/202608240005_admin_notification_reads.sql) | back-office | **Plus utilisee.** Etat « lu » par administrateur, du temps ou la cloche listait les notifications des utilisateurs. La table reste en place, plus rien ne la lit. |
 | [`202608240006_drop_admins_manage.sql`](supabase/migrations/202608240006_drop_admins_manage.sql) | back-office | Retire la permission `admins.manage` et la policy d'ecriture sur `admin_user_roles` : l'ecran d'attribution des roles ne figure pas au cahier des charges. L'attribution se fait desormais dans l'editeur SQL. |
 | `0047_messaging_block_report.sql` | **mobile** (`~/ifriqiyastar`) | Blocage et signalement d'un utilisateur depuis la messagerie : `reports.context_conversation_id`, `report_conversation_user()`. Le back-office lit le signalement, jamais les messages du fil. |
+| [`202609090001_realtime_admin_queue.sql`](supabase/migrations/202609090001_realtime_admin_queue.sql) | back-office | Publie en temps reel les sept tables comptees par la file d'attente, pour que la cloche et les pastilles reagissent a l'instant plutot qu'au sondage suivant. **Facultative** : sans elle le back-office fonctionne, avec une latence de dix secondes sur les compteurs. |
 
 ### Validation des retraits de contenu
 

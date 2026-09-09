@@ -3,7 +3,8 @@
 import Link from "next/link"
 import * as React from "react"
 
-import { NAV_ITEMS, type NavBadges } from "@/components/admin/nav-items"
+import { NAV_ITEMS } from "@/components/admin/nav-items"
+import { useAdminQueue } from "@/components/admin/queue-live"
 import { RailDiagnostics } from "@/components/admin/rail-diagnostics"
 import { TodayCard } from "@/components/admin/today-card"
 import { NavMain } from "@/components/nav-main"
@@ -16,29 +17,29 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarRail,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import type { AdminPermission } from "@/lib/auth"
-import type { AdminTask, NextAdminEvent } from "@/lib/queries/admin-queue"
+import type { NextAdminEvent } from "@/lib/queries/admin-queue"
 import type { Diagnostic } from "@/lib/queries/diagnostics"
 
 export function AppSidebar({
   user,
-  badges,
   permissions,
   diagnostics = [],
-  tasks = [],
   nextEvent = null,
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
   user: { name: string; email: string; roleLabel?: string; avatar?: string }
-  badges: NavBadges
   permissions: AdminPermission[]
   /** Defauts de configuration a signaler. Liste vide = rien ne s'affiche. */
   diagnostics?: Diagnostic[]
-  tasks?: AdminTask[]
   nextEvent?: NextAdminEvent | null
 }) {
+  // Memes chiffres que la cloche, et vivants comme elle : les deux lisent le
+  // meme instantane.
+  const { tasks, badges } = useAdminQueue()
   const items = NAV_ITEMS.filter((item) => permissions.includes(item.permission)).map((item) => ({
     title: item.label,
     url: item.href,
@@ -52,9 +53,14 @@ export function AppSidebar({
 
   return (
     <Sidebar collapsible="icon" className="admin-sidebar" {...props}>
-      <SidebarHeader className="border-b border-sidebar-border px-3 py-3">
-        <div className="flex h-10 items-center gap-2">
-          <SidebarMenu className="min-w-0 flex-1">
+      {/* En mode icone, le logo cede sa place au declencheur : c'est le seul
+          endroit ou l'on peut redeployer le rail a la souris. Il etait masque
+          la (`group-data-[collapsible=icon]:hidden`) et celui du bandeau est
+          reserve au mobile (`md:hidden`) — une fois replie, le rail ne pouvait
+          donc plus etre rouvert qu'au clavier (Ctrl/Cmd + B). */}
+      <SidebarHeader className="border-b border-sidebar-border px-3 py-3 group-data-[collapsible=icon]:px-1.5">
+        <div className="flex h-10 items-center gap-2 group-data-[collapsible=icon]:justify-center">
+          <SidebarMenu className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
             <SidebarMenuItem>
               <SidebarMenuButton
                 className="h-10 rounded-lg p-1! hover:bg-secondary group-data-[collapsible=icon]:p-0!"
@@ -73,10 +79,14 @@ export function AppSidebar({
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
-          <SidebarTrigger className="size-7 shrink-0 rounded-lg border border-sidebar-border bg-secondary/60 text-sidebar-foreground/70 hover:bg-secondary hover:text-sidebar-foreground group-data-[collapsible=icon]:hidden" />
+          <SidebarTrigger
+            aria-label="Reduire ou deployer le menu"
+            title="Reduire ou deployer le menu (Ctrl + B)"
+            className="size-7 shrink-0 rounded-lg border border-sidebar-border bg-secondary/60 text-sidebar-foreground/70 hover:bg-secondary hover:text-sidebar-foreground"
+          />
         </div>
       </SidebarHeader>
-      <SidebarContent className="px-3 py-3">
+      <SidebarContent className="px-3 py-3 group-data-[collapsible=icon]:px-2">
         <NavMain items={items} />
         {/* L'espace entre la navigation et le compte connecte ne porte que ce
             qui n'est nulle part ailleurs : les defauts d'installation, qui
@@ -87,9 +97,12 @@ export function AppSidebar({
           <RailDiagnostics issues={diagnostics} />
         </div>
       </SidebarContent>
-      <SidebarFooter className="gap-2.5 p-3">
+      <SidebarFooter className="gap-2.5 p-3 group-data-[collapsible=icon]:p-2">
         <NavUser user={user} />
       </SidebarFooter>
+      {/* La bordure elle-meme devient cliquable : deuxieme prise pour replier
+          et redeployer, sans avoir a viser le bouton de l'en-tete. */}
+      <SidebarRail />
     </Sidebar>
   )
 }

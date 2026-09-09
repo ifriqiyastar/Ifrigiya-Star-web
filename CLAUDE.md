@@ -217,9 +217,38 @@ place so the journal refills by itself if it ever comes back, and
   awaits a decision — validation queues, reports, removals to validate, Scout
   Days to validate, account-deletion requests — filters the lines by the
   admin's permissions, and feeds **both** the bell and the nav badges from that
-  one read so the two can never disagree. There is no read/unread state: a task
-  leaves the list when it is handled. Do not point the bell back at
+  one read so the two can never disagree. The bell's own pill sums the task
+  *counts*, not the number of task lines: several reports share one line
+  ("2 signalements a instruire"), so counting lines froze the pill at 1 while
+  the nav pill beside "Moderation" — which does sum dossiers — climbed. There is
+  no read/unread state: a task leaves the list when it is handled. Do not point the bell back at
   `notifications` without the client asking.
+  The layout's read only *seeds* the display: `AdminQueueProvider`
+  (`components/admin/queue-live.tsx`) wraps the shell and keeps it current
+  through `/admin/file-attente` — the same `fetchAdminQueue()`, same permission
+  filter — so a dossier deposited from the mobile app appears without a reload.
+  **It does that two ways, and the second is not redundant.** A
+  `postgres_changes` subscription on the seven counted tables makes the update
+  immediate: Postgres pushes, the provider re-counts, and only the *event* is
+  used — the payload is discarded, never rendered. A 10 s poll stays underneath
+  it, because a subscription on a table absent from the `supabase_realtime`
+  publication **succeeds and delivers nothing**, with no error to observe:
+  dropping the poll on the assumption that push works would make the bell
+  slower, not faster. Migration `202609090001_realtime_admin_queue.sql` is what
+  publishes those seven tables (and sets `replica identity full`, since the
+  signal is almost always an UPDATE); until it is applied on the shared project,
+  10 s is the floor. Adding a queue to `fetchAdminQueue()` means adding its
+  table to `QUEUE_TABLES` and to that migration, or the new queue silently
+  keeps the polling latency.
+  The provider holds still while the bell or a dialog is open, and a
+  `revalidatePath` re-render always wins over the polled value.
+  That keeps the *counters* live, not the screen under them — so
+  `app/admin/layout.tsx` also mounts `AutoRefresh` (30 s) for every admin page:
+  `router.refresh()` replays the current Server Component and its queries
+  without a reload and without losing client state. The two are complementary
+  and the split is deliberate — one cheap JSON read every 10 s for the badges,
+  the page's full query set only every 30 s. Mount `AutoRefresh` once, in the
+  layout: a second one on a page would double every query on that screen.
 - **`user_blocks` is admin-readable and admin-untouchable.** `blocks_admin_read`
   lets the back-office count them; there is no admin gesture, and there must
   not be one — blocking is a user's own decision. It is displayed as a

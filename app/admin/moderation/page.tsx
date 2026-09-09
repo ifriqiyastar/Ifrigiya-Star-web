@@ -22,7 +22,6 @@ import {
 } from "lucide-react";
 
 import { ActionButton } from "@/components/admin/action-button";
-import { AutoRefresh } from "@/components/admin/auto-refresh";
 import { EmptyState } from "@/components/admin/empty-state";
 import { FilterBar } from "@/components/admin/filter-bar";
 import { NoteCards } from "@/components/admin/note-cards";
@@ -122,10 +121,6 @@ export default async function ModerationPage({ searchParams }: PageProps<"/admin
 
   return (
     <>
-      {/* Les signalements arrivent de l'application mobile, sans action ici :
-          sans rafraichissement, l'ecran ouvert reste fige. */}
-      <AutoRefresh />
-
       <PageHeader
         breadcrumb={[{ label: "Moderation" }, { label: "Signalements et audit" }]}
         title="Moderation & securite des contenus"
@@ -575,11 +570,12 @@ async function ReportsView({
         <span>
           {visible.length} incident(s) affiche(s) sur {count ?? 0} repertorie(s)
         </span>
-        {/* Vrai : `AutoRefresh` rejoue le Server Component chaque minute, sauf
-            quand une decision est en cours de saisie. */}
+        {/* Vrai : `AutoRefresh`, monte par le layout, rejoue le Server
+            Component toutes les trente secondes, sauf quand une decision est en
+            cours de saisie. */}
         <span className="flex items-center gap-1.5">
           <span className="size-1.5 rounded-full bg-brand" />
-          Actualisation automatique toutes les minutes
+          Actualisation automatique
         </span>
       </div>
       <Pagination basePath="/admin/moderation" params={params} page={page} pageSize={PAGE_SIZE} total={count ?? 0} />

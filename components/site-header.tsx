@@ -14,8 +14,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
+import { useAdminQueue } from "@/components/admin/queue-live"
 import { initials } from "@/lib/format"
-import type { AdminTask } from "@/lib/queries/admin-queue"
 import { cn } from "@/lib/utils"
 
 /**
@@ -33,17 +33,21 @@ import { cn } from "@/lib/utils"
  * Il n'y a donc plus de « marquer comme lu » : une tache disparait de la liste
  * quand elle est traitee, pas quand on la regarde.
  *
+ * Les lignes ne sont plus figees au rendu de la page : elles viennent de
+ * `useAdminQueue()`, que `AdminQueueProvider` reactualise en arriere-plan. Un
+ * dossier depose depuis l'application mobile apparait donc ici sans que
+ * l'administrateur ait a recharger l'ecran.
+ *
  * Le declencheur est stylise directement plutot que compose avec `Button` via
  * `render` : deux composants qui posent chacun leur `data-slot` ne fusionnent
  * pas pareil au rendu serveur et au rendu client, ce qui casse l'hydratation.
  */
 export function SiteHeader({
   user,
-  tasks = [],
 }: {
   user: { name: string; email: string; roleLabel: string }
-  tasks?: AdminTask[]
 }) {
+  const { tasks } = useAdminQueue()
   const pathname = usePathname()
   const router = useRouter()
   const [query, setQuery] = React.useState("")
@@ -62,9 +66,14 @@ export function SiteHeader({
     return () => window.removeEventListener("keydown", onKeyDown)
   }, [])
 
-  // La pastille compte les files ouvertes, pas les dossiers : « 3 » veut dire
-  // trois choses a faire, chacune chiffree dans la liste.
-  const openQueues = tasks.length
+  // La pastille compte les **dossiers en attente**, pas les files. Elle
+  // comptait les files (`tasks.length`) : deux signalements tiennent sur une
+  // seule ligne (« 2 signalements a instruire »), donc le chiffre restait a 1
+  // pendant que la file grossissait — une pastille qui ne bouge pas se lit
+  // comme une pastille en panne. C'est aussi ce que comptent deja les
+  // pastilles du rail, qui additionnent les dossiers de leur section : les
+  // deux disaient donc deux choses differentes.
+  const pending = tasks.reduce((total, task) => total + task.count, 0)
   const title = pathname === "/admin" ? "Tableau de bord" : pathname.split("/").filter(Boolean).at(-1)?.replaceAll("-", " ") ?? "Administration"
   return (
     <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b border-border bg-[#101318] transition-[width,height] ease-linear">
@@ -90,9 +99,9 @@ export function SiteHeader({
               )}
             >
               <BellIcon className="size-4" />
-              {openQueues > 0 ? (
+              {pending > 0 ? (
                 <span className="absolute -top-1 -right-1 flex min-w-4 items-center justify-center rounded-full bg-brand px-1 text-[9px] font-bold text-brand-foreground tabular-nums">
-                  {openQueues > 99 ? "99+" : openQueues}
+                  {pending > 99 ? "99+" : pending}
                 </span>
               ) : null}
             </DropdownMenuTrigger>
