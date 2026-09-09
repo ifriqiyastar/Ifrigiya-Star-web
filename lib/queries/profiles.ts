@@ -10,8 +10,10 @@ export type ProfileSummary = {
    * Photo affichable. **Elle ne vient pas de `profiles`** : la table de ce
    * projet Supabase n'a pas de colonne `avatar_url` (contrairement a ce que
    * laisse croire `00_ALL_IN_ONE.sql` cote app mobile — verifie contre la base
-   * reelle). La seule photo disponible est `player_profiles.profile_photo_url`,
-   * donc elle est renseignee pour les joueurs et nulle pour les autres roles.
+   * reelle). Elle est reconstituee a partir des deux tables metier :
+   * `player_profiles.profile_photo_url` pour un joueur,
+   * `professional_profiles.photo_url` pour un professionnel (migration mobile
+   * `0039`, meme bucket public `avatars`). Elle reste nulle pour un admin.
    */
   avatar_url: string | null;
   is_active: boolean;
@@ -39,14 +41,24 @@ export async function fetchProfilesByIds(ids: string[]) {
   if (!unique.length) return new Map<string, ProfileSummary>();
 
   const supabase = await createClient();
-  const [profiles, photos] = await Promise.all([
+  // Les deux requetes photo sont volontairement separees de celle des profils :
+  // si la migration mobile `0039` n'est pas appliquee, `photo_url` repond en
+  // 42703 et seule cette requete-la retourne vide — les identites restent
+  // affichees, sans vignette.
+  const [profiles, playerPhotos, proPhotos] = await Promise.all([
     supabase.from("profiles").select(PROFILE_COLUMNS).in("id", unique),
     supabase.from("player_profiles").select("id, profile_photo_url").in("id", unique),
+    supabase.from("professional_profiles").select("id, photo_url").in("id", unique),
   ]);
 
-  const photoById = new Map(
-    (photos.data ?? []).map((row) => [row.id as string, row.profile_photo_url as string | null]),
-  );
+  const photoById = new Map<string, string | null>([
+    ...(playerPhotos.data ?? []).map(
+      (row) => [row.id as string, row.profile_photo_url as string | null] as const,
+    ),
+    ...(proPhotos.data ?? []).map(
+      (row) => [row.id as string, row.photo_url as string | null] as const,
+    ),
+  ]);
 
   return new Map(
     (profiles.data ?? []).map((row) => [

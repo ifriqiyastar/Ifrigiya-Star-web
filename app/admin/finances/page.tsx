@@ -1,14 +1,23 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CreditCardIcon, DownloadIcon, ReceiptTextIcon, WalletIcon } from "lucide-react";
+import {
+  CreditCardIcon,
+  DownloadIcon,
+  ReceiptTextIcon,
+  TrendingUpIcon,
+  Undo2Icon,
+  WalletIcon,
+} from "lucide-react";
 
 import { ActionButton } from "@/components/admin/action-button";
 import { CopyButton } from "@/components/admin/copy-button";
 import { EmptyState } from "@/components/admin/empty-state";
 import { FilterBar } from "@/components/admin/filter-bar";
-import { PageHeader } from "@/components/admin/page-header";
+import { NoteCards } from "@/components/admin/note-cards";
+import { HeaderMeta, PageHeader } from "@/components/admin/page-header";
 import { ReasonDialog } from "@/components/admin/reason-dialog";
 import { Panel, PanelHeader } from "@/components/admin/panel";
+import { Pagination } from "@/components/admin/pagination";
 import { RevenueChart, type RevenueRow } from "@/components/admin/revenue-chart";
 import { SegmentedNav } from "@/components/admin/segmented-nav";
 import { StatCard } from "@/components/admin/stat-card";
@@ -46,6 +55,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Abonnements & paiements" };
+const PAGE_SIZE = 20;
 
 const VUES = ["paiements", "abonnements", "offres"] as const;
 type Vue = (typeof VUES)[number];
@@ -64,6 +74,7 @@ export default async function FinancesPage({ searchParams }: PageProps<"/admin/f
     statut: str(resolved.statut),
     type: str(resolved.type),
     moyen: str(resolved.moyen),
+    page: str(resolved.page),
   };
 
   const supabase = await createClient();
@@ -111,10 +122,11 @@ export default async function FinancesPage({ searchParams }: PageProps<"/admin/f
   return (
     <>
       <PageHeader
-        kicker="Paiements et revenus"
-        title="Abonnements & paiements"
+        breadcrumb={[{ label: "Paiements et revenus" }, { label: "Finances et tresorerie" }]}
+        title="Abonnements, encaissements & finances"
+        meta={<HeaderMeta tone="brand">{formatAmount(collected)} encaisses</HeaderMeta>}
         description="Suivi des encaissements, des souscriptions et du catalogue d'offres. Les tarifs, commissions et regles de remboursement ne sont pas arretes par le cahier des charges : cet ecran suit ce qui est enregistre, il ne facture pas."
-        actions={<Link href="/admin/finances/export" className={cn(buttonVariants({ variant: "outline", size: "sm" }), "rounded-full")}><DownloadIcon /> Exporter CSV</Link>}
+        actions={<Link href="/admin/finances/export" className={cn(buttonVariants({ variant: "outline", size: "sm" }))}><DownloadIcon /> Exporter CSV</Link>}
       />
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -123,7 +135,6 @@ export default async function FinancesPage({ searchParams }: PageProps<"/admin/f
           value={formatAmount(collected)}
           hint="Paiements « reussi » et « active manuellement »"
           icon={WalletIcon}
-          tone="brand"
         />
         <StatCard
           label="En attente"
@@ -131,18 +142,26 @@ export default async function FinancesPage({ searchParams }: PageProps<"/admin/f
           hint="A confirmer ou a activer manuellement"
           icon={ReceiptTextIcon}
         />
-        <StatCard label="Rembourse" value={formatAmount(refunded)} />
+        <StatCard
+          label="Rembourse"
+          value={formatAmount(refunded)}
+          icon={Undo2Icon}
+          deltaTone="warning"
+        />
         <StatCard
           label="Abonnements actifs"
           value={formatNumber(activeSubscriptions ?? 0)}
           icon={CreditCardIcon}
+          accent="secondary"
+          href="/admin/finances?vue=abonnements"
         />
       </section>
 
       <Panel>
         <PanelHeader
-          title="Revenus par mois"
-          description="Recalcules depuis payments.paid_at, decomposes par type de paiement."
+          icon={TrendingUpIcon}
+          title="Revenus par mois et projection comptable"
+          description="Recalcules depuis la date d'encaissement, decomposes par type de paiement."
         />
         <RevenueChart rows={revenueRows} />
       </Panel>
@@ -161,6 +180,26 @@ export default async function FinancesPage({ searchParams }: PageProps<"/admin/f
       {vue === "paiements" ? <PaymentsView params={params} /> : null}
       {vue === "abonnements" ? <SubscriptionsView params={params} /> : null}
       {vue === "offres" ? <PlansView /> : null}
+
+      <NoteCards
+        notes={[
+          {
+            icon: WalletIcon,
+            title: "Cet ecran suit, il ne facture pas",
+            body: "Les montants affiches sont ceux enregistres dans la table des paiements. Tarifs, commissions et regles de remboursement ne sont pas arretes par le cahier des charges : rien n'est calcule ici, tout est repris tel quel.",
+          },
+          {
+            icon: ReceiptTextIcon,
+            title: "Activation manuelle",
+            body: "Un encaissement hors ligne se confirme a la main : le paiement passe a « active manuellement » et rejoint les montants encaisses. Le geste est trace, et il reste distinct d'un paiement confirme par la passerelle.",
+          },
+          {
+            icon: CreditCardIcon,
+            title: "Un abonnement actif n'est pas un paiement",
+            body: "Le compteur d'abonnements lit le statut des souscriptions, pas les transactions. Les deux peuvent diverger le temps qu'un paiement soit confirme — c'est normal, et c'est pourquoi ils sont affiches separement.",
+          },
+        ]}
+      />
     </>
   );
 }
@@ -169,20 +208,22 @@ export default async function FinancesPage({ searchParams }: PageProps<"/admin/f
 
 async function PaymentsView({ params }: { params: Record<string, string | undefined> }) {
   const supabase = await createClient();
+  const page = Math.max(1, Number(params.page ?? 1) || 1);
 
   let query = supabase
     .from("payments")
     .select(
       "id, profile_id, payment_type, subscription_id, scout_day_registration_id, amount, currency, method, status, provider_reference, manually_activated_at, paid_at, created_at",
+      { count: "exact" },
     )
     .order("created_at", { ascending: false })
-    .limit(200);
+    .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
 
   if (params.statut) query = query.eq("status", params.statut);
   if (params.type) query = query.eq("payment_type", params.type);
   if (params.moyen) query = query.eq("method", params.moyen);
 
-  const { data, error } = await query;
+  const { data, error, count } = await query;
   const rows = data ?? [];
   const profiles = await fetchProfilesByIds(rows.map((row) => row.profile_id));
 
@@ -297,7 +338,7 @@ async function PaymentsView({ params }: { params: Record<string, string | undefi
                       ) : null}
                       {["reussi", "active_manuellement"].includes(row.status) ? (
                         <ReasonDialog
-                          action={(reason) => setPaymentStatus(row.id, "rembourse", reason)}
+                          action={setPaymentStatus.bind(null, row.id, "rembourse")}
                           trigger={<Button variant="destructive" size="xs">Rembourser</Button>}
                           title="Marquer ce paiement rembourse"
                           description="Indiquez le motif. Le montant sortira des revenus encaisses, mais le remboursement effectif chez le prestataire doit etre confirme separement."
@@ -313,6 +354,7 @@ async function PaymentsView({ params }: { params: Record<string, string | undefi
           </TableBody>
         </Table>
       )}
+      <Pagination basePath="/admin/finances" params={params} page={page} pageSize={PAGE_SIZE} total={count ?? 0} />
     </Panel>
   );
 }
@@ -321,18 +363,20 @@ async function PaymentsView({ params }: { params: Record<string, string | undefi
 
 async function SubscriptionsView({ params }: { params: Record<string, string | undefined> }) {
   const supabase = await createClient();
+  const page = Math.max(1, Number(params.page ?? 1) || 1);
 
   let query = supabase
     .from("subscriptions")
     .select(
       "id, profile_id, plan_id, status, starts_at, ends_at, cancelled_at, auto_renew, created_at",
+      { count: "exact" },
     )
     .order("created_at", { ascending: false })
-    .limit(200);
+    .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
 
   if (params.statut) query = query.eq("status", params.statut);
 
-  const [{ data, error }, { data: plans }] = await Promise.all([
+  const [{ data, error, count }, { data: plans }] = await Promise.all([
     query,
     supabase.from("subscription_plans").select("id, code, label, target_role, price_amount, price_currency"),
   ]);
@@ -460,6 +504,7 @@ async function SubscriptionsView({ params }: { params: Record<string, string | u
           </TableBody>
         </Table>
       )}
+      <Pagination basePath="/admin/finances" params={params} page={page} pageSize={PAGE_SIZE} total={count ?? 0} />
     </Panel>
   );
 }
@@ -488,13 +533,13 @@ async function PlansView() {
     <Panel>
       <PanelHeader
         title="Catalogue d'offres"
-        description="Lecture seule. Les limites listees ici sont celles que l'application et la fonction can_message() font respecter cote serveur — les modifier releve d'une migration, pas du back-office."
+        description="Lecture seule. Les limites listees ici sont celles que l'application fait respecter cote serveur ; les modifier passe par une intervention technique, pas par le back-office."
       />
       {!plans?.length ? (
         <EmptyState
           icon={CreditCardIcon}
           title="Aucune offre"
-          description="La table subscription_plans est vide."
+          description="Aucune offre n'est enregistree dans le catalogue."
         />
       ) : (
         <Table>

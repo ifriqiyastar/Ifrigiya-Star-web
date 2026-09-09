@@ -3,8 +3,13 @@
 import * as React from "react";
 import { PencilIcon, PlusIcon } from "lucide-react";
 
-import { ScoutDayForm, type ScoutDayFormValue } from "@/components/admin/forms/scout-day-form";
+import {
+  ScoutDayForm,
+  type ScoutDayFormValue,
+  type ScoutDayOrganizer,
+} from "@/components/admin/forms/scout-day-form";
 import { Button } from "@/components/ui/button";
+import type { Country } from "@/lib/countries-api";
 import {
   Dialog,
   DialogContent,
@@ -14,7 +19,15 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
-export function ScoutDayDialog({ value }: { value?: ScoutDayFormValue }) {
+export function ScoutDayDialog({
+  value,
+  organizers,
+  countries,
+}: {
+  value?: ScoutDayFormValue;
+  organizers?: ScoutDayOrganizer[];
+  countries?: Country[];
+}) {
   const [open, setOpen] = React.useState(false);
   const close = React.useCallback(() => setOpen(false), []);
   const editing = Boolean(value?.id);
@@ -23,13 +36,16 @@ export function ScoutDayDialog({ value }: { value?: ScoutDayFormValue }) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
         render={
-          <Button variant={editing ? "outline" : "default"} size="sm">
+          // `data-slot` impose : `Button` et `DialogTrigger` le posent tous les
+          // deux, et Base UI ne tranche pas pareil au rendu serveur et au rendu
+          // client — c'est ce qui casse l'hydratation de la page entiere.
+          <Button data-slot="dialog-trigger" variant={editing ? "outline" : "default"} size="sm">
             {editing ? <PencilIcon /> : <PlusIcon />}
             {editing ? "Modifier" : "Nouveau Scout Day"}
           </Button>
         }
       />
-      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-3xl">
+      <DialogContent className="max-h-[90dvh] gap-4 overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>{editing ? "Modifier le Scout Day" : "Creer un Scout Day"}</DialogTitle>
           <DialogDescription>
@@ -40,6 +56,8 @@ export function ScoutDayDialog({ value }: { value?: ScoutDayFormValue }) {
         </DialogHeader>
         <ScoutDayForm
           value={value}
+          organizers={organizers}
+          countries={countries}
           submitLabel={editing ? "Enregistrer les modifications" : "Creer en brouillon"}
           onSuccess={close}
         />

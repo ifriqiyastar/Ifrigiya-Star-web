@@ -98,7 +98,7 @@ export function FilterBar({
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
         {filters.map((filter) => (
           <label key={filter.name} className="flex items-center gap-2">
-            <span className="text-[0.625rem] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+            <span className="micro-label hidden text-muted-foreground sm:inline">
               {filter.label}
             </span>
             <Select
@@ -108,7 +108,13 @@ export function FilterBar({
                 router.push(buildUrl({ [filter.name]: value === "__all" ? null : String(value) }))
               }
             >
-              <SelectTrigger size="sm" className="min-w-28">
+              <SelectTrigger
+                size="sm"
+                className={cn(
+                  "min-w-28 rounded-md",
+                  params[filter.name] && "border-brand/40 text-brand",
+                )}
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

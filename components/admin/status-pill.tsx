@@ -18,7 +18,7 @@ const pill = cva(
     variants: {
       tone: {
         brand: "bg-brand-gradient font-semibold text-brand-foreground",
-        danger: "bg-destructive font-semibold text-white",
+        danger: "bg-[var(--danger-surface,var(--destructive))] font-semibold text-[#e1e2e8]",
         warning: "bg-warning/12 text-warning",
         success: "bg-success/12 text-success",
         info: "bg-info/12 text-info",
@@ -32,7 +32,7 @@ const pill = cva(
 
 const DOT: Record<Tone, string> = {
   brand: "bg-brand-foreground/70",
-  danger: "bg-white/80",
+  danger: "bg-card-foreground/80",
   warning: "bg-warning",
   success: "bg-success",
   info: "bg-info",

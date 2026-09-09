@@ -1,12 +1,31 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { ArrowLeftIcon, CalendarDaysIcon, CheckIcon, XIcon } from "lucide-react";
+import {
+  ArrowLeftIcon,
+  BadgeCheckIcon,
+  CalendarDaysIcon,
+  CalendarIcon,
+  CheckIcon,
+  ClockIcon,
+  FilePlus2Icon,
+  FileTextIcon,
+  MapPinIcon,
+  PenLineIcon,
+  SendIcon,
+  ShieldCheckIcon,
+  TicketIcon,
+  UserIcon,
+  UsersIcon,
+  XIcon,
+} from "lucide-react";
 
 import { ActionButton } from "@/components/admin/action-button";
 import { DefinitionList } from "@/components/admin/definition-list";
+import { EligibilityCriteria } from "@/components/admin/eligibility-criteria";
 import { EmptyState } from "@/components/admin/empty-state";
 import { PageHeader } from "@/components/admin/page-header";
+import { ReasonDialog } from "@/components/admin/reason-dialog";
 import { Panel, PanelHeader } from "@/components/admin/panel";
 import { StatCard } from "@/components/admin/stat-card";
 import { StatusPill } from "@/components/admin/status-pill";
@@ -22,7 +41,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { activatePaymentManually } from "@/lib/actions/finances";
-import { deleteScoutDay, setRegistrationStatus, setScoutDayStatus } from "@/lib/actions/scout-days";
+import {
+  deleteScoutDay,
+  refuseScoutDay,
+  setRegistrationStatus,
+  setScoutDayStatus,
+  validateScoutDay,
+} from "@/lib/actions/scout-days";
 import { formatAmount, formatDate, formatDateTime, formatNumber } from "@/lib/format";
 import {
   PAYMENT_METHOD,
@@ -33,8 +58,11 @@ import {
   label,
 } from "@/lib/labels";
 import { displayName, fetchProfilesByIds } from "@/lib/queries/profiles";
+// Alias : `EligibilityCriteria` est deja le composant d'affichage importe plus haut.
+import type { EligibilityCriteria as CriteriaShape } from "@/lib/football";
+import { fetchCountries } from "@/lib/countries-api";
 import { createClient } from "@/lib/supabase/server";
-import { requirePermission } from "@/lib/auth";
+import { getAdminAccess, requirePermission } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Scout Day" };
@@ -44,7 +72,9 @@ const EMPTY_UUID = "00000000-0000-0000-0000-000000000000";
 export default async function ScoutDayDetailPage({
   params,
 }: PageProps<"/admin/scout-days/[id]">) {
-  await requirePermission("events.manage");
+  const admin = await requirePermission("events.manage");
+  const { permissions } = await getAdminAccess(admin.userId);
+  const canValidate = permissions.includes("events.validate");
   const { id } = await params;
   const supabase = await createClient();
 
@@ -69,7 +99,11 @@ export default async function ScoutDayDetailPage({
   const paymentIds = rows.map((row) => row.payment_id).filter(Boolean) as string[];
 
   const [profiles, payments, evaluations] = await Promise.all([
-    fetchProfilesByIds([scoutDay.organizer_id, ...rows.map((row) => row.player_id)]),
+    fetchProfilesByIds([
+      scoutDay.organizer_id,
+      scoutDay.validated_by,
+      ...rows.map((row) => row.player_id),
+    ]),
     supabase
       .from("payments")
       .select("id, amount, currency, method, status, provider_reference, paid_at")
@@ -90,7 +124,10 @@ export default async function ScoutDayDetailPage({
     evaluationsByRegistration.set(evaluation.registration_id, list);
   }
 
+  const countries = await fetchCountries();
   const organizer = profiles.get(scoutDay.organizer_id);
+  const validator = scoutDay.validated_by ? profiles.get(scoutDay.validated_by) : undefined;
+  const awaitingValidation = scoutDay.status === "en_attente_validation";
   const confirmed = rows.filter((row) => ["confirme", "present"].includes(row.status)).length;
   const collected = (payments.data ?? [])
     .filter((payment) => ["reussi", "active_manuellement"].includes(payment.status))
@@ -100,7 +137,6 @@ export default async function ScoutDayDetailPage({
   ).length;
 
   const criteria = (scoutDay.eligibility_criteria ?? {}) as Record<string, unknown>;
-  const criteriaEntries = Object.entries(criteria);
 
   return (
     <>
@@ -134,6 +170,7 @@ export default async function ScoutDayDetailPage({
           actions={
             <>
               <ScoutDayDialog
+                countries={countries}
                 value={{
                   id: scoutDay.id,
                   title: scoutDay.title,
@@ -143,41 +180,76 @@ export default async function ScoutDayDetailPage({
                   end_time: scoutDay.end_time,
                   location: scoutDay.location,
                   capacity: scoutDay.capacity,
-                  eligibility_criteria:
-                    typeof scoutDay.eligibility_criteria === "object"
-                      ? String(scoutDay.eligibility_criteria?.description ?? "")
-                      : String(scoutDay.eligibility_criteria ?? ""),
+                  location_address: scoutDay.location_address,
+                  latitude: scoutDay.latitude,
+                  longitude: scoutDay.longitude,
+                  // Le jsonb tel quel : le formulaire edite les vraies cles.
+                  eligibility_criteria: criteria as CriteriaShape,
                   is_paid: scoutDay.is_paid,
                   price_amount: scoutDay.price_amount,
                   price_currency: scoutDay.price_currency,
                 }}
               />
-              {scoutDay.status !== "publie" ? (
-                <ActionButton
-                  action={setScoutDayStatus.bind(null, scoutDay.id, "publie")}
-                  variant="default"
-                  size="sm"
-                >
-                  <CheckIcon />
-                  Publier
-                </ActionButton>
-              ) : (
+              {scoutDay.status === "publie" ? (
                 <ActionButton
                   action={setScoutDayStatus.bind(null, scoutDay.id, "brouillon")}
                   size="sm"
                 >
                   Depublier
                 </ActionButton>
-              )}
-              {scoutDay.status !== "cloture" ? (
+              ) : canValidate ? (
+                <ActionButton
+                  action={
+                    awaitingValidation
+                      ? validateScoutDay.bind(null, scoutDay.id)
+                      : setScoutDayStatus.bind(null, scoutDay.id, "publie")
+                  }
+                  variant="default"
+                  size="sm"
+                >
+                  <CheckIcon />
+                  {awaitingValidation ? "Valider" : "Publier"}
+                </ActionButton>
+              ) : null}
+              {awaitingValidation && canValidate ? (
+                <ReasonDialog
+                  action={refuseScoutDay.bind(null, scoutDay.id)}
+                  trigger={
+                    <button
+                      type="button"
+                      className="inline-flex h-9 items-center gap-1.5 rounded-full border border-destructive/40 px-4 text-sm font-medium text-destructive hover:bg-destructive/10"
+                    >
+                      Refuser
+                    </button>
+                  }
+                  title="Refuser cet evenement"
+                  description="L'evenement retourne en brouillon chez son organisateur, qui recoit le motif en notification."
+                  label="Motif du refus"
+                  placeholder="Lieu imprecis, tarif incoherent, date a confirmer…"
+                  submitLabel="Refuser l'evenement"
+                />
+              ) : null}
+              {/* Cloturer ne s'offre que sur un evenement EN LIGNE : on cloture
+                  une journee qui a eu lieu. Propose sur un brouillon ou sur un
+                  evenement en attente de validation, ce bouton le sortait du
+                  circuit de validation et le rendait invisible des joueurs —
+                  `cloture` passe le filtre de la RPC mais n'est jamais « ouvert ».
+                  C'est arrive en production le 2026-08-31. */}
+              {scoutDay.status === "publie" ? (
                 <ActionButton
                   action={setScoutDayStatus.bind(null, scoutDay.id, "cloture")}
                   size="sm"
+                  confirm={{
+                    title: "Cloturer cet evenement",
+                    description:
+                      "A reserver a une journee qui a eu lieu : un evenement cloture n'apparait plus dans les opportunites ouvertes des joueurs. Pour un evenement qui n'aura pas lieu, utilisez « Annuler », qui previent les inscrits.",
+                    actionLabel: "Cloturer",
+                  }}
                 >
                   Cloturer
                 </ActionButton>
               ) : null}
-              {scoutDay.status !== "annule" ? (
+              {["brouillon", "en_attente_validation", "publie"].includes(scoutDay.status) ? (
                 <ActionButton
                   action={setScoutDayStatus.bind(null, scoutDay.id, "annule")}
                   variant="destructive"
@@ -211,7 +283,6 @@ export default async function ScoutDayDetailPage({
           value={`${formatNumber(rows.length)}${scoutDay.capacity ? ` / ${scoutDay.capacity}` : ""}`}
           hint={`${formatNumber(confirmed)} confirmees ou presentes`}
           icon={CalendarDaysIcon}
-          tone="brand"
         />
         <StatCard
           label="Encaisse"
@@ -240,6 +311,7 @@ export default async function ScoutDayDetailPage({
               items={[
                 {
                   label: "Organisateur",
+                  icon: UserIcon,
                   value: (
                     <Link
                       href={`/admin/utilisateurs/${scoutDay.organizer_id}`}
@@ -249,35 +321,85 @@ export default async function ScoutDayDetailPage({
                     </Link>
                   ),
                 },
-                { label: "Date", value: formatDate(scoutDay.event_date) },
+                { label: "Date", icon: CalendarIcon, value: formatDate(scoutDay.event_date) },
                 {
                   label: "Horaires",
+                  icon: ClockIcon,
                   value:
                     [scoutDay.start_time, scoutDay.end_time]
                       .filter(Boolean)
                       .map((value) => String(value).slice(0, 5))
                       .join(" – ") || "—",
                 },
-                { label: "Lieu", value: scoutDay.location ?? "—" },
-                { label: "Capacite", value: scoutDay.capacity ?? "Non limitee" },
+                { label: "Lieu", icon: MapPinIcon, value: scoutDay.location ?? "—" },
+                {
+                  label: "Capacite",
+                  icon: UsersIcon,
+                  value: scoutDay.capacity ? `${scoutDay.capacity} places` : "Non limitee",
+                },
                 {
                   label: "Tarif",
+                  icon: TicketIcon,
                   value: scoutDay.is_paid
                     ? formatAmount(scoutDay.price_amount, scoutDay.price_currency ?? "TND")
                     : "Gratuit",
                 },
-                { label: "Cree le", value: formatDateTime(scoutDay.created_at) },
-                { label: "Mis a jour le", value: formatDateTime(scoutDay.updated_at) },
+                {
+                  label: "Cree le",
+                  icon: FilePlus2Icon,
+                  value: formatDateTime(scoutDay.created_at),
+                },
+                {
+                  label: "Mis a jour le",
+                  icon: PenLineIcon,
+                  value: formatDateTime(scoutDay.updated_at),
+                },
+                // Trace de validation (migration 0040) : ces trois lignes sont
+                // ecrites par le trigger, pas par le back-office.
+                ...(scoutDay.submitted_at
+                  ? [
+                      {
+                        label: "Soumis le",
+                        icon: SendIcon,
+                        value: formatDateTime(scoutDay.submitted_at),
+                      },
+                    ]
+                  : []),
+                ...(scoutDay.validated_at
+                  ? [
+                      {
+                        label: scoutDay.status === "publie" ? "Valide le" : "Decision du",
+                        icon: BadgeCheckIcon,
+                        value: formatDateTime(scoutDay.validated_at),
+                      },
+                      { label: "Par", icon: ShieldCheckIcon, value: displayName(validator) },
+                    ]
+                  : []),
               ]}
             />
-            {scoutDay.description ? (
-              <div className="space-y-1.5">
-                <p className="text-[0.625rem] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-                  Description
+            {scoutDay.validation_reason ? (
+              <div className="space-y-1.5 rounded-xl bg-destructive/10 px-4 py-3">
+                <p className="text-[0.625rem] font-semibold tracking-[0.18em] text-destructive uppercase">
+                  Motif du refus communique a l&apos;organisateur
                 </p>
                 <p className="text-sm leading-relaxed whitespace-pre-line">
-                  {scoutDay.description}
+                  {scoutDay.validation_reason}
                 </p>
+              </div>
+            ) : null}
+            {scoutDay.description ? (
+              <div className="flex items-start gap-3 border-t border-border/60 pt-5">
+                <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary">
+                  <FileTextIcon className="size-4 text-foreground/70" />
+                </span>
+                <div className="min-w-0 space-y-1.5">
+                  <p className="text-[0.625rem] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+                    Description
+                  </p>
+                  <p className="text-sm leading-relaxed whitespace-pre-line">
+                    {scoutDay.description}
+                  </p>
+                </div>
               </div>
             ) : null}
           </div>
@@ -286,25 +408,10 @@ export default async function ScoutDayDetailPage({
         <Panel>
           <PanelHeader
             title="Criteres d'eligibilite"
-            description="Structure libre (jsonb) : le CDC ne fixe pas de liste fermee de criteres."
+            description="Filtres declares par l'organisateur. Un critere absent n'est pas filtrant."
           />
           <div className="px-4 py-5 sm:px-5">
-            {!criteriaEntries.length ? (
-              <p className="text-xs text-muted-foreground">Aucun critere declare.</p>
-            ) : (
-              <dl className="space-y-3">
-                {criteriaEntries.map(([key, value]) => (
-                  <div key={key} className="space-y-0.5">
-                    <dt className="text-[0.625rem] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-                      {key.replace(/_/g, " ")}
-                    </dt>
-                    <dd className="text-sm break-words">
-                      {typeof value === "object" ? JSON.stringify(value) : String(value)}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            )}
+            <EligibilityCriteria criteria={criteria} />
           </div>
         </Panel>
       </div>
@@ -457,7 +564,7 @@ export default async function ScoutDayDetailPage({
         <Panel>
           <PanelHeader
             title="Rapports de scouting"
-            description="Le bareme du score /100 n'est pas fixe par le CDC : les scores affiches sont ceux saisis par les evaluateurs, moyennes par la colonne calculee overall_score."
+            description="Le bareme du score /100 n'est pas fixe par le cahier des charges : les scores affiches sont ceux saisis par les evaluateurs, et la note globale est calculee cote serveur."
           />
           <Table>
             <TableHeader>

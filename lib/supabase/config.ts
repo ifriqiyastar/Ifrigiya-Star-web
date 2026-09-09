@@ -26,10 +26,17 @@ export function requireSupabaseEnv(): { url: string; key: string } {
 }
 
 /**
- * URL publique d'un objet de stockage. Reservee aux buckets publics
- * (`avatars`, `player-videos`, `player-photos`, `player-cv`, `post-media`) ;
- * pour les buckets prives, passer par la route `/admin/documents` qui signe
- * l'URL avec la session administrateur.
+ * URL publique d'un objet de stockage.
+ *
+ * ⚠️ **Reservee aux trois buckets reellement publics** : `avatars`,
+ * `player-videos` et `post-media`. Verifie contre la base le 2026-08-31 —
+ * `select id, public from storage.buckets` — parce que le commentaire
+ * precedent listait aussi `player-photos` et `player-cv`, qui sont **prives**
+ * (le bucket des photos a ete cree a la main sans la case « public », comme le
+ * note le CLAUDE.md mobile). Resultat : toutes les photos de joueur et tous
+ * les CV du back-office pointaient sur une URL qui ne repond pas.
+ *
+ * Pour un bucket prive, utiliser `privateStorageUrl()`.
  */
 export function publicStorageUrl(bucket: string, path: string | null | undefined) {
   if (!SUPABASE_URL || !path) return null;
@@ -37,4 +44,15 @@ export function publicStorageUrl(bucket: string, path: string | null | undefined
     .split("/")
     .map(encodeURIComponent)
     .join("/")}`;
+}
+
+/**
+ * URL d'un objet de bucket **prive**, servie par la route `/admin/documents`
+ * qui signe l'acces avec la session administrateur (5 minutes) et redirige.
+ * Convient aussi bien a un `<a href>` qu'a un `<img src>` : le navigateur suit
+ * la redirection.
+ */
+export function privateStorageUrl(bucket: string, path: string | null | undefined) {
+  if (!path) return null;
+  return `/admin/documents?bucket=${encodeURIComponent(bucket)}&path=${encodeURIComponent(path)}`;
 }

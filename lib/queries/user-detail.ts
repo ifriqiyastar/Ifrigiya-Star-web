@@ -81,10 +81,19 @@ export async function getUserDossier(profileId: string, role: string) {
 }
 
 /** Contenus produits par le compte, pour la moderation ciblee (§12.2). */
+/**
+ * Les medias du compte, plus quatre compteurs.
+ *
+ * Les publications, commentaires, signalements et blocages ne sont plus
+ * *listes* sur la fiche — ils se traitent dans « Moderation ». On n'en garde
+ * donc que le nombre, et on le demande en `count: exact, head: true` : la
+ * version precedente chargeait cinquante lignes de chaque table pour en lire
+ * la longueur.
+ */
 export async function getUserContent(profileId: string, role: string) {
   const supabase = await createClient();
 
-  const [videos, photos, cvs, posts, comments, reportsAbout, reportsBy] = await Promise.all([
+  const [videos, photos, cvs, posts, reportsAbout, blocksReceived] = await Promise.all([
     role === "player"
       ? supabase
           .from("player_videos")
@@ -108,36 +117,27 @@ export async function getUserContent(profileId: string, role: string) {
       : Promise.resolve({ data: [] }),
     supabase
       .from("posts")
-      .select("id, content, media_type, media_url, is_hidden, is_deleted, created_at")
-      .eq("author_id", profileId)
-      .order("created_at", { ascending: false })
-      .limit(50),
-    supabase
-      .from("post_comments")
-      .select("id, post_id, content, is_hidden, is_deleted, created_at")
-      .eq("author_id", profileId)
-      .order("created_at", { ascending: false })
-      .limit(50),
+      .select("id", { count: "exact", head: true })
+      .eq("author_id", profileId),
     supabase
       .from("reports")
-      .select("id, target_type, target_id, reason, status, moderation_action, created_at")
-      .eq("target_id", profileId)
-      .order("created_at", { ascending: false }),
+      .select("id", { count: "exact", head: true })
+      .eq("target_id", profileId),
+    // Blocages recus : lisibles par l'administration (`blocks_admin_read`)
+    // mais jamais modifiables par elle — c'est une decision d'utilisateur.
     supabase
-      .from("reports")
-      .select("id, target_type, target_id, reason, status, created_at")
-      .eq("reporter_id", profileId)
-      .order("created_at", { ascending: false }),
+      .from("user_blocks")
+      .select("blocker_id", { count: "exact", head: true })
+      .eq("blocked_id", profileId),
   ]);
 
   return {
     videos: (videos.data ?? []) as Record<string, string | number | null>[],
     photos: (photos.data ?? []) as Record<string, string | null>[],
     cvs: (cvs.data ?? []) as Record<string, string | boolean | null>[],
-    posts: (posts.data ?? []) as Record<string, string | boolean | null>[],
-    comments: (comments.data ?? []) as Record<string, string | boolean | null>[],
-    reportsAbout: (reportsAbout.data ?? []) as Record<string, string | null>[],
-    reportsBy: (reportsBy.data ?? []) as Record<string, string | null>[],
+    postsCount: posts.count ?? 0,
+    reportsAboutCount: reportsAbout.count ?? 0,
+    blocksReceivedCount: blocksReceived.count ?? 0,
   };
 }
 
@@ -145,7 +145,7 @@ export async function getUserContent(profileId: string, role: string) {
 export async function getUserFinances(profileId: string, role: string) {
   const supabase = await createClient();
 
-  const [subscriptions, payments, plans, registrations, views, favorites, audit] =
+  const [subscriptions, payments, plans, registrations, views, favorites] =
     await Promise.all([
       supabase
         .from("subscriptions")
@@ -179,12 +179,6 @@ export async function getUserFinances(profileId: string, role: string) {
             .select("player_id", { count: "exact", head: true })
             .eq("player_id", profileId)
         : Promise.resolve({ count: 0 }),
-      supabase
-        .from("admin_audit_log")
-        .select("id, admin_id, action, target_type, target_id, metadata, created_at")
-        .eq("target_id", profileId)
-        .order("created_at", { ascending: false })
-        .limit(50),
     ]);
 
   const scoutDayIds = (registrations.data ?? []).map(
@@ -207,6 +201,5 @@ export async function getUserFinances(profileId: string, role: string) {
     ),
     viewsCount: ("count" in views ? views.count : 0) ?? 0,
     favoritesCount: ("count" in favorites ? favorites.count : 0) ?? 0,
-    audit: (audit.data ?? []) as Record<string, unknown>[],
   };
 }

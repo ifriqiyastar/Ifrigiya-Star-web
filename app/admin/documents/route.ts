@@ -15,7 +15,16 @@ import { createClient } from "@/lib/supabase/server";
  * La liste blanche de buckets est volontaire : ce handler ne doit pas pouvoir
  * servir a lire un chemin arbitraire d'un autre bucket.
  */
-const ALLOWED_BUCKETS = new Set(["identity-documents", "professional-documents", "guardian-documents"]);
+// Les buckets prives du projet. `player-photos` et `player-cv` en font partie
+// — verifie contre `storage.buckets` — alors qu'ils etaient traites comme
+// publics ailleurs dans le code.
+const ALLOWED_BUCKETS = new Set([
+  "identity-documents",
+  "professional-documents",
+  "guardian-documents",
+  "player-photos",
+  "player-cv",
+]);
 
 const EXPIRY_SECONDS = 60 * 5;
 
@@ -38,11 +47,20 @@ export async function GET(request: NextRequest) {
     .createSignedUrl(path, EXPIRY_SECONDS);
 
   if (error || !data?.signedUrl) {
+    // Deux causes tres differentes, et le message brut ne les distingue pas :
+    // le **bucket** peut ne pas exister du tout — l'`insert into
+    // storage.buckets` de la migration 0012 n'a jamais pris sur ce projet, la
+    // table appartenant a `supabase_storage_admin` et le `on conflict do
+    // nothing` ayant masque l'echec — ou le bucket existe et c'est le
+    // **chemin** qui ne pointe sur rien. On nomme la premiere, qui se corrige
+    // en une minute depuis le dashboard.
+    const bucketMissing = /bucket.*not found|does not exist/i.test(error?.message ?? "");
     return NextResponse.json(
       {
-        error:
-          error?.message ??
-          "Document introuvable dans le stockage. Le chemin enregistre en base ne correspond peut-etre a aucun fichier.",
+        error: bucketMissing
+          ? `Le bucket « ${bucket} » n'existe pas sur ce projet Supabase. Creez-le depuis Storage → New bucket, en le laissant **prive**, puis reessayez. (Verification : select id, public from storage.buckets;)`
+          : (error?.message ??
+            "Document introuvable dans le stockage. Le chemin enregistre en base ne correspond peut-etre a aucun fichier."),
       },
       { status: 404 },
     );

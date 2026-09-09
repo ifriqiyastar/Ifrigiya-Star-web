@@ -42,8 +42,7 @@ insert into public.admin_permissions (code, description) values
   ('users.write', 'Modifier les comptes'), ('verifications.review', 'Traiter les validations'),
   ('moderation.manage', 'Moderer les contenus'), ('events.manage', 'Gerer les Scout Days'),
   ('evaluations.manage', 'Gerer les evaluations'), ('finance.manage', 'Gerer les finances'),
-  ('notifications.manage', 'Gerer les notifications'), ('audit.read', 'Consulter le journal'),
-  ('admins.manage', 'Gerer les roles administrateurs')
+  ('notifications.manage', 'Gerer les notifications'), ('audit.read', 'Consulter le journal')
 on conflict (code) do update set description = excluded.description;
 
 insert into public.admin_role_permissions (role_id, permission_id)
@@ -147,9 +146,9 @@ drop policy if exists admin_role_permissions_read on public.admin_role_permissio
 create policy admin_role_permissions_read on public.admin_role_permissions for select to authenticated using (public.is_admin());
 drop policy if exists admin_user_roles_read on public.admin_user_roles;
 create policy admin_user_roles_read on public.admin_user_roles for select to authenticated using (public.is_admin());
-drop policy if exists admin_user_roles_manage on public.admin_user_roles;
-create policy admin_user_roles_manage on public.admin_user_roles for all to authenticated
-using (public.admin_has_permission('admins.manage')) with check (public.admin_has_permission('admins.manage'));
+-- Aucune policy d'ecriture sur `admin_user_roles` : l'ecran d'attribution des
+-- roles ne figure pas au cahier des charges et a ete retire. L'attribution se
+-- fait dans l'editeur SQL de Supabase, qui passe outre RLS.
 drop policy if exists admin_campaigns_manage on public.admin_notification_campaigns;
 create policy admin_campaigns_manage on public.admin_notification_campaigns for all to authenticated
 using (public.admin_has_permission('notifications.manage')) with check (public.admin_has_permission('notifications.manage'));

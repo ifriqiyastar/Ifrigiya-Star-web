@@ -26,7 +26,11 @@ export function DocumentPreviewDialog({
     <Dialog>
       <DialogTrigger
         render={
+          // Meme raison que les autres declencheurs : `Button` et
+          // `DialogTrigger` posent chacun leur `data-slot`, et la fusion ne
+          // tranche pas pareil serveur/client (erreur d'hydratation).
           <Button
+            data-slot="dialog-trigger"
             type="button"
             variant={compact ? "ghost" : "outline"}
             size={compact ? "icon-xs" : "sm"}

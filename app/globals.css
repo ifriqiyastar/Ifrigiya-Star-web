@@ -83,8 +83,9 @@
 
   --brand: #8bcc00;
   --brand-foreground: #000000;
-  --brand-from: #c3f53c;
-  --brand-to: #8bcc00;
+  --brand-from: #d5ff4e;
+  --brand-mid: #9cea18;
+  --brand-to: #68c907;
   --surface: #ffffff;
   --sidebar-pill: #F0F0F3;
   --success: #4B9E3F;
@@ -142,8 +143,11 @@
 
   --brand: #aff70f;
   --brand-foreground: #0B0B0C;
-  --brand-from: #CBFB55;         /* degrade des boutons et de l'onglet actif */
-  --brand-to: #9AE80A;
+  /* Arrets exacts de l'entree de navigation active : c'est LE degrade de
+     marque, et il n'est defini qu'ici. */
+  --brand-from: #d5ff4e;
+  --brand-mid: #9cea18;
+  --brand-to: #68c907;
   --surface: #171718;
   --sidebar-pill: #1E1E20;
   --success: #7BD650;
@@ -235,23 +239,59 @@
    espace de travail clair et rail lateral profond. Ces variables restent
    scopees a /admin et ne modifient pas la vitrine ni la connexion. */
 .admin-dashboard-shell {
-  --background: #101010;
-  --foreground: #ffffff;
-  --card: #1b1b1b;
-  --card-foreground: #ffffff;
-  --popover: #1b1b1b;
-  --popover-foreground: #ffffff;
-  --muted: #242424;
-  --muted-foreground: #a9a9a9;
-  --accent: #292929;
-  --accent-foreground: #ffffff;
-  --border: #303030;
-  --input: #383838;
-  --sidebar: #1c1d1c;
-  --sidebar-foreground: #ffffff;
-  --sidebar-accent: #aff70f;
-  --sidebar-accent-foreground: #000000;
-  --sidebar-border: #303030;
+  /* Palette mesuree directement sur les sept maquettes de reference. Elle est
+     volontairement froide : les noirs tirent vers le bleu, jamais vers le
+     vert. Les valeurs dominantes des captures sont conservees telles quelles
+     pour que le rail, le plan de travail et les panneaux gardent leur ecart. */
+  --background: #0b0e12;
+  --foreground: #e1e2e8;
+  --card: #191c20;
+  --card-foreground: #e1e2e8;
+  --popover: #191c20;
+  --popover-foreground: #e1e2e8;
+  --primary: #9ee939;
+  --primary-foreground: #0b0e12;
+  --secondary: #1d2024;
+  --secondary-foreground: #e1e2e8;
+  --muted: #1d2024;
+  --muted-foreground: #899181;
+  --accent: #272a2e;
+  --accent-foreground: #e1e2e8;
+  --border: #272a2e;
+  --input: #323539;
+  --ring: #9ee939;
+
+  --brand: #9ee939;
+  --brand-foreground: #0b0e12;
+  --brand-from: #9ee939;
+  --brand-mid: #9ee939;
+  --brand-to: #9ee939;
+  --surface: #191c20;
+  --success: #84cc16;
+  --warning: #fea518;
+  --info: #7bd0ff;
+  --destructive: #f05260;
+  --danger-surface: #93000a;
+
+  --chart-1: #9ee939;
+  --chart-2: #84cc16;
+  --chart-3: #7bd0ff;
+  --chart-4: #fea518;
+  --chart-5: #f05260;
+  /* Angles nettement moins ronds : les maquettes empilent des blocs
+     rectangulaires denses, pas des cartes a coins doux. */
+  /* Les interfaces de reference sont denses et presque orthogonales. Les
+     composants gardent juste assez de rayon pour rester tactiles, sans
+     prendre l'allure de cartes grand public. */
+  --radius: 0.375rem;
+  --sidebar: #111418;
+  --sidebar-foreground: #e1e2e8;
+  --sidebar-primary: #9ee939;
+  --sidebar-primary-foreground: #0b0e12;
+  --sidebar-accent: #9ee939;
+  --sidebar-accent-foreground: #0b0e12;
+  --sidebar-border: #272a2e;
+  --sidebar-ring: #9ee939;
   position: relative;
   width: 100%;
   min-height: 100svh;
@@ -267,6 +307,14 @@
   box-shadow: none;
 }
 
+/* Les surfaces superposees gagnent un peu de profondeur sans halo diffus :
+   c'est ce qui preserve la hierarchie sur les longs tableaux sombres. */
+.admin-dashboard-shell [data-slot="card"],
+.admin-dashboard-shell [data-slot="dialog-content"],
+.admin-dashboard-shell [data-slot="dropdown-menu-content"] {
+  box-shadow: 0 12px 28px rgb(0 0 0 / 0.16);
+}
+
 .admin-dashboard-shell [data-slot="sidebar-inner"] {
   color: var(--sidebar-foreground);
 }
@@ -276,10 +324,8 @@
 }
 
 .admin-dashboard-shell [data-slot="sidebar-inner"] {
-  border-right: 1px solid rgb(255 255 255 / 0.055);
-  background:
-    radial-gradient(circle at 50% 100%, rgb(175 247 15 / 0.055), transparent 32%),
-    var(--sidebar);
+  border-right: 1px solid var(--sidebar-border);
+  background: var(--sidebar);
 }
 
 .admin-dashboard-shell [data-slot="sidebar-content"] {
@@ -295,30 +341,23 @@
 }
 
 body:has(.admin-dashboard-shell) {
-  background: #101010;
+  background: #0b0e12;
 }
 
+/* L'element actif du rail n'est plus un bouton plein lime mais un fond sourd
+   et un liseré : le texte reste donc lime, pas noir. */
 .admin-dashboard-shell [data-slot="sidebar-menu-button"][data-active="true"] {
-  color: #000000;
+  color: var(--brand);
 }
 
 .admin-dashboard-shell [data-slot="sidebar-menu-button"]:not([data-active="true"]):hover {
-  background: #2b2b2b;
-  color: #ffffff;
+  background: #1d2024;
+  color: #e1e2e8;
 }
 
-.admin-dashboard-shell .dashboard-metric::after {
-  position: absolute;
-  right: -15%;
-  bottom: -65%;
-  width: 75%;
-  height: 115%;
-  border-radius: 999px;
-  background: #aff70f;
-  content: "";
-  filter: blur(38px);
-  opacity: 0.2;
-  pointer-events: none;
+.admin-dashboard-shell [data-slot="input"],
+.admin-dashboard-shell [data-slot="select-trigger"] {
+  background: #101318;
 }
 
 @media (min-width: 640px) {
@@ -339,11 +378,16 @@ body:has(.admin-dashboard-shell) {
 }
 
 @media (min-width: 768px) {
+  /* Le rail reste colle au viewport pendant le defilement de la page.
+     `position: absolute` + `height: 100%` le rendaient solidaire de la hauteur
+     totale du document : il remontait donc avec le scroll. `fixed` + `100svh`
+     le detachent du flux, et l'element `sidebar-gap` de shadcn continue de
+     reserver la largeur pour que le contenu ne passe pas dessous. */
   .admin-dashboard-shell [data-slot="sidebar-container"] {
-    position: absolute;
+    position: fixed;
     inset-block: 0;
     left: 0;
-    height: 100%;
+    height: 100svh;
   }
 
   .admin-dashboard-shell [data-slot="sidebar-inner"] {
@@ -365,24 +409,134 @@ body:has(.admin-dashboard-shell) {
      actif, pastilles de variation. Declare une fois ici plutot qu'en classes
      `bg-gradient-to-br from-… to-…` repetees partout. */
   .bg-brand-gradient {
-    background-image: linear-gradient(135deg, var(--brand-from), var(--brand-to));
+    background-image: linear-gradient(
+      100deg,
+      var(--brand-from) 0%,
+      var(--brand-mid) 52%,
+      var(--brand-to) 100%
+    );
   }
 
   /* Halo diffus au fond des tuiles d'indicateurs. Deux teintes, comme la
      maquette : vert pour les metriques de volume, turquoise pour la derniere
      tuile de chaque rangee. */
   .glow-lime {
-    background-image: radial-gradient(
-      130% 110% at 28% 130%,
-      color-mix(in oklch, var(--brand) 22%, transparent),
-      transparent 62%
-    );
+    background-image: none;
   }
   .glow-teal {
+    background-image: none;
+  }
+
+  /* Micro-libelle en capitales espacees : l'unite typographique des maquettes
+     (fil d'ariane, en-tetes de tableau, intitules de tuiles, legendes). Declare
+     ici parce qu'elle revient sur chaque ecran et qu'une seule definition evite
+     que trois variantes de `tracking` cohabitent. */
+  .micro-label {
+    font-size: 0.625rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    line-height: 1.2;
+  }
+
+  /* Ligne de tableau qui demande une decision : liseré lime a gauche et fond
+     legerement releve, comme la file de moderation des maquettes. La couleur
+     n'est jamais seule a porter l'information — la ligne garde sa pastille de
+     statut. */
+  .row-flagged {
+    background: color-mix(in oklch, var(--brand) 7%, transparent);
+  }
+
+  /* Le liseré est pose sur la premiere cellule, pas sur la ligne : avec
+     `border-collapse: collapse`, une ombre interne appliquee au `tr` n'est pas
+     rendue de facon fiable. */
+  .row-flagged > td:first-child {
+    box-shadow: inset 3px 0 0 0 var(--brand);
+  }
+}
+
+
+/* =====================================================================
+   Site public (landing page) — palette de la charte graphique
+   d'Ifriqiya Star (Wii Studio, aout 2026), et d'elle seule.
+
+   Quatre couleurs, pas une de plus : #000000, #aff70f, #CCCCCC, #FFFFFF.
+   C'est un bloc **scope**, comme `.admin-dashboard-shell` : le back-office
+   garde ses propres tokens (#0B0B0C / #171718 …), qui sont une declinaison
+   du noir de la charte et non la charte elle-meme. Modifier l'un ne touche
+   pas l'autre — et c'est voulu.
+   ===================================================================== */
+.site-shell {
+  --site-bg: #000000;
+  --site-fg: #ffffff;
+  --site-muted: #cccccc;
+  --site-accent: #aff70f;
+  --site-ink: #000000;
+  --site-card: #0a0a0a;
+  --site-line: rgba(255, 255, 255, 0.09);
+  --site-line-strong: rgba(255, 255, 255, 0.16);
+
+  background-color: var(--site-bg);
+  color: var(--site-fg);
+}
+
+@layer utilities {
+  /* Trame de fond de la maquette : un quadrillage tres discret, qui donne
+     l'echelle sans jamais concurrencer le contenu. */
+  .site-grid {
+    background-image:
+      linear-gradient(to right, var(--site-line) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--site-line) 1px, transparent 1px);
+    background-size: 88px 88px;
+  }
+
+  /* Le halo vert de la charte : present sur chaque planche du guideline,
+     toujours en bas a gauche, toujours diffus. */
+  .site-glow {
     background-image: radial-gradient(
-      130% 110% at 28% 130%,
-      color-mix(in oklch, #2DD4BF 20%, transparent),
-      transparent 62%
+      60% 55% at 12% 100%,
+      color-mix(in srgb, var(--site-accent) 26%, transparent),
+      transparent 70%
     );
+  }
+  .site-glow-center {
+    background-image: radial-gradient(
+      50% 60% at 50% 110%,
+      color-mix(in srgb, var(--site-accent) 20%, transparent),
+      transparent 72%
+    );
+  }
+
+  /* Chassis de telephone. Le contenu est une vraie capture de l'app, donc
+     le cadre reste sobre : une bordure, un rayon, une ombre portee. */
+  .site-phone {
+    border-radius: 2.25rem;
+    border: 1px solid var(--site-line-strong);
+    background: #050505;
+    padding: 0.4rem;
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, 0.9),
+      0 30px 80px -20px rgba(0, 0, 0, 0.9),
+      0 0 60px -30px color-mix(in srgb, var(--site-accent) 60%, transparent);
+  }
+
+  /* Defilement horizontal continu des valeurs. `prefers-reduced-motion`
+     l'arrete : une bande qui bouge en permanence est un obstacle reel. */
+  .site-marquee {
+    animation: site-marquee 38s linear infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .site-marquee {
+      animation: none;
+    }
+  }
+}
+
+@keyframes site-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
   }
 }

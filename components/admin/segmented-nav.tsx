@@ -2,7 +2,13 @@ import Link from "next/link";
 
 import { cn } from "@/lib/utils";
 
-export type Segment = { value: string; label: string; count?: number };
+export type Segment = {
+  value: string;
+  label: string;
+  count?: number;
+  /** Icone posee devant le libelle, comme dans les maquettes de validation. */
+  icon?: React.ComponentType<{ className?: string }>;
+};
 
 /**
  * Onglets rendus en liens : l'onglet actif vit dans l'URL, donc la page reste
@@ -38,7 +44,7 @@ export function SegmentedNav({
   return (
     <div
       className={cn(
-        "-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0",
+        "-mx-4 flex gap-1 overflow-x-auto border-y border-border bg-card p-1 sm:mx-0 sm:w-fit sm:rounded-lg sm:border",
         className,
       )}
     >
@@ -50,18 +56,23 @@ export function SegmentedNav({
             href={href(segment.value)}
             aria-current={isActive ? "page" : undefined}
             className={cn(
-              "flex shrink-0 items-center gap-2 rounded-full border px-3.5 py-2 text-xs font-semibold tracking-wide transition-colors",
+              "flex shrink-0 items-center gap-2 rounded-md border border-transparent px-3 py-2 text-xs font-semibold transition-colors",
               isActive
-                ? "border-brand bg-brand text-brand-foreground"
-                : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground",
+                ? "bg-brand text-brand-foreground"
+                : "text-muted-foreground hover:bg-secondary hover:text-foreground",
             )}
           >
+            {segment.icon ? (
+              <segment.icon
+                className={cn("size-3.5", isActive ? "" : "text-muted-foreground")}
+              />
+            ) : null}
             {segment.label}
             {typeof segment.count === "number" && segment.count > 0 ? (
               <span
                 className={cn(
                   "rounded-full px-1.5 py-0.5 text-[0.625rem] tabular-nums",
-                  isActive ? "bg-black/15" : "bg-accent",
+                  isActive ? "bg-black/15 font-bold" : "bg-secondary text-muted-foreground",
                 )}
               >
                 {segment.count}

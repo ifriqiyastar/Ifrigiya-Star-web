@@ -31,6 +31,8 @@ export function NavUser({
   user: {
     name: string
     email: string
+    /** Role RBAC affiche sous l'adresse, comme dans les maquettes. */
+    roleLabel?: string
     avatar?: string
   }
 }) {
@@ -49,23 +51,25 @@ export function NavUser({
             render={
               <SidebarMenuButton
                 size="lg"
-                className="h-14 rounded-full border border-white/[0.07] bg-white/[0.065] px-2 text-white hover:bg-white/10 aria-expanded:bg-white/10"
+                className="h-12 rounded-lg border border-sidebar-border bg-secondary/40 px-2 text-sidebar-foreground hover:bg-secondary aria-expanded:bg-secondary"
               />
             }
           >
-            <Avatar className="size-9 ring-1 ring-white/10">
+            <Avatar className="size-8 rounded-lg">
               <AvatarImage src={user.avatar} alt={user.name} />
-              <AvatarFallback className="bg-primary font-semibold text-black">
+              <AvatarFallback className="rounded-lg bg-primary font-semibold text-black">
                 {initials(user.name || user.email)}
               </AvatarFallback>
             </Avatar>
-            <div className="grid flex-1 text-left text-sm leading-tight">
-              <span className="truncate text-xs font-semibold">{user.name}</span>
-              <span className="truncate text-[0.625rem] text-white/45">
+            <div className="grid flex-1 text-left leading-tight">
+              <span className="truncate text-[0.6875rem] font-medium text-sidebar-foreground/80">
                 {user.email}
               </span>
+              <span className="micro-label truncate text-brand">
+                {user.roleLabel ?? user.name}
+              </span>
             </div>
-            <EllipsisVerticalIcon className="ml-auto size-3.5 text-white/50" />
+            <EllipsisVerticalIcon className="ml-auto size-3.5 text-sidebar-foreground/50" />
           </DropdownMenuTrigger>
           <DropdownMenuContent
             className="min-w-56"
@@ -95,9 +99,10 @@ export function NavUser({
                 <ShieldCheckIcon />
                 Validations
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <BellIcon
-                />
+              {/* Le lien manquait : l'entree n'etait cliquable que pour ne
+                  rien faire. */}
+              <DropdownMenuItem render={<a href="/admin/notifications" />}>
+                <BellIcon />
                 Notifications
               </DropdownMenuItem>
             </DropdownMenuGroup>

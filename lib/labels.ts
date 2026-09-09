@@ -22,7 +22,12 @@ export type DocumentStatus = "en_attente" | "valide" | "refuse";
 export type ProfessionalType = "recruteur" | "club" | "academie" | "agent";
 export type PlayerLevel = "amateur" | "semi_professionnel" | "professionnel";
 export type FootPreference = "gauche" | "droit" | "ambidextre";
-export type ScoutDayStatus = "brouillon" | "publie" | "annule" | "cloture";
+export type ScoutDayStatus =
+  | "brouillon"
+  | "en_attente_validation"
+  | "publie"
+  | "annule"
+  | "cloture";
 export type RegistrationStatus =
   | "inscrit"
   | "confirme"
@@ -30,7 +35,7 @@ export type RegistrationStatus =
   | "annule"
   | "present"
   | "absent";
-export type ReportStatus = "en_attente" | "traite" | "rejete";
+export type ReportStatus = "en_attente" | "a_valider" | "traite" | "rejete";
 export type ModerationAction = "aucune" | "masque" | "supprime" | "utilisateur_suspendu";
 export type ReportableType =
   | "profil_joueur"
@@ -113,6 +118,7 @@ export const FOOT_PREFERENCE: Dict<FootPreference> = {
 
 export const SCOUT_DAY_STATUS: Dict<ScoutDayStatus> = {
   brouillon: { label: "Brouillon", tone: "neutral" },
+  en_attente_validation: { label: "En attente de validation", tone: "warning" },
   publie: { label: "Publie", tone: "success" },
   annule: { label: "Annule", tone: "danger" },
   cloture: { label: "Cloture", tone: "info" },
@@ -129,6 +135,7 @@ export const REGISTRATION_STATUS: Dict<RegistrationStatus> = {
 
 export const REPORT_STATUS: Dict<ReportStatus> = {
   en_attente: { label: "En attente", tone: "warning" },
+  a_valider: { label: "Retrait a valider", tone: "brand" },
   traite: { label: "Traite", tone: "success" },
   rejete: { label: "Rejete", tone: "neutral" },
 };

@@ -90,3 +90,17 @@ export function timeAgo(value: string | null | undefined) {
   if (days < 31) return `il y a ${days} j`;
   return formatDate(value);
 }
+
+/**
+ * Duree en clair a partir d'un nombre de millisecondes : « 14 min », « 3 h »,
+ * « 2 j ». Sert aux delais moyens des files de travail, ou une valeur en
+ * millisecondes ne se lit pas.
+ */
+export function formatDuration(ms: number) {
+  const minutes = Math.round(ms / 60000);
+  if (minutes < 1) return "moins d'une minute";
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 48) return `${hours} h`;
+  return `${Math.round(hours / 24)} j`;
+}

@@ -12,12 +12,14 @@ export function Pagination({
   page,
   pageSize,
   total,
+  pageParam = "page",
 }: {
   basePath: string;
   params: Record<string, string | undefined>;
   page: number;
   pageSize: number;
   total: number;
+  pageParam?: string;
 }) {
   const lastPage = Math.max(1, Math.ceil(total / pageSize));
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
@@ -26,9 +28,9 @@ export function Pagination({
   const href = (target: number) => {
     const next = new URLSearchParams();
     for (const [key, value] of Object.entries(params)) {
-      if (value && key !== "page") next.set(key, value);
+      if (value && key !== pageParam) next.set(key, value);
     }
-    if (target > 1) next.set("page", String(target));
+    if (target > 1) next.set(pageParam, String(target));
     const query = next.toString();
     return query ? `${basePath}?${query}` : basePath;
   };

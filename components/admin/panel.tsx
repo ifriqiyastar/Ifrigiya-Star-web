@@ -15,8 +15,8 @@ export function Panel({
   return (
     <section
       className={cn(
-        "overflow-hidden rounded-2xl bg-card ring-1 ring-white/5",
-        highlighted && "ring-brand/40",
+        "overflow-hidden rounded-lg border border-border bg-card",
+        highlighted && "border-brand/40",
         className,
       )}
       {...props}
@@ -28,25 +28,35 @@ export function PanelHeader({
   title,
   description,
   action,
+  icon: Icon,
   className,
 }: {
   title: React.ReactNode;
   description?: React.ReactNode;
   action?: React.ReactNode;
+  /** Icone de section, posee dans un carre sourd devant le titre. */
+  icon?: React.ComponentType<{ className?: string }>;
   className?: string;
 }) {
   return (
     <header
       className={cn(
-        "flex flex-wrap items-start justify-between gap-3 px-4 pt-4 pb-3 sm:px-5",
+        "flex flex-wrap items-start justify-between gap-3 border-b border-border/70 px-4 py-3 sm:px-4",
         className,
       )}
     >
-      <div className="min-w-0 space-y-1">
-        <h2 className="font-heading text-base font-bold">{title}</h2>
-        {description ? (
-          <p className="text-xs leading-relaxed text-muted-foreground">{description}</p>
+      <div className="flex min-w-0 items-start gap-2.5">
+        {Icon ? (
+          <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-brand/12 text-brand">
+            <Icon className="size-3.5" />
+          </span>
         ) : null}
+        <div className="min-w-0 space-y-1">
+          <h2 className="font-heading text-sm leading-tight font-bold sm:text-base">{title}</h2>
+          {description ? (
+            <p className="max-w-3xl text-[0.6875rem] leading-relaxed text-muted-foreground">{description}</p>
+          ) : null}
+        </div>
       </div>
       {action ? <div className="flex shrink-0 items-center gap-2">{action}</div> : null}
     </header>

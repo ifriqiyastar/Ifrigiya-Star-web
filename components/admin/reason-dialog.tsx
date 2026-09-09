@@ -20,6 +20,22 @@ import { Textarea } from "@/components/ui/textarea";
 import type { ActionResult } from "@/lib/actions/result";
 
 /**
+ * Base UI compose le declencheur via `render` : le `Button` pose
+ * `data-slot="button"`, `DialogTrigger` pose `data-slot="dialog-trigger"`, et
+ * la fusion des deux ne tranche pas pareil au rendu serveur et au rendu
+ * client — d'ou une erreur d'hydratation sur *chaque* dialogue rendu dans une
+ * page serveur. On impose donc la valeur du primitif a l'element passe : les
+ * deux passes produisent alors le meme attribut.
+ */
+function asTrigger(trigger: React.ReactNode): React.ReactElement {
+  return React.isValidElement(trigger)
+    ? React.cloneElement(trigger as React.ReactElement<Record<string, unknown>>, {
+        "data-slot": "dialog-trigger",
+      })
+    : (trigger as unknown as React.ReactElement);
+}
+
+/**
  * Actions qui exigent un motif : refus d'un profil, suspension d'un compte,
  * rejet d'un justificatif. Le motif alimente `status_reason` /
  * `rejection_reason`, colonnes prevues pour ca dans le schema — c'est ce que
@@ -74,7 +90,7 @@ export function ReasonDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={trigger as React.ReactElement} />
+      <DialogTrigger render={asTrigger(trigger)} />
       <DialogContent>
         <form onSubmit={submit} className="contents">
           <DialogHeader>

@@ -4,16 +4,14 @@ import {
   ClipboardCheckIcon,
   FlagIcon,
   LayoutDashboardIcon,
-  ScrollTextIcon,
   ShieldCheckIcon,
-  SettingsIcon,
   UsersIcon,
   WalletIcon,
 } from "lucide-react";
 import type { AdminPermission } from "@/lib/auth";
 
 /**
- * Les sept sections du back-office, dans l'ordre du cahier des charges §12.
+ * Les sections du back-office, dans l'ordre du cahier des charges §12.
  * `badge` designe le compteur passe par le layout (files d'attente).
  */
 export const NAV_ITEMS = [
@@ -53,7 +51,7 @@ export const NAV_ITEMS = [
     href: "/admin/scout-days",
     label: "Scout Days",
     icon: CalendarDaysIcon,
-    badge: null,
+    badge: "scoutDays" as const,
     permission: "events.manage" as AdminPermission,
     section: "Operations" as const,
   },
@@ -74,14 +72,6 @@ export const NAV_ITEMS = [
     section: "Communication" as const,
   },
   {
-    href: "/admin/acces",
-    label: "Acces administrateurs",
-    icon: SettingsIcon,
-    badge: null,
-    permission: "admins.manage" as AdminPermission,
-    section: "Administration" as const,
-  },
-  {
     href: "/admin/finances",
     label: "Abonnements & paiements",
     icon: WalletIcon,
@@ -89,14 +79,6 @@ export const NAV_ITEMS = [
     permission: "finance.manage" as AdminPermission,
     section: "Pilotage" as const,
   },
-  {
-    href: "/admin/journal",
-    label: "Journal d'audit",
-    icon: ScrollTextIcon,
-    badge: null,
-    permission: "audit.read" as AdminPermission,
-    section: "Administration" as const,
-  },
 ] as const;
 
-export type NavBadges = { validations: number; signalements: number };
+export type NavBadges = { validations: number; signalements: number; scoutDays: number };

@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { logAdminAction, requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { describeError, fail, ok, type ActionResult } from "@/lib/actions/result";
+import { describeError, describeRpcError, fail, ok, type ActionResult } from "@/lib/actions/result";
 import type {
   DocumentStatus,
   IdentityVerificationStatus,
@@ -44,7 +44,7 @@ export async function setPlayerStatus(
     })
     .eq("id", playerId);
 
-  if (error) return fail(describeError(error));
+  if (error) return fail(describeStatusError(error));
 
   await logAdminAction(`player_status_${status}`, "player_profile", playerId, {
     status,
@@ -56,6 +56,54 @@ export async function setPlayerStatus(
       ? "Profil joueur valide."
       : `Statut du profil joueur mis a jour : ${status.replace(/_/g, " ")}.`,
   );
+}
+
+/**
+ * Validation groupee de plusieurs profils joueurs (« Validation groupee » des
+ * maquettes).
+ *
+ * Elle ne court-circuite rien : chaque ligne passe par la meme mise a jour que
+ * le geste unitaire, donc par `verifications.review`, par les policies RLS et
+ * par les triggers de `player_profiles`. Le compte rendu distingue les profils
+ * reellement valides de ceux que Postgres a refuses — un « 3 valides » global
+ * masquerait un echec silencieux.
+ */
+export async function bulkValidatePlayers(formData: FormData): Promise<ActionResult> {
+  const admin = await requirePermission("verifications.review");
+  const ids = formData.getAll("ids").map(String).filter(Boolean);
+  if (!ids.length) return fail("Selectionnez au moins un dossier.");
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("player_profiles")
+    .update({
+      status: "valide",
+      status_reason: null,
+      status_updated_by: admin.userId,
+      status_updated_at: new Date().toISOString(),
+    })
+    .in("id", ids)
+    .eq("status", "en_attente_validation")
+    .select("id");
+
+  if (error) return fail(describeStatusError(error));
+
+  const updated = data?.length ?? 0;
+  for (const id of data ?? []) {
+    await logAdminAction("player_status_valide", "player_profile", id.id, { bulk: true });
+  }
+  REFRESH();
+
+  if (!updated) {
+    return fail(
+      "Aucun profil n'a change d'etat : la selection a peut-etre deja ete traitee ailleurs.",
+    );
+  }
+  return updated === ids.length
+    ? ok(`${updated} profil(s) joueur valide(s).`)
+    : ok(
+        `${updated} profil(s) valide(s) sur ${ids.length} : les autres n'etaient plus en attente.`,
+      );
 }
 
 /** §12.1 — validation / refus / suspension d'un compte professionnel. */
@@ -77,7 +125,7 @@ export async function setProfessionalStatus(
     })
     .eq("id", professionalId);
 
-  if (error) return fail(describeError(error));
+  if (error) return fail(describeStatusError(error));
 
   await logAdminAction(`professional_status_${status}`, "professional_profile", professionalId, {
     status,
@@ -145,6 +193,25 @@ export async function setIdentityStatus(
   return ok(`Verification d'identite : ${status.replace(/_/g, " ")}.`);
 }
 
+/**
+ * Le refus le plus deroutant de la validation de compte.
+ *
+ * `notify_player_status_change()` / `notify_professional_status_change()`
+ * choisissent le type de notification par un `case … end`, dont les branches
+ * se resolvent **entre elles** avant la colonne cible : le resultat est `text`,
+ * et il n'existe aucune conversion implicite vers un enum. Les triggers etant
+ * `after update`, l'erreur remonte sur l'UPDATE lui-meme — passer un compte a
+ * « valide » devient tout simplement impossible, a la main comme depuis cet
+ * ecran. C'est ce que corrige la migration 0017, qui n'est pas dans la plage
+ * appliquee (« 0016, 0018-0029 ») du depot mobile.
+ */
+function describeStatusError(error: { code?: string; message: string; hint?: string | null }) {
+  if (error.code === "42804" || /notification_type/i.test(error.message)) {
+    return "Validation impossible : appliquez la migration 0017_notification_type_cast.sql (depot mobile). Sans elle, le trigger de notification refuse tout passage a « valide » ou « refuse » (42804).";
+  }
+  return describeError(error);
+}
+
 /** §12.1 — desactivation / reactivation d'un compte (reversible). */
 export async function setAccountActive(
   profileId: string,
@@ -153,19 +220,111 @@ export async function setAccountActive(
   await requirePermission("users.write");
   const supabase = await createClient();
 
-  const { error } = await supabase
-    .from("profiles")
-    .update({
-      is_active: isActive,
-      deactivated_at: isActive ? null : new Date().toISOString(),
-    })
-    .eq("id", profileId);
+  // `profiles.is_active` n'est pas ecrivable par une session administrateur :
+  // la migration 0025 a revoque ce privilege de colonne a `authenticated` pour
+  // qu'un utilisateur ne se promeuve pas. La RPC de 0044 le rend a Postgres,
+  // avec son propre controle `is_admin()`, et aligne le statut du profil
+  // metier — que le resolveur d'onboarding mobile lit, lui, pour laisser
+  // entrer ou non.
+  const { data, error } = await supabase.rpc("admin_set_account_active", {
+    p_profile_id: profileId,
+    p_active: isActive,
+    p_reason: null,
+  });
 
-  if (error) return fail(describeError(error));
+  if (error) {
+    return fail(
+      describeRpcError(
+        error,
+        "admin_set_account_active",
+        isActive ? "Reactivation indisponible" : "Desactivation indisponible",
+      ),
+    );
+  }
+  if (data === false) return fail("Compte introuvable.");
 
   await logAdminAction(isActive ? "reactivate_user" : "deactivate_user", "profile", profileId);
   REFRESH();
-  return ok(isActive ? "Compte reactive." : "Compte desactive.");
+  // « Compte reactive » etait exact et trompeur : la RPC de 0044 ne remonte
+  // pas le profil metier a « valide » mais a « en_attente_validation », et
+  // c'est un statut que l'application mobile bloque aussi. Reactiver ne rend
+  // donc pas l'acces — il rend le dossier a la file de validation.
+  return ok(
+    isActive
+      ? "Compte reactive. Le profil metier repasse en « en attente de validation » : l'utilisateur reste bloque a la connexion jusqu'a ce que vous validiez son dossier dans Validations."
+      : "Compte desactive et profil metier passe en « suspendu » : l'application refuse la connexion et deconnecte le compte au prochain demarrage.",
+  );
+}
+
+/**
+ * §12.1 — **lever une suspension**, en un seul geste.
+ *
+ * Lever une suspension demandait deux clics dans un ordre precis, et rien ne
+ * le disait :
+ *
+ *   1. « Reactiver » appelle `admin_set_account_active(true)`, qui remet
+ *      `is_active` mais renvoie le profil metier a `en_attente_validation` —
+ *      un statut que l'application mobile bloque **aussi** ;
+ *   2. « Valider le compte » le repasse a `valide`.
+ *
+ * Un administrateur qui s'arretait apres le premier clic croyait avoir rendu
+ * l'acces, alors que l'utilisateur restait dehors. Cette action enchaine les
+ * deux, dans l'ordre : sans l'etape 1 le compte reste `is_active = false`, et
+ * sans l'etape 2 il reste bloque.
+ *
+ * Le passage a `valide` declenche `notify_player_status_change` /
+ * `notify_professional_status_change` : l'utilisateur est prevenu que son
+ * profil est de nouveau valide. C'est voulu — on ne lui rend pas l'acces en
+ * silence.
+ */
+export async function liftSuspension(profileId: string): Promise<ActionResult> {
+  const admin = await requirePermission("users.write");
+  const supabase = await createClient();
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", profileId)
+    .maybeSingle();
+  if (!profile) return fail("Compte introuvable.");
+
+  // Etape 1 : `is_active` n'est pas ecrivable par une session administrateur
+  // (colonne revoquee par 0025), d'ou la RPC de 0044.
+  const { data: reactivated, error: activeError } = await supabase.rpc(
+    "admin_set_account_active",
+    { p_profile_id: profileId, p_active: true, p_reason: null },
+  );
+  if (activeError) {
+    return fail(
+      describeRpcError(activeError, "admin_set_account_active", "Levee de suspension indisponible"),
+    );
+  }
+  if (reactivated === false) return fail("Compte introuvable.");
+
+  // Etape 2 : le statut metier, ecrit directement — `player_profiles` et
+  // `professional_profiles` n'ont subi aucun revoke de colonne, et les
+  // policies `*_update_admin` autorisent l'ecriture.
+  const table = profile.role === "player" ? "player_profiles" : "professional_profiles";
+  if (profile.role === "player" || profile.role === "professional") {
+    const { error } = await supabase
+      .from(table)
+      .update({
+        status: "valide",
+        status_reason: null,
+        status_updated_by: admin.userId,
+        status_updated_at: new Date().toISOString(),
+      })
+      .eq("id", profileId);
+    if (error) {
+      return fail(
+        `Compte reactive, mais le profil metier est reste en attente de validation : ${describeStatusError(error)}`,
+      );
+    }
+  }
+
+  await logAdminAction("lift_suspension", "profile", profileId, { role: profile.role });
+  REFRESH();
+  return ok("Suspension levee : le compte est actif et son profil de nouveau valide.");
 }
 
 /** Visibilite du profil joueur dans la recherche professionnelle (§5.1). */
@@ -209,16 +368,19 @@ export async function deleteAccount(profileId: string): Promise<ActionResult> {
 
   if (!service) {
     const supabase = await createClient();
-    const { error } = await supabase
-      .from("profiles")
-      .update({
-        is_active: false,
-        deactivated_at: new Date().toISOString(),
-        deletion_requested_at: new Date().toISOString(),
-      })
-      .eq("id", profileId);
+    // Meme raison qu'au-dessus : `is_active` et `deactivated_at` sont revoques
+    // a `authenticated` depuis 0025, seul `deletion_requested_at` restait
+    // ecrivable — la desactivation echouait donc silencieusement a moitie.
+    const { data, error } = await supabase.rpc("admin_request_account_deletion", {
+      p_profile_id: profileId,
+    });
 
-    if (error) return fail(describeError(error));
+    if (error) {
+      return fail(
+        describeRpcError(error, "admin_request_account_deletion", "Suppression indisponible"),
+      );
+    }
+    if (data === false) return fail("Compte introuvable.");
 
     await logAdminAction("request_account_deletion", "profile", profileId, {
       reason: "SUPABASE_SERVICE_ROLE_KEY absente",
@@ -253,18 +415,39 @@ export async function updateProfileCore(
   };
 
   const role = text("role");
+  // `full_name`, `phone` et `locale` font partie des colonnes que 0025 a
+  // laissees ecrivables ; `role` non — il passe par la RPC de 0044, qui
+  // refuse au passage qu'un administrateur change le sien.
   const payload: Record<string, unknown> = {
     full_name: text("full_name"),
     phone: text("phone"),
     locale: text("locale") ?? "fr",
   };
-  // Le trigger `prevent_self_role_escalation` interdit a un utilisateur de
-  // changer son propre role ; on ne transmet donc la colonne que si elle
-  // change vraiment, pour ne pas declencher le garde-fou inutilement.
-  if (role && ["player", "professional", "admin"].includes(role)) payload.role = role;
 
   const { error } = await supabase.from("profiles").update(payload).eq("id", profileId);
   if (error) return fail(describeError(error));
+
+  if (role && ["player", "professional", "admin"].includes(role)) {
+    const { data: current } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", profileId)
+      .maybeSingle();
+    // On n'appelle la RPC que si le role change vraiment : inutile de
+    // declencher le garde-fou anti-escalade pour une valeur identique.
+    if (current && current.role !== role) {
+      const { error: roleError } = await supabase.rpc("admin_set_account_role", {
+        p_profile_id: profileId,
+        p_role: role,
+      });
+      if (roleError) {
+        return fail(
+          describeRpcError(roleError, "admin_set_account_role", "Changement de role indisponible"),
+        );
+      }
+      payload.role = role;
+    }
+  }
 
   await logAdminAction("update_profile", "profile", profileId, payload);
   REFRESH();

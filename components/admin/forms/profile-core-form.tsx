@@ -60,7 +60,7 @@ export function ProfileCoreForm({
           <Field
             label="Adresse email"
             htmlFor="email"
-            hint="Modifiable uniquement via l'API Auth (cle service_role)."
+            hint="Non modifiable ici : l'adresse sert d'identifiant de connexion."
           >
             <Input id="email" defaultValue={values.email ?? ""} disabled readOnly />
           </Field>

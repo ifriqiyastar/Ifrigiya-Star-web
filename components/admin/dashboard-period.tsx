@@ -11,7 +11,7 @@ export function DashboardPeriod({ value }: { value: number }) {
       aria-label="Periode du tableau de bord"
       value={String(value)}
       onChange={(event) => router.push(`/admin?periode=${event.target.value}`)}
-      className="h-9 min-w-40 rounded-full border border-border bg-card px-3 text-xs"
+      className="h-9 min-w-40 rounded-md border border-border bg-card px-3 text-xs"
     >
       <option value="7">7 derniers jours</option>
       <option value="30">30 derniers jours</option>

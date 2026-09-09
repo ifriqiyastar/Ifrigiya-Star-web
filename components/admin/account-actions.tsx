@@ -2,10 +2,12 @@ import { BanIcon, CheckIcon, EyeIcon, EyeOffIcon, Trash2Icon, Undo2Icon, XIcon }
 
 import { ActionButton } from "@/components/admin/action-button";
 import { ReasonDialog } from "@/components/admin/reason-dialog";
+import { StatusPill } from "@/components/admin/status-pill";
 import { Button } from "@/components/ui/button";
 import { suspendUser } from "@/lib/actions/moderation";
 import {
   deleteAccount,
+  liftSuspension,
   setAccountActive,
   setPlayerStatus,
   setPlayerVisibility,
@@ -19,6 +21,14 @@ import { hasServiceRole } from "@/lib/supabase/service";
  *
  * Les actions proposees dependent du statut courant : on n'offre pas de
  * valider un compte deja valide, ni de reactiver un compte actif.
+ */
+/**
+ * ⚠️ Ce composant est un **Server Component** : il n'a pas de `"use client"`,
+ * et il passe des actions a `ReasonDialog` / `ActionButton`, qui sont clients.
+ * Toute action doit donc etre une Server Action **liee** (`action.bind(null,
+ * …)`), jamais une fleche : une fermeture ecrite ici ne traverse pas la
+ * frontiere, et React refuse le rendu avec « Functions cannot be passed
+ * directly to Client Components ».
  */
 export function AccountActions({
   profileId,
@@ -40,6 +50,7 @@ export function AccountActions({
   const isProfessional = role === "professional";
   const setStatus = isPlayer ? setPlayerStatus : setProfessionalStatus;
   const canSetStatus = isPlayer || isProfessional;
+  const isSuspended = businessStatus === "suspendu";
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -56,7 +67,7 @@ export function AccountActions({
 
       {canSetStatus && businessStatus !== "refuse" ? (
         <ReasonDialog
-          action={(reason) => setStatus(profileId, "refuse", reason)}
+          action={setStatus.bind(null, profileId, "refuse")}
           trigger={
             <Button variant="outline" size="sm">
               <XIcon />
@@ -64,7 +75,7 @@ export function AccountActions({
             </Button>
           }
           title="Refuser ce compte"
-          description="Le motif est enregistre dans status_reason et explique la decision a l'utilisateur."
+          description="Le motif est enregistre sur le compte et explique la decision a l'utilisateur."
           submitLabel="Refuser"
         />
       ) : null}
@@ -79,11 +90,40 @@ export function AccountActions({
         </ActionButton>
       ) : null}
 
-      {isActive ? (
+      {/* Trois etats, trois gestes, et un seul affiche a la fois.
+
+          « Suspendu » se lit sur le **profil metier**, pas sur `is_active` :
+          c'est `status = 'suspendu'` que l'application mobile refuse a la
+          connexion. Un compte peut donc etre suspendu tout en restant actif,
+          si le statut a ete pose sans passer par la RPC — d'ou la condition
+          sur `businessStatus` et non sur `isActive` seul. */}
+      {isSuspended ? (
+        <ActionButton
+          action={liftSuspension.bind(null, profileId)}
+          variant="default"
+          size="sm"
+          confirm={{
+            title: "Lever la suspension",
+            description:
+              "Le compte redevient actif et son profil metier repasse a « valide » : l'utilisateur retrouve l'acces a l'application immediatement, et recoit une notification lui annoncant que son profil est valide. Les deux etapes sont enchainees — reactiver seul laisserait le compte bloque en « en attente de validation ».",
+            actionLabel: "Lever la suspension",
+          }}
+        >
+          <Undo2Icon />
+          Lever la suspension
+        </ActionButton>
+      ) : isActive && self ? (
+        /* Son propre compte, actif : aucun geste d'etat. `disabled` sur
+           l'element passe en `render` d'un `DialogTrigger` Base UI diverge
+           entre le rendu serveur et le rendu client et casse l'hydratation,
+           donc on n'offre pas le geste plutot que de le griser — et on dit
+           pourquoi, ce qu'un bouton grise ne faisait pas. */
+        <StatusPill tone="neutral">Votre compte : suspension impossible</StatusPill>
+      ) : isActive ? (
         <ReasonDialog
-          action={(reason) => suspendUser(profileId, reason)}
+          action={suspendUser.bind(null, profileId)}
           trigger={
-            <Button variant="destructive" size="sm" disabled={self}>
+            <Button variant="destructive" size="sm">
               <BanIcon />
               Suspendre
             </Button>
@@ -94,10 +134,19 @@ export function AccountActions({
           submitLabel="Suspendre le compte"
         />
       ) : (
+        /* Compte desactive **sans** suspension du profil metier : demande de
+           suppression, desactivation de confort… On le reactive sans
+           revalider son dossier au passage. */
         <ActionButton
           action={setAccountActive.bind(null, profileId, true)}
           variant="outline"
           size="sm"
+          confirm={{
+            title: "Reactiver ce compte",
+            description:
+              "Le compte redevient actif. Si son profil metier avait ete suspendu, il repasse en « en attente de validation » — un statut que l'application bloque aussi, et le dossier retourne dans « Files de validation ».",
+            actionLabel: "Reactiver",
+          }}
         >
           <Undo2Icon />
           Reactiver
