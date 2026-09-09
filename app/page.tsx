@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 
 import { Check, Phone, Pill, SectionHeading } from "@/components/site/pieces";
 import { SiteNav } from "@/components/site/site-nav";
+import { HeroStar } from "@/components/site/hero-star";
 import { APP_SCREENS } from "@/lib/app-screens";
 
 /**
@@ -205,33 +206,7 @@ function Hero() {
           </dl>
         </div>
 
-        <div className="relative flex items-center justify-center lg:justify-end">
-          {/* Etiquette inclinee de la maquette. */}
-          <span className="absolute top-2 right-6 z-20 hidden -rotate-8 rounded-xl bg-(--site-accent) px-4 py-2 text-xs font-bold text-(--site-ink) shadow-lg sm:block">
-            Ton profil s&apos;affiche
-          </span>
-
-          {/* Deux appareils qui se **chevauchent**, comme la maquette de
-              reference : celui de devant porte la promesse, celui de derriere
-              montre ou elle mene. Ils etaient cote a cote avec un ecart, ce
-              qui les faisait lire comme deux vignettes sans rapport. */}
-          <div className="relative flex items-center justify-center">
-            <Phone
-              screen={APP_SCREENS["scout-day-detail"]}
-              alt="Fiche d'une journee de detection dans l'application Ifriqiya Star"
-              width={230}
-              priority
-              className="relative z-0 hidden translate-x-10 translate-y-10 rotate-4 sm:block"
-            />
-            <Phone
-              screen={APP_SCREENS["profil-joueur"]}
-              alt="Profil d'un joueur dans l'application Ifriqiya Star"
-              width={268}
-              priority
-              className="relative z-10 sm:-translate-x-8 sm:-translate-y-4"
-            />
-          </div>
-        </div>
+        <HeroStar />
       </div>
     </section>
   );

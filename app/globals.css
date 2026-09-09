@@ -532,6 +532,24 @@ body:has(.admin-dashboard-shell) {
   }
 }
 
+.site-star-halo {
+  position: absolute;
+  inset: 12% 5% 8%;
+  z-index: -1;
+  background: radial-gradient(ellipse at 57% 58%, rgba(175, 247, 15, 0.13), transparent 65%);
+  pointer-events: none;
+}
+
+.site-star-orbit {
+  position: absolute;
+  inset: 23% 1%;
+  z-index: -1;
+  border: 1px solid rgba(175, 247, 15, 0.12);
+  border-radius: 50%;
+  transform: rotate(-28deg);
+  pointer-events: none;
+}
+
 @keyframes site-marquee {
   from {
     transform: translateX(0);
