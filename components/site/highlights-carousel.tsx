@@ -37,13 +37,16 @@ export function HighlightsCarousel() {
   const sectionRef = useRef<HTMLElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
-  const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
   const [visible, setVisible] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(true);
-  const rotating = visible && !hovered && !focused && !reducedMotion;
+  // La rotation lit l'index courant sans redemarrer le minuteur a chaque scroll.
+  const activeRef = useRef(0);
+  const [cycle, setCycle] = useState(0);
+  const rotating = visible && !focused && !reducedMotion;
 
   const goTo = useCallback((index: number) => {
+    setCycle((value) => value + 1);
     const track = trackRef.current;
     const slide = track?.children[index] as HTMLElement | undefined;
     if (!track || !slide) return;
@@ -73,9 +76,9 @@ export function HighlightsCarousel() {
 
   useEffect(() => {
     if (!rotating) return;
-    const timer = window.setTimeout(() => goTo((active + 1) % SLIDES.length), 5000);
+    const timer = window.setTimeout(() => goTo((activeRef.current + 1) % SLIDES.length), 5000);
     return () => window.clearTimeout(timer);
-  }, [active, goTo, rotating]);
+  }, [cycle, goTo, rotating]);
 
   return (
     <section
@@ -83,11 +86,13 @@ export function HighlightsCarousel() {
       aria-label="À découvrir avec Ifriqiya Star"
       aria-roledescription="carrousel"
       className="mx-auto max-w-7xl px-5 pt-8 pb-12 sm:px-8 sm:pt-12 sm:pb-16 [&_button]:cursor-pointer"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      onFocusCapture={() => setFocused(true)}
+      onFocusCapture={(event) => {
+        const target = event.target;
+        if (target instanceof Element && target.matches(":focus-visible")) setFocused(true);
+      }}
       onBlurCapture={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false);
+        else if (event.relatedTarget instanceof Element && !event.relatedTarget.matches(":focus-visible")) setFocused(false);
       }}
     >
       <div className="overflow-hidden rounded-3xl border border-white/15 bg-[#101010]">
@@ -112,7 +117,8 @@ export function HighlightsCarousel() {
             if (!track) return;
             const distances = Array.from(track.children, (slide) =>
               Math.abs((slide as HTMLElement).offsetLeft - track.scrollLeft));
-            setActive(distances.indexOf(Math.min(...distances)));
+            activeRef.current = distances.indexOf(Math.min(...distances));
+            setActive(activeRef.current);
           }}
         >
           {SLIDES.map((slide, index) => (
