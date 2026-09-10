@@ -13,17 +13,11 @@ export function HeroVideo() {
     const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
     const connection = (
       navigator as Navigator & {
-        connection?: { saveData?: boolean; effectiveType?: string; downlink?: number };
+        connection?: { saveData?: boolean };
       }
     ).connection;
-    const smallScreen = window.matchMedia("(max-width: 767px)").matches;
-    const slowConnection =
-      ["slow-2g", "2g", "3g"].includes(connection?.effectiveType ?? "") ||
-      (connection?.downlink !== undefined && connection.downlink < 1.5);
-    // Pick one file once: resizing must not restart playback or download both.
-    const source = smallScreen || slowConnection
-      ? "/videos/football-hero-480p.mp4"
-      : "/videos/football-hero-720p.mp4";
+    // Preserve the original quality, including on high-density mobile screens.
+    const source = "/videos/football-hero-4k.mp4";
     let visible = false;
     let sourceAttached = false;
     let playPending = false;
@@ -100,8 +94,8 @@ export function HeroVideo() {
         <video
           ref={videoRef}
           id="hero-football-video"
-          width={1280}
-          height={720}
+          width={3840}
+          height={2160}
           poster="/videos/football-hero-cover.webp"
           preload="none"
           muted

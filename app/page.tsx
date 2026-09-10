@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import { Check, Phone, Pill, SectionHeading } from "@/components/site/pieces";
 import { SiteNav } from "@/components/site/site-nav";
 import { HeroVideo } from "@/components/site/hero-video";
+import { HighlightsCarousel } from "@/components/site/highlights-carousel";
 import { APP_SCREENS } from "@/lib/app-screens";
 
 /**
@@ -125,6 +126,7 @@ export default function LandingPage() {
 
       <main>
         <Hero />
+        <HighlightsCarousel />
         <Piliers />
         <CommentCaMarche />
         <Pourquoi />
@@ -147,21 +149,22 @@ function Hero() {
       <HeroVideo />
 
       <div className="relative z-10 mx-auto flex min-h-[calc(100svh-4rem)] max-w-7xl items-center px-5 pt-14 pb-28 sm:px-8 sm:pt-20 sm:pb-28 lg:min-h-[max(720px,calc(100svh-4rem))] lg:pt-24 lg:pb-32">
-        <div className="flex w-full max-w-2xl flex-col items-start gap-6">
+        <div className="flex w-full max-w-4xl flex-col items-start gap-6">
           <Pill>
             <span className="size-1.5 rounded-full bg-(--site-accent)" />
             Academie de football d&apos;elite · Detection · Progression
           </Pill>
 
-          <h1 className="font-heading text-[2.25rem] leading-[1.08] font-extrabold text-balance drop-shadow-sm sm:text-6xl lg:text-7xl">
-            Aucun talent africain
-            <br />
-            ne doit rester{" "}
-            {/* Le mot cercle de la maquette : ici il porte la promesse
-                entiere, donc il merite l'accent. */}
-            <span className="relative inline-block px-4 py-0.5">
-              <span className="absolute inset-0 rounded-full border-2 border-(--site-accent)" aria-hidden />
-              <span className="relative text-(--site-accent)">invisible</span>
+          <h1 className="font-heading text-[clamp(1rem,6.2vw,2.25rem)] leading-[1.08] font-extrabold drop-shadow-sm sm:text-5xl lg:text-7xl">
+            <span className="block whitespace-nowrap">Aucun talent africain</span>
+            <span className="block whitespace-nowrap">
+              ne doit rester{" "}
+              {/* Le mot cercle de la maquette : ici il porte la promesse
+                  entiere, donc il merite l'accent. */}
+              <span className="relative inline-block px-4 py-0.5">
+                <span className="absolute inset-0 rounded-full border-2 border-(--site-accent)" aria-hidden />
+                <span className="relative text-(--site-accent)">invisible</span>
+              </span>
             </span>
           </h1>
 
