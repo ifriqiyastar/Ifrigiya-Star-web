@@ -126,8 +126,8 @@ export default function LandingPage() {
 
       <main>
         <Hero />
-        <HighlightsCarousel />
         <Piliers />
+        <HighlightsCarousel />
         <CommentCaMarche />
         <Pourquoi />
         <Fonctionnalites />
