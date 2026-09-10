@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 
 import { Check, Phone, Pill, SectionHeading } from "@/components/site/pieces";
 import { SiteNav } from "@/components/site/site-nav";
-import { HeroStar } from "@/components/site/hero-star";
+import { HeroVideo } from "@/components/site/hero-video";
 import { APP_SCREENS } from "@/lib/app-screens";
 
 /**
@@ -143,18 +143,17 @@ export default function LandingPage() {
 
 function Hero() {
   return (
-    <section id="academie" className="scroll-mt-20 relative overflow-hidden">
-      <div className="site-grid absolute inset-0 opacity-70" aria-hidden />
-      <div className="site-glow absolute inset-0" aria-hidden />
+    <section id="academie" className="relative isolate scroll-mt-16 overflow-hidden bg-black">
+      <HeroVideo />
 
-      <div className="relative mx-auto grid max-w-7xl gap-12 px-5 pt-12 pb-16 sm:px-8 sm:pt-16 sm:pb-20 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:pt-24 lg:pb-28">
-        <div className="flex flex-col items-start gap-6">
+      <div className="relative z-10 mx-auto flex min-h-[calc(100svh-4rem)] max-w-7xl items-center px-5 pt-14 pb-28 sm:px-8 sm:pt-20 sm:pb-28 lg:min-h-[max(720px,calc(100svh-4rem))] lg:pt-24 lg:pb-32">
+        <div className="flex w-full max-w-2xl flex-col items-start gap-6">
           <Pill>
             <span className="size-1.5 rounded-full bg-(--site-accent)" />
             Academie de football d&apos;elite · Detection · Progression
           </Pill>
 
-          <h1 className="font-heading text-[2rem] leading-[1.08] font-extrabold text-balance sm:text-5xl lg:text-6xl">
+          <h1 className="font-heading text-[2.25rem] leading-[1.08] font-extrabold text-balance drop-shadow-sm sm:text-6xl lg:text-7xl">
             Aucun talent africain
             <br />
             ne doit rester{" "}
@@ -166,7 +165,7 @@ function Hero() {
             </span>
           </h1>
 
-          <p className="max-w-xl text-sm leading-relaxed text-(--site-muted) sm:text-base">
+          <p className="max-w-xl text-base leading-relaxed text-(--site-muted)">
             Ifriqiya Star est une academie de football d&apos;elite dediee a la formation, au
             developpement technique et a l&apos;epanouissement des jeunes talents. Profil verifie,
             videos de match, journees de detection et contact direct avec les recruteurs — tout
@@ -182,7 +181,7 @@ function Hero() {
             </a>
             <a
               href="#comment"
-              className="rounded-full border border-(--site-line-strong) px-7 py-3.5 text-center text-sm font-semibold transition-colors hover:border-(--site-accent) hover:text-(--site-accent)"
+              className="rounded-full border border-white/30 bg-black/25 px-7 py-3.5 text-center text-sm font-semibold backdrop-blur-sm transition-colors hover:border-(--site-accent) hover:text-(--site-accent)"
             >
               Comment ca marche
             </a>
@@ -206,7 +205,6 @@ function Hero() {
           </dl>
         </div>
 
-        <HeroStar />
       </div>
     </section>
   );
