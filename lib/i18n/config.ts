@@ -43,11 +43,19 @@ export const LOCALE_LABEL: Record<Locale, string> = {
   ar: "العربية",
 };
 
-/** L'etiquette courte du selecteur. */
+/**
+ * Le code court affiche sur le declencheur du selecteur.
+ *
+ * Les trois sont des codes ISO latins, y compris pour l'arabe : « ع » n'est
+ * pas un code, c'est une lettre, et melanger deux abreviations ISO avec un
+ * caractere arabe isole donnait trois choses de nature differente alignees
+ * comme si elles etaient comparables. Le nom dans sa propre ecriture —
+ * العربية — est ce que le menu affiche, la ou il est reellement lu.
+ */
 export const LOCALE_SHORT: Record<Locale, string> = {
   fr: "FR",
   en: "EN",
-  ar: "ع",
+  ar: "AR",
 };
 
 /**
@@ -134,4 +142,23 @@ export function writeLocaleCookie(locale: Locale | null): void {
     locale === null
       ? `${base}; path=/; max-age=0; samesite=lax`
       : `${base}${locale}; path=/; max-age=${LOCALE_COOKIE_MAX_AGE}; samesite=lax`;
+}
+
+/**
+ * Lit la preference explicite, ou `null` quand il n'y en a pas — c'est-a-dire
+ * le mode « Automatique ».
+ *
+ * Cote navigateur uniquement : elle sert a l'ecran Parametres, qui doit
+ * distinguer « j'ai choisi le francais » de « je suis en automatique et
+ * l'automatique donne le francais ». Les deux rendent la meme page, seul le
+ * cookie les separe, et le serveur ne peut donc pas trancher sans faire
+ * diverger l'hydratation.
+ */
+export function readLocaleCookie(): Locale | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(
+    new RegExp(`(?:^|;\\s*)${LOCALE_COOKIE}=([^;]*)`),
+  );
+  const value = match?.[1];
+  return value && isLocale(value) ? value : null;
 }
