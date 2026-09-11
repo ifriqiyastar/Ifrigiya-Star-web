@@ -35,8 +35,26 @@ import {
  * **redirigees** vers leur prefixe, pour que l'URL dise la langue et reste
  * partageable et indexable.
  */
+/**
+ * Tout chemin qui se termine par une extension est un fichier servi depuis
+ * `public/` — video, image, police, sous-titre — et non une page.
+ *
+ * On teste l'extension plutot que d'en tenir la liste, parce que c'est
+ * exactement une liste qui a casse : le `matcher` ci-dessous n'excluait que
+ * les extensions d'images, ecrites avant que le site ne serve des videos. Les
+ * `.mp4` arrivaient donc jusqu'a la resolution de langue, qui les reecrivait
+ * vers `/fr/videos/...` ou les redirigeait vers `/ar/videos/...` — deux
+ * chemins qui n'existent pas. Resultat : 404, et le lecteur affichait « la
+ * video est momentanement indisponible ».
+ */
+const PUBLIC_FILE = /\.[a-zA-Z0-9]+$/;
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Avant tout le reste, et sans meme rafraichir la session : un fichier
+  // statique n'a ni langue ni token a renouveler.
+  if (PUBLIC_FILE.test(pathname)) return NextResponse.next();
 
   // Les webhooks ne sont pas une page : ils n'ont pas de langue, et le
   // prestataire de paiement ne suivrait de toute facon pas une redirection
