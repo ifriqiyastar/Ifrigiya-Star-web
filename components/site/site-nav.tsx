@@ -32,11 +32,12 @@ import { ArrowUpRightIcon, MenuIcon, XIcon } from "lucide-react";
  * clavier et de l'arbre d'accessibilite tant qu'il est ferme.
  */
 const NAV = [
-  { href: "#academie", label: "L'academie" },
-  { href: "#comment", label: "Comment ca marche" },
-  { href: "#fonctionnalites", label: "Fonctionnalites" },
-  { href: "#valeurs", label: "Nos valeurs" },
-  { href: "#faq", label: "FAQ" },
+  { href: "/#academie", label: "L'academie" },
+  { href: "/#comment", label: "Comment ca marche" },
+  { href: "/#fonctionnalites", label: "Fonctionnalites" },
+  { href: "/#valeurs", label: "Nos valeurs" },
+  { href: "/#faq", label: "FAQ" },
+  { href: "/contact", label: "Contact" },
 ];
 
 export function SiteNav() {
@@ -82,31 +83,31 @@ export function SiteNav() {
             </span>
           </Link>
 
-          <nav className="hidden flex-1 items-center justify-center gap-6 lg:flex xl:gap-7">
+          <nav className="hidden flex-1 items-center justify-center gap-4 lg:flex xl:gap-5">
             {NAV.map((item) => (
-              <a
+              <Link
                 key={item.href}
                 href={item.href}
                 className="text-sm whitespace-nowrap text-[var(--site-muted)] transition-colors hover:text-[var(--site-fg)]"
               >
                 {item.label}
-              </a>
+              </Link>
             ))}
           </nav>
 
           <div className="ml-auto flex items-center gap-2 lg:ml-0">
             <Link
               href="/admin"
-              className="hidden rounded-full px-4 py-2 text-sm whitespace-nowrap text-[var(--site-muted)] transition-colors hover:text-[var(--site-fg)] xl:inline-flex"
+              className="hidden rounded-full px-4 py-2 text-sm whitespace-nowrap text-[var(--site-muted)] transition-colors hover:text-[var(--site-fg)] 2xl:inline-flex"
             >
               Espace administration
             </Link>
-            <a
-              href="#telecharger"
+            <Link
+              href="/#telecharger"
               className="hidden rounded-full border border-[var(--site-accent)] px-5 py-2 text-sm font-semibold whitespace-nowrap text-[var(--site-accent)] transition-colors hover:bg-[var(--site-accent)] hover:text-[var(--site-ink)] sm:inline-flex"
             >
               Telecharger l&apos;app
-            </a>
+            </Link>
 
             <button
               ref={burgerRef}
@@ -159,7 +160,7 @@ export function SiteNav() {
 
         <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-4 py-5">
           {NAV.map((item) => (
-            <a
+            <Link
               key={item.href}
               href={item.href}
               onClick={close}
@@ -167,18 +168,18 @@ export function SiteNav() {
             >
               {item.label}
               <ArrowUpRightIcon className="size-4 text-[var(--site-muted)]" />
-            </a>
+            </Link>
           ))}
         </nav>
 
         <div className="shrink-0 space-y-3 border-t border-[var(--site-line)] px-4 py-5">
-          <a
-            href="#telecharger"
+          <Link
+            href="/#telecharger"
             onClick={close}
             className="block rounded-full bg-[var(--site-accent)] px-5 py-3.5 text-center text-sm font-semibold text-[var(--site-ink)]"
           >
             Telecharger l&apos;app
-          </a>
+          </Link>
           <Link
             href="/admin"
             onClick={close}

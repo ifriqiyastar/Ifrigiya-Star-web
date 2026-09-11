@@ -1,11 +1,15 @@
 import Image from "next/image";
-import Link from "next/link";
 import type { Metadata } from "next";
 
 import { Check, Phone, Pill, SectionHeading } from "@/components/site/pieces";
 import { SiteNav } from "@/components/site/site-nav";
+import { SiteFooter } from "@/components/site/site-footer";
+import { ContactSection } from "@/components/site/contact-section";
+import { TestimonialsSection } from "@/components/site/testimonials-section";
+import { ScoutDaysVideosSection } from "@/components/site/scout-days-videos-section";
 import { HeroVideo } from "@/components/site/hero-video";
 import { HighlightsCarousel } from "@/components/site/highlights-carousel";
+import { Reveal } from "@/components/site/reveal";
 import { APP_SCREENS } from "@/lib/app-screens";
 
 /**
@@ -15,14 +19,14 @@ import { APP_SCREENS } from "@/lib/app-screens";
  * back-office. Elle sert desormais le site vitrine, et l'administration reste
  * a `/admin` — inchangee, toujours derriere `requireAdmin()`.
  *
- * TOUT CE QUI EST ECRIT ICI VIENT DE LA CHARTE GRAPHIQUE (Wii Studio, aout
+ * Les contenus de marque viennent de la charte graphique (Wii Studio, aout
  * 2026) : les services, la mission, la vision, les cinq valeurs et le slogan
  * sont repris mot pour mot de la planche « Marque ». Les captures sont de
- * vraies captures de l'application mobile. **Aucun chiffre d'audience,
- * aucun temoignage** : inventer « 10 000 joueurs inscrits » ou une citation
- * signee d'un nom sur une page publique, c'est fabriquer une preuve. Les
- * trois indicateurs du bandeau disent ce que la plateforme *fait*, pas
- * combien de gens l'utilisent.
+ * vraies captures de l'application mobile. Aucun chiffre d'audience n'est
+ * invente. La section Temoignages contient des exemples explicitement
+ * fictifs et des portraits generes par IA, pas des avis de membres reels.
+ * Les trois indicateurs du bandeau disent ce que la plateforme fait,
+ * pas combien de gens l'utilisent.
  *
  * La palette est celle de la charte et rien d'autre — #000000, #aff70f,
  * #CCCCCC, #FFFFFF — portee par le bloc `.site-shell` de `globals.css`.
@@ -122,6 +126,13 @@ export default function LandingPage() {
   // colonne de la FAQ. `clip` coupe le debordement sans cet effet de bord.
   return (
     <div className="site-shell overflow-x-clip font-sans">
+      {/* Les blocs `.site-reveal` arrivent caches et c'est un script qui les
+          revele au defilement. Sans JavaScript personne ne les observerait :
+          on les reaffiche donc tous, plutot que de servir une page vide. */}
+      <noscript>
+        <style>{".site-reveal{opacity:1;transform:none}"}</style>
+      </noscript>
+
       <SiteNav />
 
       <main>
@@ -130,10 +141,13 @@ export default function LandingPage() {
         <HighlightsCarousel />
         <CommentCaMarche />
         <Pourquoi />
+        <ScoutDaysVideosSection />
         <Fonctionnalites />
         <Valeurs />
+        <TestimonialsSection />
         <Faq />
         <AppelFinal />
+        <ContactSection />
       </main>
 
       <SiteFooter />
@@ -150,12 +164,14 @@ function Hero() {
 
       <div className="relative z-10 mx-auto flex min-h-[calc(100svh-4rem)] max-w-7xl items-center px-5 pt-14 pb-28 sm:px-8 sm:pt-20 sm:pb-28 lg:min-h-[max(720px,calc(100svh-4rem))] lg:pt-24 lg:pb-32">
         <div className="flex w-full max-w-4xl flex-col items-start gap-6">
-          <Pill>
-            <span className="size-1.5 rounded-full bg-(--site-accent)" />
-            Academie de football d&apos;elite · Detection · Progression
-          </Pill>
+          <Reveal>
+            <Pill>
+              <span className="size-1.5 rounded-full bg-(--site-accent)" />
+              Academie de football d&apos;elite · Detection · Progression
+            </Pill>
+          </Reveal>
 
-          <h1 className="font-heading text-[clamp(1rem,6.2vw,2.25rem)] leading-[1.08] font-extrabold drop-shadow-sm sm:text-5xl lg:text-7xl">
+          <Reveal as="h1" delay={80} className="font-heading text-[clamp(1rem,6.2vw,2.25rem)] leading-[1.08] font-extrabold drop-shadow-sm sm:text-5xl lg:text-7xl">
             <span className="block whitespace-nowrap">Aucun talent africain</span>
             <span className="block whitespace-nowrap">
               ne doit rester{" "}
@@ -166,19 +182,20 @@ function Hero() {
                 <span className="relative text-(--site-accent)">invisible</span>
               </span>
             </span>
-          </h1>
+          </Reveal>
 
-          <p className="max-w-xl text-base leading-relaxed text-(--site-muted)">
+          <Reveal as="p" delay={160} className="max-w-xl text-base leading-relaxed text-(--site-muted)">
             Ifriqiya Star est une academie de football d&apos;elite dediee a la formation, au
             developpement technique et a l&apos;epanouissement des jeunes talents. Profil verifie,
             videos de match, journees de detection et contact direct avec les recruteurs — tout
             depuis votre telephone.
-          </p>
+          </Reveal>
 
-          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
+          <Reveal delay={240} className="w-full sm:w-auto">
+          <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
             <a
               href="#telecharger"
-              className="rounded-full bg-(--site-accent) px-7 py-3.5 text-center text-sm font-semibold text-(--site-ink) transition-opacity hover:opacity-90"
+              className="site-shimmer rounded-full bg-(--site-accent) px-7 py-3.5 text-center text-sm font-semibold text-(--site-ink) transition-opacity hover:opacity-90"
             >
               Rejoindre l&apos;academie
             </a>
@@ -189,12 +206,13 @@ function Hero() {
               Comment ca marche
             </a>
           </div>
+          </Reveal>
 
           {/* Trois piliers, pas trois chiffres d'audience : ce sont les
               fondamentaux nommes par la charte, et ils sont verifiables. */}
           {/* Trois colonnes de 100 px sur un ecran de 360 px coupaient les
               libelles en trois lignes : on empile tant que la place manque. */}
-          <dl className="mt-4 grid w-full max-w-lg gap-4 border-t border-(--site-line) pt-6 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-(--site-line)">
+          <Reveal as="dl" delay={320} className="mt-4 grid w-full max-w-lg gap-4 border-t border-(--site-line) pt-6 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-(--site-line)">
             {[
               ["Detection", "Scout Days encadres"],
               ["Progression", "Evaluation apres chaque journee"],
@@ -205,7 +223,7 @@ function Hero() {
                 <dd className="mt-1 text-xs leading-snug text-(--site-muted)">{texte}</dd>
               </div>
             ))}
-          </dl>
+          </Reveal>
         </div>
 
       </div>
@@ -265,8 +283,10 @@ function CommentCaMarche() {
           {/* Les deux colonnes de texte passent **devant** : le disque est un
               decor, il ne doit jamais pouvoir recouvrir une etape. */}
           <div className="relative z-10 flex flex-col gap-12">
-            {ETAPES.slice(0, 2).map((etape) => (
-              <Etape key={etape.numero} {...etape} />
+            {ETAPES.slice(0, 2).map((etape, i) => (
+              <Reveal key={etape.numero} variant="left" delay={i * 110}>
+                <Etape {...etape} />
+              </Reveal>
             ))}
           </div>
 
@@ -284,17 +304,20 @@ function CommentCaMarche() {
             {/* L'ecran de recherche des recruteurs : c'est la que menent les
                 quatre etapes — apparaitre dans leurs resultats. Il tient le
                 centre parce qu'il montre l'aboutissement, pas une etape. */}
-            <Phone
-              screen={APP_SCREENS["recherche-joueurs"]}
-              alt="Recherche de joueurs par un recruteur dans l'application Ifriqiya Star"
-              width={262}
-              className="relative z-10"
-            />
+            <Reveal variant="zoom" delay={120} className="relative z-10">
+              <Phone
+                screen={APP_SCREENS["recherche-joueurs"]}
+                alt="Recherche de joueurs par un recruteur dans l'application Ifriqiya Star"
+                width={262}
+              />
+            </Reveal>
           </div>
 
           <div className="relative z-10 flex flex-col gap-12">
-            {ETAPES.slice(2).map((etape) => (
-              <Etape key={etape.numero} {...etape} />
+            {ETAPES.slice(2).map((etape, i) => (
+              <Reveal key={etape.numero} variant="right" delay={i * 110}>
+                <Etape {...etape} />
+              </Reveal>
             ))}
           </div>
         </div>
@@ -322,7 +345,7 @@ function Pourquoi() {
     <section className="relative overflow-hidden border-t border-(--site-line) py-16 sm:py-24 lg:py-28">
       <div className="site-glow absolute inset-0 opacity-60" aria-hidden />
       <div className="relative mx-auto grid max-w-7xl gap-14 px-5 sm:px-8 lg:grid-cols-2 lg:items-center">
-        <div className="flex flex-col gap-6">
+        <Reveal variant="left" className="flex flex-col gap-6">
           <h2 className="font-heading text-[1.75rem] leading-[1.12] font-extrabold text-balance sm:text-4xl">
             Pourquoi Ifriqiya Star
           </h2>
@@ -344,29 +367,31 @@ function Pourquoi() {
             <Check>Contact direct avec les recruteurs</Check>
             <Check>Moderation et signalement</Check>
           </ul>
-        </div>
 
-        {/* Deux appareils inclines et **imbriques**, comme la reference. Le
-            `py-10` est la parce que la rotation elargit la boite : sans lui,
-            les coins hauts se faisaient couper par l'`overflow-hidden` de la
-            section. */}
-        <div className="relative flex items-center justify-center py-10">
-          <Phone
-            screen={APP_SCREENS.videos}
-            alt="Videotheque du joueur dans l'application Ifriqiya Star"
-            width={236}
-            className="relative z-10 -rotate-7 sm:translate-x-6"
+          <a
+            href="#telecharger"
+            className="site-shimmer mt-2 inline-flex items-center justify-center gap-3 self-start rounded-full bg-(--site-accent) px-7 py-3.5 text-sm font-semibold text-(--site-ink) transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-(--site-accent)"
+          >
+            Rejoindre l&apos;académie
+            <svg viewBox="0 0 24 24" className="size-4 fill-none stroke-current stroke-2" aria-hidden="true">
+              <path d="M5 12h14m-6-6 6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </a>
+        </Reveal>
+
+        <Reveal
+          variant="right"
+          delay={120}
+          className="relative mx-auto aspect-4/5 w-full max-w-lg overflow-hidden rounded-3xl border border-(--site-line) lg:ml-auto lg:mr-0"
+        >
+          <Image
+            src="/images/pourquoi-training-tunisian.webp"
+            alt="Un footballeur travaille sa conduite de balle sur un terrain d’entraînement"
+            fill
+            sizes="(max-width: 639px) calc(100vw - 40px), (max-width: 1023px) 512px, (max-width: 1143px) calc((100vw - 120px) / 2), 512px"
+            className="site-parallax object-cover"
           />
-          {/* Sur telephone, les deux maquettes cote a cote font 458 px : elles
-              debordaient de l'ecran. La seconde n'apparait qu'a partir de
-              `sm`, ou la place existe. */}
-          <Phone
-            screen={APP_SCREENS.photos}
-            alt="Galerie photo du joueur dans l'application Ifriqiya Star"
-            width={222}
-            className="relative z-0 mt-14 hidden -translate-x-6 rotate-7 sm:block"
-          />
-        </div>
+        </Reveal>
       </div>
     </section>
   );
@@ -385,8 +410,12 @@ function Fonctionnalites() {
         />
 
         <div className="mt-16 grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
-          {FONCTIONS.map((fonction) => (
-            <div key={fonction.titre} className="flex flex-col items-center gap-6 text-center">
+          {FONCTIONS.map((fonction, i) => (
+            <Reveal
+              key={fonction.titre}
+              delay={(i % 3) * 110}
+              className="flex flex-col items-center gap-6 text-center"
+            >
               <Phone
                 screen={fonction.screen}
                 alt={`${fonction.titre} — application Ifriqiya Star`}
@@ -398,7 +427,7 @@ function Fonctionnalites() {
                   {fonction.texte}
                 </p>
               </div>
-            </div>
+            </Reveal>
           ))}
         </div>
       </div>
@@ -423,10 +452,12 @@ function Valeurs() {
         />
 
         <ul className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {VALEURS.map((valeur) => (
-            <li
+          {VALEURS.map((valeur, i) => (
+            <Reveal
               key={valeur.titre}
-              className="rounded-2xl border border-(--site-line) bg-(--site-card) p-6 transition-colors hover:border-(--site-accent)/50"
+              as="li"
+              delay={(i % 3) * 110}
+              className="site-lift rounded-2xl border border-(--site-line) bg-(--site-card) p-6 hover:border-(--site-accent)/50"
             >
               <h3 className="font-heading text-lg font-extrabold text-(--site-accent)">
                 {valeur.titre}
@@ -434,14 +465,18 @@ function Valeurs() {
               <p className="mt-2 text-sm leading-relaxed text-(--site-muted)">
                 {valeur.texte}
               </p>
-            </li>
+            </Reveal>
           ))}
-          <li className="flex flex-col justify-center rounded-2xl border border-(--site-accent) bg-(--site-accent) p-6 text-(--site-ink)">
+          <Reveal
+            as="li"
+            delay={220}
+            className="flex flex-col justify-center rounded-2xl border border-(--site-accent) bg-(--site-accent) p-6 text-(--site-ink)"
+          >
             <p className="font-heading text-lg leading-tight font-extrabold text-balance">
               « Parce qu&apos;aucun talent africain ne doit rester invisible. »
             </p>
             <p className="mt-2 text-xs font-medium opacity-70">Notre signature</p>
-          </li>
+          </Reveal>
         </ul>
       </div>
     </section>
@@ -457,7 +492,7 @@ function Faq() {
         {/* Colonne sans maquette : le titre reste colle en haut pendant qu'on
             deroule l'accordeon, sinon il laisse un vide de la hauteur des six
             questions. */}
-        <div className="flex flex-col gap-5 lg:sticky lg:top-24">
+        <Reveal variant="left" className="flex flex-col gap-5 lg:sticky lg:top-24">
           <h2 className="font-heading text-[1.75rem] leading-[1.12] font-extrabold text-balance sm:text-4xl">
             Questions frequentes
           </h2>
@@ -471,14 +506,14 @@ function Faq() {
           >
             contact@ifriqiyastar.com
           </a>
-        </div>
+        </Reveal>
 
         {/* `<details>` natif : l'accordeon fonctionne sans JavaScript, reste
             navigable au clavier et annonce son etat aux lecteurs d'ecran. */}
         <div className="flex flex-col gap-3">
-          {FAQ.map((item) => (
+          {FAQ.map((item, i) => (
+            <Reveal key={item.q} delay={Math.min(i, 4) * 80}>
             <details
-              key={item.q}
               className="group rounded-2xl border border-(--site-line) bg-(--site-card) px-5 py-4 open:border-(--site-accent)/40 sm:px-6 sm:py-5"
             >
               <summary className="flex cursor-pointer list-none items-center gap-4 text-sm font-semibold sm:text-base [&::-webkit-details-marker]:hidden">
@@ -491,6 +526,7 @@ function Faq() {
               </summary>
               <p className="mt-3 text-sm leading-relaxed text-(--site-muted)">{item.r}</p>
             </details>
+            </Reveal>
           ))}
         </div>
       </div>
@@ -505,7 +541,7 @@ function AppelFinal() {
     <section id="telecharger" className="scroll-mt-20 px-5 pb-16 sm:px-8 sm:pb-24 lg:pb-28">
       <div className="mx-auto max-w-7xl overflow-hidden rounded-3xl bg-(--site-accent) text-(--site-ink) sm:rounded-[2rem]">
         <div className="grid gap-10 p-6 sm:p-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:p-12">
-          <div className="flex flex-col gap-6">
+          <Reveal variant="left" className="flex flex-col gap-6">
             <h2 className="font-heading text-[1.75rem] leading-[1.1] font-extrabold text-balance sm:text-4xl">
               Commence ton parcours
               <br />
@@ -541,7 +577,7 @@ function AppelFinal() {
               <StoreButton store="l'App Store" prefix="Telecharger sur" icon={<AppleMark />} />
               <StoreButton store="Google Play" prefix="Disponible sur" icon={<PlayMark />} />
             </div>
-          </div>
+          </Reveal>
 
           {/* Les deux portes d'entree de l'application : creer un compte, et
               revenir.
@@ -555,7 +591,11 @@ function AppelFinal() {
               Chaque maquette porte son intitule : cet ecran-la est
               volontairement sobre — un titre, deux champs, un bouton — et sans
               legende, une vignette sombre ne dit pas ce qu'elle montre. */}
-          <div className="relative flex items-end justify-center gap-3 sm:gap-5 lg:justify-end">
+          <Reveal
+            variant="right"
+            delay={120}
+            className="relative flex items-end justify-center gap-3 sm:gap-5 lg:justify-end"
+          >
             <figure className="hidden shrink-0 flex-col items-center gap-3 sm:flex">
               <Phone
                 screen={APP_SCREENS.connexion}
@@ -579,7 +619,7 @@ function AppelFinal() {
                 Creer un compte
               </figcaption>
             </figure>
-          </div>
+          </Reveal>
         </div>
       </div>
     </section>
@@ -657,95 +697,5 @@ function StoreButton({
         </span>
       </span>
     </span>
-  );
-}
-
-/* ------------------------------------------------------------------- pied */
-
-/** Le logo, en vectoriel — voir `components/site/site-nav.tsx` pour le detail. */
-function Logo({ size = 32 }: { size?: number }) {
-  return (
-    <Image src="/brand/ifriqiya-star.svg" alt="Ifriqiya Star" width={size} height={size} />
-  );
-}
-
-function SiteFooter() {
-  return (
-    <footer className="border-t border-(--site-line) py-14">
-      <div className="mx-auto grid max-w-7xl gap-10 px-5 sm:px-8 md:grid-cols-2 lg:grid-cols-4">
-        <div className="flex flex-col gap-4">
-          <Link href="/" className="flex items-center gap-2.5">
-            <Logo size={32} />
-            <span className="font-heading text-base font-extrabold">Ifriqiya Star</span>
-          </Link>
-          <p className="max-w-xs text-sm leading-relaxed text-(--site-muted)">
-            L&apos;excellence footballistique au service de la jeunesse et de la performance.
-          </p>
-        </div>
-
-        <FooterColumn
-          titre="L'academie"
-          liens={[
-            { href: "#academie", label: "Qui sommes-nous" },
-            { href: "#comment", label: "Comment ca marche" },
-            { href: "#fonctionnalites", label: "L'application" },
-            { href: "#valeurs", label: "Nos valeurs" },
-          ]}
-        />
-
-        <FooterColumn
-          titre="Ressources"
-          liens={[
-            { href: "#faq", label: "Questions frequentes" },
-            { href: "#telecharger", label: "Telecharger l'app" },
-            { href: "/admin", label: "Espace administration" },
-          ]}
-        />
-
-        <div className="flex flex-col gap-3">
-          <p className="font-heading text-sm font-bold tracking-wide uppercase">Nous ecrire</p>
-          <p className="text-sm leading-relaxed text-(--site-muted)">
-            Une question sur l&apos;academie, une detection ou un partenariat ? Notre equipe repond.
-          </p>
-          <a
-            href="mailto:contact@ifriqiyastar.com"
-            className="w-fit text-sm font-semibold text-(--site-accent) hover:underline"
-          >
-            contact@ifriqiyastar.com
-          </a>
-        </div>
-      </div>
-
-      <div className="mx-auto mt-12 flex max-w-7xl flex-col gap-2 border-t border-(--site-line) px-5 pt-6 text-xs text-(--site-muted) sm:flex-row sm:items-center sm:justify-between sm:px-8">
-        <p>© {new Date().getFullYear()} Ifriqiya Star. Tous droits reserves.</p>
-        <p>Detection · Progression · Excellence</p>
-      </div>
-    </footer>
-  );
-}
-
-function FooterColumn({
-  titre,
-  liens,
-}: {
-  titre: string;
-  liens: { href: string; label: string }[];
-}) {
-  return (
-    <div className="flex flex-col gap-3">
-      <p className="font-heading text-sm font-bold tracking-wide uppercase">{titre}</p>
-      <ul className="flex flex-col gap-2">
-        {liens.map((lien) => (
-          <li key={lien.href}>
-            <a
-              href={lien.href}
-              className="text-sm text-(--site-muted) transition-colors hover:text-(--site-accent)"
-            >
-              {lien.label}
-            </a>
-          </li>
-        ))}
-      </ul>
-    </div>
   );
 }

@@ -558,3 +558,138 @@ body:has(.admin-dashboard-shell) {
     transform: translateX(-50%);
   }
 }
+
+/* ------------------------------------------------------------- animations
+   Le site vitrine s'anime en CSS seulement. Aucune librairie de motion n'a
+   ete ajoutee : une page marketing n'a pas besoin d'embarquer un moteur
+   d'animation pour des fondus, et le seul JavaScript ici est l'observateur
+   de `components/site/reveal.tsx`, qui ne fait que poser une classe.
+
+   Les durees restent entre 300 et 500 ms, et chaque effet est desactive par
+   `prefers-reduced-motion` en bas de ce bloc. La palette ne bouge pas : le
+   scintillement est blanc, le halo est vert accent, les deux sont deja dans
+   la charte. */
+
+/* 1. Apparition au defilement. L'etat cache est ici ; `Reveal` ajoute
+      `is-visible` quand le bloc entre dans l'ecran. */
+.site-reveal {
+  opacity: 0;
+  transform: translate3d(0, 1.5rem, 0);
+  transition:
+    opacity 500ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 500ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.site-reveal[data-variant="left"] {
+  transform: translate3d(-1.75rem, 0, 0);
+}
+.site-reveal[data-variant="right"] {
+  transform: translate3d(1.75rem, 0, 0);
+}
+.site-reveal[data-variant="zoom"] {
+  transform: scale(0.94);
+}
+.site-reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* 2. Scintillement des boutons d'appel a l'action. Le reflet balaie le
+      bouton puis marque une pause : une brillance continue attire l'oeil
+      en permanence et finit par le fatiguer. */
+.site-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.site-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    115deg,
+    transparent 38%,
+    rgba(255, 255, 255, 0.5) 50%,
+    transparent 62%
+  );
+  transform: translateX(-130%);
+  animation: site-shimmer 4.5s ease-in-out infinite;
+}
+/* Le reflet blanc sur le bouton bordure claire serait invisible : on le
+   passe en vert accent. */
+.site-shimmer[data-sheen="accent"]::after {
+  background: linear-gradient(
+    115deg,
+    transparent 38%,
+    color-mix(in srgb, var(--site-accent) 45%, transparent) 50%,
+    transparent 62%
+  );
+}
+
+/* 3. Micro-interaction au survol : la carte se souleve legerement. */
+.site-lift {
+  transition:
+    transform 300ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 300ms ease,
+    box-shadow 300ms ease;
+}
+.site-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 40px -28px color-mix(in srgb, var(--site-accent) 70%, transparent);
+}
+
+/* 4. Parallaxe. `animation-timeline: view()` lie l'animation au defilement
+      sans un seul octet de JavaScript. Chrome et Edge l'appliquent ; Firefox
+      et Safari l'ignorent et affichent l'image fixe, ce qui est une
+      degradation acceptable pour un effet purement decoratif. Le `scale`
+      est porte par les deux images-cles : c'est la marge qui permet de
+      translater sans decouvrir le bord du cadre. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .site-parallax {
+      animation: site-parallax linear both;
+      animation-timeline: view();
+      animation-range: entry 0% exit 100%;
+    }
+  }
+}
+
+@keyframes site-shimmer {
+  0% {
+    transform: translateX(-130%);
+  }
+  55%,
+  100% {
+    transform: translateX(130%);
+  }
+}
+
+@keyframes site-parallax {
+  from {
+    transform: translateY(-4.5%) scale(1.1);
+  }
+  to {
+    transform: translateY(4.5%) scale(1.1);
+  }
+}
+
+/* Mouvement reduit : on garde l'etat final de chaque effet, jamais le
+   mouvement. Le contenu revele doit rester visible — le neutraliser en
+   oubliant `.site-reveal` rendrait la page vide. */
+@media (prefers-reduced-motion: reduce) {
+  .site-reveal,
+  .site-reveal.is-visible {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .site-shimmer::after {
+    animation: none;
+    opacity: 0;
+  }
+  .site-lift {
+    transition: none;
+  }
+  .site-lift:hover {
+    transform: none;
+  }
+}
