@@ -36,14 +36,14 @@ export function ScoutDaysVideosSection() {
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
         <div className="flex items-center justify-between gap-5">
           <h2 id="scout-days-videos-heading" className="font-heading text-2xl leading-tight font-extrabold tracking-tight uppercase sm:text-3xl lg:text-4xl">
-            Scout Days en action
+            {t.heading}
           </h2>
           <div className="flex shrink-0 items-center gap-3">
-            <button type="button" onClick={() => rotate(-1)} aria-label="Vidéos précédentes" aria-controls="scout-days-video-rail" className="flex size-11 items-center justify-center rounded-full border border-white/20 text-white transition-colors hover:border-white/50 hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-(--site-accent)">
-              <ChevronLeftIcon className="size-4" aria-hidden />
+            <button type="button" onClick={() => rotate(-1)} aria-label={t.prev} aria-controls="scout-days-video-rail" className="flex size-11 items-center justify-center rounded-full border border-white/20 text-white transition-colors hover:border-white/50 hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-(--site-accent)">
+              <ChevronLeftIcon className="size-4 rtl:-scale-x-100" aria-hidden />
             </button>
-            <button type="button" onClick={() => rotate(1)} aria-label="Vidéos suivantes" aria-controls="scout-days-video-rail" className="flex size-11 items-center justify-center rounded-full border border-white/20 text-white transition-colors hover:border-white/50 hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-(--site-accent)">
-              <ChevronRightIcon className="size-4" aria-hidden />
+            <button type="button" onClick={() => rotate(1)} aria-label={t.next} aria-controls="scout-days-video-rail" className="flex size-11 items-center justify-center rounded-full border border-white/20 text-white transition-colors hover:border-white/50 hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-(--site-accent)">
+              <ChevronRightIcon className="size-4 rtl:-scale-x-100" aria-hidden />
             </button>
           </div>
         </div>

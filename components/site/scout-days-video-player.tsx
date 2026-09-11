@@ -109,7 +109,7 @@ export function ScoutDaysVideoPlayer({ id, src, poster, position }: ScoutDaysVid
       await video.play();
       video.focus();
     } catch {
-      setPlaybackNotice("La lecture n’a pas démarré. Appuyez sur lecture pour réessayer.");
+      setPlaybackNotice(dict.video.playbackFailed);
     }
   }
 
@@ -183,8 +183,11 @@ export function ScoutDaysVideoPlayer({ id, src, poster, position }: ScoutDaysVid
 
       {failed ? (
         <p role="alert" className="absolute inset-x-3 bottom-16 rounded-xl bg-black/90 p-4 text-xs leading-relaxed text-(--site-muted)">
-          La vidéo est momentanément indisponible.{" "}
-          <a href={src} className="text-(--site-accent) underline underline-offset-4">Ouvrir directement</a>.
+          {dict.video.unavailable}{" "}
+          <a href={src} className="text-(--site-accent) underline underline-offset-4">
+            {dict.video.openDirect}
+          </a>
+          .
         </p>
       ) : playbackNotice ? (
         <p role="status" className="pointer-events-none absolute inset-x-3 bottom-16 rounded-xl bg-black/90 p-4 text-xs leading-relaxed text-(--site-muted)">{playbackNotice}</p>

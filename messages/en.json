@@ -184,7 +184,8 @@
     "signInCaption": "Sign in",
     "signUpCaption": "Create an account",
     "signInAlt": "Sign-in screen of the Ifriqiya Star app",
-    "signUpAlt": "Account creation screen of the Ifriqiya Star app"
+    "signUpAlt": "Account creation screen of the Ifriqiya Star app",
+    "storeSoon": "Available when the app launches"
   },
   "contactSection": {
     "pill": "Contact us",
@@ -311,7 +312,10 @@
     "openVideo": "Open the video",
     "unmute": "Unmute video {id}",
     "mute": "Mute video {id}",
-    "play": "Play video preview {id}"
+    "play": "Play video preview {id}",
+    "heading": "Scout Days in action",
+    "prev": "Previous videos",
+    "next": "Next videos"
   },
   "carousel": {
     "regionAria": "Discover Ifriqiya Star",
@@ -339,5 +343,10 @@
     ],
     "pickSlide": "Choose a slide",
     "showSlide": "Show: {tag}"
+  },
+  "video": {
+    "unavailable": "The video is temporarily unavailable.",
+    "openDirect": "Open it directly",
+    "playbackFailed": "Playback did not start. Press play to try again."
   }
 }

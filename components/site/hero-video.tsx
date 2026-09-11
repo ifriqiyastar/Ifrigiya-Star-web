@@ -2,7 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { useI18n } from "@/lib/i18n/client";
+
 export function HeroVideo() {
+  const { dict } = useI18n();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [failed, setFailed] = useState(false);
 
@@ -115,7 +118,7 @@ export function HeroVideo() {
       {failed && (
         <div className="absolute inset-x-0 bottom-6 z-20 mx-auto flex max-w-7xl items-center justify-end gap-3 px-5 sm:bottom-8 sm:px-8">
           <p role="status" className="rounded-full bg-black/60 px-4 py-2 text-sm text-(--site-muted)">
-            La vidéo est momentanément indisponible.
+            {dict.video.unavailable}
           </p>
         </div>
       )}

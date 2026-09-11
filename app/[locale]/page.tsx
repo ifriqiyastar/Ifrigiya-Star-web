@@ -503,8 +503,18 @@ function AppelFinal({ dict }: { dict: Dictionary }) {
                 360 px une fois retire le padding de la carte : ils s'empilent
                 en pleine largeur tant que la place manque. */}
             <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap">
-              <StoreButton store={t.appleStore} prefix={t.applePrefix} icon={<AppleMark />} />
-              <StoreButton store={t.googleStore} prefix={t.googlePrefix} icon={<PlayMark />} />
+              <StoreButton
+                store={t.appleStore}
+                prefix={t.applePrefix}
+                soon={t.storeSoon}
+                icon={<AppleMark />}
+              />
+              <StoreButton
+                store={t.googleStore}
+                prefix={t.googlePrefix}
+                soon={t.storeSoon}
+                icon={<PlayMark />}
+              />
             </div>
           </Reveal>
 
@@ -600,15 +610,18 @@ function StoreButton({
   store,
   prefix,
   icon,
+  soon,
 }: {
   store: string;
   prefix: string;
   icon: React.ReactNode;
+  /** Infobulle « pas encore publie » — traduite, comme le reste du bouton. */
+  soon: string;
 }) {
   return (
     <span
       aria-disabled
-      title="Disponible au lancement de l'application"
+      title={soon}
       className="inline-flex w-full cursor-not-allowed items-center justify-center gap-3 rounded-xl bg-(--site-ink) px-5 py-3.5 text-(--site-fg) sm:w-auto sm:justify-start"
     >
       {icon}
