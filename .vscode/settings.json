@@ -1,0 +1,9 @@
+{
+  // Tailwind v4 introduit @import "tailwindcss", @theme, @custom-variant et
+  // @apply. Le validateur CSS integre a VS Code ne les connait pas et les
+  // signale comme "Unknown at rule" dans app/globals.css. La syntaxe est
+  // correcte : c'est le validateur qui est en retard.
+  "css.lint.unknownAtRules": "ignore",
+  "scss.lint.unknownAtRules": "ignore",
+  "less.lint.unknownAtRules": "ignore"
+}
