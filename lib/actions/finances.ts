@@ -9,7 +9,7 @@ import type { PaymentStatus, SubscriptionStatus } from "@/lib/labels";
 
 /** Actions §10.3 / §12.3 — suivi des paiements et des abonnements. */
 
-const REFRESH = () => revalidatePath("/admin", "layout");
+const REFRESH = () => revalidatePath("/[locale]/admin", "layout");
 
 /**
  * §10.3 — activation manuelle d'un paiement encaisse hors ligne (especes,

@@ -1,0 +1,343 @@
+{
+  "nav": {
+    "academy": "L'academie",
+    "how": "Comment ca marche",
+    "features": "Fonctionnalites",
+    "values": "Nos valeurs",
+    "faq": "FAQ",
+    "contact": "Contact",
+    "admin": "Espace administration",
+    "download": "Telecharger l'app",
+    "openMenu": "Ouvrir le menu",
+    "closeMenu": "Fermer le menu",
+    "slogan": "Parce qu'aucun talent africain ne doit rester invisible.",
+    "drawerLabel": "Navigation principale"
+  },
+  "hero": {
+    "pill": "Academie de football d'elite · Detection · Progression",
+    "titleLine1": "Aucun talent africain",
+    "titleLine2": "ne doit rester",
+    "titleAccent": "invisible",
+    "lead": "Ifriqiya Star est une academie de football d'elite dediee a la formation, au developpement technique et a l'epanouissement des jeunes talents. Profil verifie, videos de match, journees de detection et contact direct avec les recruteurs — tout depuis votre telephone.",
+    "ctaPrimary": "Rejoindre l'academie",
+    "ctaSecondary": "Comment ca marche",
+    "pillars": {
+      "detection": {
+        "title": "Detection",
+        "text": "Scout Days encadres"
+      },
+      "progression": {
+        "title": "Progression",
+        "text": "Evaluation apres chaque journee"
+      },
+      "excellence": {
+        "title": "Excellence",
+        "text": "Profils verifies un par un"
+      }
+    }
+  },
+  "services": {
+    "label": "Nos services",
+    "items": [
+      "Formation et academie",
+      "Preparation physique et tactique",
+      "Detection et orientation pro",
+      "Tournois et evenements sportifs"
+    ]
+  },
+  "steps": {
+    "pill": "Le parcours",
+    "title": "Comment ca marche",
+    "lead": "Quatre etapes, de l'inscription a la detection. Le meme chemin pour tous, et un profil verifie avant d'etre montre a qui que ce soit.",
+    "phoneAlt": "Recherche de joueurs par un recruteur dans l'application Ifriqiya Star",
+    "items": [
+      {
+        "number": "01",
+        "title": "Cree ton profil",
+        "text": "Inscris-toi en joueur ou en professionnel, renseigne ton poste, ton niveau et ton parcours. Ton profil est verifie par l'academie avant d'etre visible."
+      },
+      {
+        "number": "02",
+        "title": "Fais parler le terrain",
+        "text": "Ajoute tes videos et tes photos de match. Les recruteurs, les clubs et les agents les consultent directement depuis ton profil."
+      },
+      {
+        "number": "03",
+        "title": "Passe une detection",
+        "text": "Inscris-toi aux Scout Days organises par les clubs et les academies. Les criteres d'eligibilite te disent tout de suite si le profil correspond."
+      },
+      {
+        "number": "04",
+        "title": "Sois remarque",
+        "text": "Recois ton evaluation apres la journee de detection, echange en direct avec les recruteurs, et suis ta progression saison apres saison."
+      }
+    ]
+  },
+  "why": {
+    "title": "Pourquoi Ifriqiya Star",
+    "leadBefore": "Notre mission est de faire d'Ifriqiya Star un pole de reference dans la formation sportive en Afrique. Nous offrons aux jeunes athletes",
+    "leadStrong": "un cadre rigoureux et inspirant",
+    "leadAfter": "ou la passion du ballon rond et la quete d'excellence se rejoignent pour reveler les etoiles de demain.",
+    "cta": "Rejoindre l'academie",
+    "imageAlt": "Un footballeur travaille sa conduite de balle sur un terrain d'entrainement",
+    "checks": [
+      "Profil verifie par l'academie",
+      "Videos et photos de match",
+      "Journees de detection encadrees",
+      "Criteres d'eligibilite transparents",
+      "Contact direct avec les recruteurs",
+      "Moderation et signalement"
+    ]
+  },
+  "features": {
+    "pill": "L'application",
+    "title": "Tout se passe sur ton telephone.",
+    "lead": "Publier, chercher, s'inscrire, echanger. Les captures ci-dessous sont celles de l'application, sans retouche.",
+    "items": [
+      {
+        "title": "Le fil de la communaute",
+        "text": "Les publications des joueurs, des clubs, des academies et des agents. Un fil modere, ou l'on suit qui l'on veut."
+      },
+      {
+        "title": "Les journees de detection",
+        "text": "Date, lieu, places restantes, tarif et criteres d'eligibilite. L'inscription se fait en un geste depuis l'application."
+      },
+      {
+        "title": "La mise en relation",
+        "text": "Une messagerie directe entre joueurs et professionnels, avec blocage et signalement pour que l'echange reste sain."
+      }
+    ]
+  },
+  "values": {
+    "pill": "Notre vision",
+    "title": "Un continent ou le football fait grandir.",
+    "lead": "Nous revons d'un continent ou le football est un puissant levier d'ascension sociale, d'education et de rayonnement international. Ifriqiya Star n'est pas seulement une academie : c'est un incubateur de talents.",
+    "signature": "« Parce qu'aucun talent africain ne doit rester invisible. »",
+    "signatureLabel": "Notre signature",
+    "items": [
+      {
+        "title": "Excellence",
+        "text": "Exiger le meilleur de soi-meme, a chaque entrainement et sur chaque ballon."
+      },
+      {
+        "title": "Discipline",
+        "text": "Rigueur, respect du jeu, des coequipiers et des regles, pour construire des athletes complets."
+      },
+      {
+        "title": "Depassement",
+        "text": "Encourager chaque jeune a repousser ses limites physiques et mentales."
+      },
+      {
+        "title": "Ascension",
+        "text": "Guider les talents etape par etape vers le succes professionnel et l'epanouissement personnel."
+      },
+      {
+        "title": "Esprit d'equipe",
+        "text": "Placer la solidarite, l'entraide et l'unite au coeur de toutes nos victoires."
+      }
+    ]
+  },
+  "faq": {
+    "title": "Questions frequentes",
+    "lead": "L'essentiel sur l'inscription, la verification des profils et les journees de detection. Une question qui n'est pas la ? Ecrivez-nous.",
+    "items": [
+      {
+        "q": "A qui s'adresse Ifriqiya Star ?",
+        "a": "Aux jeunes joueuses et joueurs qui veulent etre vus, et aux professionnels du football — recruteurs, clubs, academies, agents — qui cherchent des talents. Les deux profils s'inscrivent depuis la meme application, avec des parcours distincts."
+      },
+      {
+        "q": "L'inscription est-elle payante ?",
+        "a": "La creation d'un profil joueur est gratuite. Certaines journees de detection ont un tarif d'inscription, indique sur la fiche de l'evenement. Les professionnels disposent de formules d'abonnement selon l'etendue de la recherche de joueurs."
+      },
+      {
+        "q": "Comment mon profil est-il verifie ?",
+        "a": "Chaque profil est examine par l'administration de l'academie : identite, piece justificative et, pour les mineurs, consentement du representant legal. Tant que la verification n'est pas faite, le profil n'apparait pas dans les recherches des recruteurs."
+      },
+      {
+        "q": "Je suis mineur, puis-je m'inscrire ?",
+        "a": "Oui, avec l'accord d'un representant legal. Son identite et son consentement sont demandes pendant l'inscription et verifies avant la validation du compte."
+      },
+      {
+        "q": "Qui peut me contacter ?",
+        "a": "Seuls les comptes professionnels valides peuvent engager une conversation. Vous pouvez a tout moment bloquer un interlocuteur ou signaler un echange : la moderation instruit chaque signalement."
+      },
+      {
+        "q": "Sur quels telephones l'application fonctionne-t-elle ?",
+        "a": "Sur iOS et sur Android. Le compte est le meme d'un appareil a l'autre : vos videos, vos photos et vos inscriptions vous suivent."
+      }
+    ]
+  },
+  "cta": {
+    "titleLine1": "Commence ton parcours",
+    "titleLine2": "avec Ifriqiya Star.",
+    "lead": "Cree ton profil, ajoute tes videos et inscris-toi a ta premiere journee de detection. L'application est gratuite pour les joueurs.",
+    "points": [
+      "Inscription en quelques minutes",
+      "Profil verifie par l'academie",
+      "Scout Days pres de chez toi",
+      "Contact direct avec les pros"
+    ],
+    "appleStore": "l'App Store",
+    "applePrefix": "Telecharger sur",
+    "googleStore": "Google Play",
+    "googlePrefix": "Disponible sur",
+    "signInCaption": "Se connecter",
+    "signUpCaption": "Creer un compte",
+    "signInAlt": "Ecran de connexion de l'application Ifriqiya Star",
+    "signUpAlt": "Ecran de creation de compte de l'application Ifriqiya Star"
+  },
+  "contactSection": {
+    "pill": "Contactez-nous",
+    "titleLine1": "Le prochain pas,",
+    "titleLine2": "faisons-le ensemble.",
+    "lead": "Une question sur l'académie, une journée de détection ou un projet de partenariat ? Échangeons autour de votre ambition.",
+    "cta": "Contactez-nous"
+  },
+  "footer": {
+    "tagline": "L'excellence footballistique au service de la jeunesse et de la performance.",
+    "academyHeading": "L'academie",
+    "about": "Qui sommes-nous",
+    "how": "Comment ca marche",
+    "scoutDaysVideo": "Scout Days en vidéo",
+    "app": "L'application",
+    "values": "Nos valeurs",
+    "resourcesHeading": "Ressources",
+    "faq": "Questions frequentes",
+    "testimonials": "Témoignages illustratifs",
+    "contact": "Contactez-nous",
+    "download": "Telecharger l'app",
+    "admin": "Espace administration",
+    "writeHeading": "Nous ecrire",
+    "rights": "Tous droits reserves.",
+    "writeBody": "Une question sur l'academie, une detection ou un partenariat ? Notre equipe repond.",
+    "motto": "Detection · Progression · Excellence"
+  },
+  "language": {
+    "label": "Langue",
+    "choose": "Choisir la langue",
+    "auto": "Automatique",
+    "autoHint": "Suit la langue de votre navigateur ou de votre telephone.",
+    "current": "Langue courante",
+    "switchTo": "Passer en {language}",
+    "autoResolved": "Actuellement : {language}",
+    "nav": "Parametres"
+  },
+  "settings": {
+    "breadcrumb": "Back-office",
+    "title": "Parametres",
+    "description": "Les reglages personnels de votre session d'administration.",
+    "languagePanel": "Langue de l'interface",
+    "languagePanelDesc": "S'applique au back-office et au site public, sur cet appareil.",
+    "scopeNote": "Le choix est enregistre dans un cookie de ce navigateur. Il ne change ni la langue des autres administrateurs, ni celle des notifications envoyees aux membres depuis l'application mobile.",
+    "saved": "Langue enregistree."
+  },
+  "contactPage": {
+    "metaTitle": "Contactez-nous",
+    "metaDescription": "Contactez l'équipe Ifriqiya Star pour une question sur l'académie, les Scout Days, l'application ou un partenariat.",
+    "back": "Retour à l'accueil",
+    "pill": "Contactez-nous",
+    "titleLine1": "Tout commence",
+    "titleLine2pre": "par un",
+    "titleAccent": "échange.",
+    "lead": "Joueur, parent, club ou partenaire : parlez-nous de votre projet. L'équipe Ifriqiya Star est à votre écoute.",
+    "mailPrompt": "Vous préférez nous écrire directement ?",
+    "faqTitle": "Une question sur l'application ?",
+    "faqBody": "Les premières réponses se trouvent peut-être dans notre FAQ.",
+    "faqAria": "Consulter les questions fréquentes",
+    "formTitle": "Parlons de votre projet",
+    "formRequired": "Tous les champs sont obligatoires.",
+    "name": "Nom complet",
+    "namePlaceholder": "Votre nom",
+    "email": "Adresse e-mail",
+    "emailPlaceholder": "vous@exemple.com",
+    "subject": "Votre demande concerne",
+    "subjectPlaceholder": "Choisissez un sujet",
+    "subjects": [
+      "L'académie et la formation",
+      "Les Scout Days et la détection",
+      "Un partenariat",
+      "L'application et mon compte",
+      "Une autre question"
+    ],
+    "message": "Votre message",
+    "messagePlaceholder": "Présentez-nous votre projet ou posez-nous votre question…",
+    "messageLimit": "1 500 caractères maximum.",
+    "missing": "Merci de renseigner tous les champs obligatoires.",
+    "submit": "Préparer mon e-mail",
+    "submitHint": "Votre application de messagerie s'ouvre avec votre message prérempli. Vous pourrez le vérifier puis l'envoyer à notre équipe.",
+    "noscript": "Activez JavaScript pour préparer votre e-mail, ou écrivez directement à contact@ifriqiyastar.com.",
+    "ready": "Votre message est prêt. Finalisez l'envoi dans votre messagerie.",
+    "readyFallback": "Rien ne s'est ouvert ? Copiez votre message et envoyez-le à contact@ifriqiyastar.com.",
+    "openMail": "Ouvrir la messagerie",
+    "copy": "Copier le message",
+    "copied": "Message copié. Collez-le dans un e-mail à contact@ifriqiyastar.com.",
+    "copyFailed": "La copie automatique est indisponible. Vous pouvez sélectionner votre message dans le formulaire."
+  },
+  "testimonials": {
+    "pill": "Témoignages · Exemples fictifs",
+    "items": [
+      {
+        "name": "Yassine",
+        "role": "Joueur · Milieu de terrain",
+        "theme": "Oser se montrer",
+        "quote": "Je gardais mes vidéos de match sur mon téléphone sans savoir quoi en faire. En construisant mon profil, j’ai appris à montrer mon jeu et mes points forts. Mon premier Scout Day m’a surtout donné une chose : l’envie de viser plus haut."
+      },
+      {
+        "name": "Inès",
+        "role": "Joueuse · Ailière",
+        "theme": "Avancer avec confiance",
+        "quote": "Après une détection, j’avais enfin des retours concrets sur mon jeu. J’ai repris l’entraînement avec des objectifs précis : mon placement, mes appels, ma dernière passe. Chaque séance avait un sens et je voyais mes progrès autrement."
+      },
+      {
+        "name": "Mehdi",
+        "role": "Entraîneur · Formation",
+        "theme": "Créer la rencontre",
+        "quote": "Un profil ne remplace pas le terrain, mais il peut ouvrir la discussion. Les vidéos m’ont permis de découvrir des joueurs hors de mon réseau habituel. Ensuite, une journée de détection nous a donné le temps de les voir jouer et d’échanger."
+      }
+    ],
+    "titleLine1": "Des ambitions.",
+    "titleLine2": "Des parcours.",
+    "titleAccent": "Une passion.",
+    "portraitAlt": "Portrait généré par IA de {name}, personnage fictif",
+    "quoteOpen": "« ",
+    "quoteClose": " »"
+  },
+  "scoutVideos": {
+    "previewsAria": "Trois aperçus vidéo des Scout Days",
+    "railAria": "Trois aperçus vidéo des Scout Days",
+    "announce": "Aperçu {id} en première position, sur {total} vidéos.",
+    "playerAria": "Aperçu vidéo Scout Days {id}",
+    "unsupported": "Votre navigateur ne prend pas en charge la vidéo.",
+    "openVideo": "Ouvrir la vidéo",
+    "unmute": "Activer le son de la vidéo {id}",
+    "mute": "Couper le son de la vidéo {id}",
+    "play": "Lire l’aperçu vidéo {id}"
+  },
+  "carousel": {
+    "regionAria": "À découvrir avec Ifriqiya Star",
+    "slidesAria": "Diapositives — utilisez les flèches pour naviguer",
+    "slideAria": "{n} sur {total} : {tag}",
+    "slides": [
+      {
+        "tag": "Scout Days",
+        "title": "Ton talent mérite le terrain.",
+        "text": "Des journées de détection pour montrer ce que tu sais faire. Découvre le parcours, les critères et les étapes pour te faire remarquer.",
+        "action": "Découvrir le parcours"
+      },
+      {
+        "tag": "À toi de jouer",
+        "title": "Fais parler ton football.",
+        "text": "Tes plus belles actions, ton parcours, ta progression. Rassemble tes vidéos et tes photos sur un profil visible par les professionnels.",
+        "action": "Explorer l’application"
+      },
+      {
+        "tag": "Ifriqiya Star",
+        "title": "Le football nous fait grandir.",
+        "text": "L’excellence, la discipline et l’esprit d’équipe nous rassemblent. Découvre les valeurs qui accompagnent chaque talent dans son ascension.",
+        "action": "Découvrir nos valeurs"
+      }
+    ],
+    "pickSlide": "Choisir une diapositive",
+    "showSlide": "Afficher : {tag}"
+  }
+}

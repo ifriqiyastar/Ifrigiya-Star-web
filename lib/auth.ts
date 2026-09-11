@@ -99,6 +99,12 @@ export async function requireAdmin(): Promise<AdminSession> {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Redirections volontairement **sans prefixe de langue**. `proxy.ts` resout
+  // la langue sur ce saut (cookie, puis `Accept-Language`) et renvoie vers
+  // `/ar/connexion` ou `/en/connexion` le cas echeant. C'est aussi la seule
+  // forme utilisable ici : `requireAdmin()` est appele depuis des Server
+  // Actions, ou `next/root-params` est interdit et ne pourrait donc pas
+  // fournir la langue courante.
   if (!user) redirect("/connexion");
 
   const { data: profile, error } = await supabase

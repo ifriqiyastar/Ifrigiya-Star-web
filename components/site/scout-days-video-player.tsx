@@ -6,6 +6,8 @@
 import { useEffect, useRef, useState } from "react";
 import { PlayIcon, Volume2Icon, VolumeXIcon } from "lucide-react";
 
+import { useI18n } from "@/lib/i18n/client";
+
 type ScoutDaysVideoPlayerProps = {
   id: string;
   src: string;
@@ -23,6 +25,8 @@ function nextSoundRequest(ref: { current: number }) {
 }
 
 export function ScoutDaysVideoPlayer({ id, src, poster, position }: ScoutDaysVideoPlayerProps) {
+  const { dict } = useI18n();
+  const t = dict.scoutVideos;
   const videoRef = useRef<HTMLVideoElement>(null);
   const visibleRef = useRef(false);
   const soundRequestRef = useRef(0);
@@ -134,7 +138,7 @@ export function ScoutDaysVideoPlayer({ id, src, poster, position }: ScoutDaysVid
         playsInline
         preload="none"
         tabIndex={0}
-        aria-label={`Aperçu vidéo Scout Days ${id}`}
+        aria-label={t.playerAria.replace("{id}", id)}
         aria-describedby={`scout-days-video-caption-${id}`}
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
@@ -143,8 +147,8 @@ export function ScoutDaysVideoPlayer({ id, src, poster, position }: ScoutDaysVid
         className="absolute inset-0 size-full object-cover [&:fullscreen]:object-contain"
         style={{ objectPosition: position }}
       >
-        Votre navigateur ne prend pas en charge la vidéo.
-        <a href={src}>Ouvrir la vidéo</a>.
+        {t.unsupported}
+        <a href={src}>{t.openVideo}</a>.
       </video>
 
       <span aria-hidden className="pointer-events-none absolute top-5 left-5 font-mono text-[11px] tracking-[0.2em] text-white/75">{id}</span>
@@ -155,7 +159,7 @@ export function ScoutDaysVideoPlayer({ id, src, poster, position }: ScoutDaysVid
             if (videoRef.current?.muted) void enableSound(true);
             else muteVideo();
           }}
-          aria-label={`${isMuted ? "Activer" : "Couper"} le son de la vidéo ${id}`}
+          aria-label={(isMuted ? t.unmute : t.mute).replace("{id}", id)}
           aria-pressed={!isMuted}
           title={isMuted ? "Activer le son" : "Couper le son"}
           className="absolute top-3 right-3 flex size-10 items-center justify-center rounded-full border border-white/20 bg-black/70 text-white backdrop-blur-sm transition-colors hover:bg-black/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
@@ -169,7 +173,7 @@ export function ScoutDaysVideoPlayer({ id, src, poster, position }: ScoutDaysVid
           <button
             type="button"
             onClick={playVideo}
-            aria-label={`Lire l’aperçu vidéo ${id}`}
+            aria-label={t.play.replace("{id}", id)}
             className="pointer-events-auto flex size-14 items-center justify-center rounded-full border border-white/10 bg-black/75 text-white backdrop-blur-sm transition-colors hover:border-white/40 hover:bg-black/90 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
           >
             <PlayIcon className="ml-0.5 size-6" strokeWidth={1.8} aria-hidden />

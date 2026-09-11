@@ -1,0 +1,343 @@
+{
+  "nav": {
+    "academy": "The academy",
+    "how": "How it works",
+    "features": "Features",
+    "values": "Our values",
+    "faq": "FAQ",
+    "contact": "Contact",
+    "admin": "Administration",
+    "download": "Get the app",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "slogan": "Because no African talent should remain invisible.",
+    "drawerLabel": "Main navigation"
+  },
+  "hero": {
+    "pill": "Elite football academy · Scouting · Progression",
+    "titleLine1": "No African talent",
+    "titleLine2": "should remain",
+    "titleAccent": "invisible",
+    "lead": "Ifriqiya Star is an elite football academy devoted to training, technical development and the growth of young talent. A verified profile, match footage, scouting days and direct contact with recruiters — all from your phone.",
+    "ctaPrimary": "Join the academy",
+    "ctaSecondary": "How it works",
+    "pillars": {
+      "detection": {
+        "title": "Scouting",
+        "text": "Supervised Scout Days"
+      },
+      "progression": {
+        "title": "Progression",
+        "text": "An assessment after every session"
+      },
+      "excellence": {
+        "title": "Excellence",
+        "text": "Profiles verified one by one"
+      }
+    }
+  },
+  "services": {
+    "label": "Our services",
+    "items": [
+      "Training and academy",
+      "Physical and tactical preparation",
+      "Scouting and professional guidance",
+      "Tournaments and sporting events"
+    ]
+  },
+  "steps": {
+    "pill": "The journey",
+    "title": "How it works",
+    "lead": "Four steps, from signing up to being scouted. The same path for everyone, and a profile verified before it is shown to anyone.",
+    "phoneAlt": "A recruiter searching for players in the Ifriqiya Star app",
+    "items": [
+      {
+        "number": "01",
+        "title": "Create your profile",
+        "text": "Sign up as a player or a professional, and fill in your position, your level and your background. Your profile is verified by the academy before it becomes visible."
+      },
+      {
+        "number": "02",
+        "title": "Let the pitch speak",
+        "text": "Add your match videos and photos. Recruiters, clubs and agents view them straight from your profile."
+      },
+      {
+        "number": "03",
+        "title": "Attend a scouting day",
+        "text": "Sign up for the Scout Days run by clubs and academies. The eligibility criteria tell you immediately whether your profile fits."
+      },
+      {
+        "number": "04",
+        "title": "Get noticed",
+        "text": "Receive your assessment after the scouting day, talk directly with recruiters, and follow your progress season after season."
+      }
+    ]
+  },
+  "why": {
+    "title": "Why Ifriqiya Star",
+    "leadBefore": "Our mission is to make Ifriqiya Star a benchmark in sports training across Africa. We offer young athletes",
+    "leadStrong": "a demanding and inspiring environment",
+    "leadAfter": "where a passion for the game and the pursuit of excellence come together to reveal the stars of tomorrow.",
+    "cta": "Join the academy",
+    "imageAlt": "A footballer working on his ball control on a training pitch",
+    "checks": [
+      "Profile verified by the academy",
+      "Match videos and photos",
+      "Supervised scouting days",
+      "Transparent eligibility criteria",
+      "Direct contact with recruiters",
+      "Moderation and reporting"
+    ]
+  },
+  "features": {
+    "pill": "The app",
+    "title": "Everything happens on your phone.",
+    "lead": "Post, search, sign up, talk. The screenshots below are the app itself, untouched.",
+    "items": [
+      {
+        "title": "The community feed",
+        "text": "Posts from players, clubs, academies and agents. A moderated feed, where you follow whoever you like."
+      },
+      {
+        "title": "Scouting days",
+        "text": "Date, place, remaining spots, price and eligibility criteria. Signing up takes a single tap in the app."
+      },
+      {
+        "title": "Getting connected",
+        "text": "Direct messaging between players and professionals, with blocking and reporting to keep the exchange healthy."
+      }
+    ]
+  },
+  "values": {
+    "pill": "Our vision",
+    "title": "A continent where football helps you grow.",
+    "lead": "We dream of a continent where football is a powerful lever for social mobility, education and international standing. Ifriqiya Star is not only an academy: it is an incubator of talent.",
+    "signature": "“Because no African talent should remain invisible.”",
+    "signatureLabel": "Our signature",
+    "items": [
+      {
+        "title": "Excellence",
+        "text": "Demanding the best of yourself, at every training session and on every ball."
+      },
+      {
+        "title": "Discipline",
+        "text": "Rigour, respect for the game, for teammates and for the rules, to build complete athletes."
+      },
+      {
+        "title": "Going further",
+        "text": "Encouraging every young player to push past their physical and mental limits."
+      },
+      {
+        "title": "Rising",
+        "text": "Guiding talent step by step towards professional success and personal fulfilment."
+      },
+      {
+        "title": "Team spirit",
+        "text": "Putting solidarity, mutual support and unity at the heart of every victory."
+      }
+    ]
+  },
+  "faq": {
+    "title": "Frequently asked questions",
+    "lead": "The essentials on signing up, profile verification and scouting days. A question that isn't here? Write to us.",
+    "items": [
+      {
+        "q": "Who is Ifriqiya Star for?",
+        "a": "For young players who want to be seen, and for football professionals — recruiters, clubs, academies, agents — looking for talent. Both sign up from the same app, along separate paths."
+      },
+      {
+        "q": "Is signing up paid?",
+        "a": "Creating a player profile is free. Some scouting days carry a registration fee, shown on the event page. Professionals have subscription plans that depend on how widely they search for players."
+      },
+      {
+        "q": "How is my profile verified?",
+        "a": "Every profile is reviewed by the academy's administration: identity, supporting document and, for minors, the consent of a legal guardian. Until that check is done, the profile does not appear in recruiters' searches."
+      },
+      {
+        "q": "I am a minor, can I sign up?",
+        "a": "Yes, with a legal guardian's agreement. Their identity and consent are requested during registration and verified before the account is approved."
+      },
+      {
+        "q": "Who can contact me?",
+        "a": "Only approved professional accounts can start a conversation. You can block someone or report an exchange at any time: moderation reviews every report."
+      },
+      {
+        "q": "Which phones does the app run on?",
+        "a": "On iOS and on Android. The account is the same from one device to the next: your videos, your photos and your registrations follow you."
+      }
+    ]
+  },
+  "cta": {
+    "titleLine1": "Start your journey",
+    "titleLine2": "with Ifriqiya Star.",
+    "lead": "Create your profile, add your videos and sign up for your first scouting day. The app is free for players.",
+    "points": [
+      "Sign up in a few minutes",
+      "Profile verified by the academy",
+      "Scout Days near you",
+      "Direct contact with professionals"
+    ],
+    "appleStore": "the App Store",
+    "applePrefix": "Download on",
+    "googleStore": "Google Play",
+    "googlePrefix": "Get it on",
+    "signInCaption": "Sign in",
+    "signUpCaption": "Create an account",
+    "signInAlt": "Sign-in screen of the Ifriqiya Star app",
+    "signUpAlt": "Account creation screen of the Ifriqiya Star app"
+  },
+  "contactSection": {
+    "pill": "Contact us",
+    "titleLine1": "The next step,",
+    "titleLine2": "let's take it together.",
+    "lead": "A question about the academy, a scouting day or a partnership? Let's talk about your ambition.",
+    "cta": "Contact us"
+  },
+  "footer": {
+    "tagline": "Footballing excellence in the service of youth and performance.",
+    "academyHeading": "The academy",
+    "about": "About us",
+    "how": "How it works",
+    "scoutDaysVideo": "Scout Days on video",
+    "app": "The app",
+    "values": "Our values",
+    "resourcesHeading": "Resources",
+    "faq": "Frequently asked questions",
+    "testimonials": "Illustrative testimonials",
+    "contact": "Contact us",
+    "download": "Get the app",
+    "admin": "Administration",
+    "writeHeading": "Write to us",
+    "rights": "All rights reserved.",
+    "writeBody": "A question about the academy, a scouting day or a partnership? Our team answers.",
+    "motto": "Scouting · Progression · Excellence"
+  },
+  "language": {
+    "label": "Language",
+    "choose": "Choose language",
+    "auto": "Automatic",
+    "autoHint": "Follows your browser or phone language.",
+    "current": "Current language",
+    "switchTo": "Switch to {language}",
+    "autoResolved": "Currently: {language}",
+    "nav": "Settings"
+  },
+  "settings": {
+    "breadcrumb": "Back-office",
+    "title": "Settings",
+    "description": "Personal preferences for your administration session.",
+    "languagePanel": "Interface language",
+    "languagePanelDesc": "Applies to the back-office and the public site, on this device.",
+    "scopeNote": "The choice is stored in a cookie in this browser. It changes neither the language of other administrators, nor that of the notifications sent to members from the mobile app.",
+    "saved": "Language saved."
+  },
+  "contactPage": {
+    "metaTitle": "Contact us",
+    "metaDescription": "Contact the Ifriqiya Star team about the academy, Scout Days, the app or a partnership.",
+    "back": "Back to home",
+    "pill": "Contact us",
+    "titleLine1": "It all starts",
+    "titleLine2pre": "with a",
+    "titleAccent": "conversation.",
+    "lead": "Player, parent, club or partner: tell us about your project. The Ifriqiya Star team is listening.",
+    "mailPrompt": "Would you rather write to us directly?",
+    "faqTitle": "A question about the app?",
+    "faqBody": "The first answers may already be in our FAQ.",
+    "faqAria": "Read the frequently asked questions",
+    "formTitle": "Let's talk about your project",
+    "formRequired": "All fields are required.",
+    "name": "Full name",
+    "namePlaceholder": "Your name",
+    "email": "Email address",
+    "emailPlaceholder": "you@example.com",
+    "subject": "Your enquiry is about",
+    "subjectPlaceholder": "Choose a subject",
+    "subjects": [
+      "The academy and training",
+      "Scout Days and scouting",
+      "A partnership",
+      "The app and my account",
+      "Another question"
+    ],
+    "message": "Your message",
+    "messagePlaceholder": "Tell us about your project or ask us your question…",
+    "messageLimit": "1,500 characters maximum.",
+    "missing": "Please fill in all required fields.",
+    "submit": "Prepare my email",
+    "submitHint": "Your mail app opens with your message pre-filled. You can check it, then send it to our team.",
+    "noscript": "Enable JavaScript to prepare your email, or write directly to contact@ifriqiyastar.com.",
+    "ready": "Your message is ready. Finish sending it in your mail app.",
+    "readyFallback": "Nothing opened? Copy your message and send it to contact@ifriqiyastar.com.",
+    "openMail": "Open mail app",
+    "copy": "Copy the message",
+    "copied": "Message copied. Paste it into an email to contact@ifriqiyastar.com.",
+    "copyFailed": "Automatic copying is unavailable. You can select your message in the form."
+  },
+  "testimonials": {
+    "pill": "Testimonials · Fictional examples",
+    "items": [
+      {
+        "name": "Yassine",
+        "role": "Player · Midfielder",
+        "theme": "Daring to be seen",
+        "quote": "I kept my match videos on my phone without knowing what to do with them. Building my profile taught me how to show my game and my strengths. Above all, my first Scout Day gave me one thing: the urge to aim higher."
+      },
+      {
+        "name": "Inès",
+        "role": "Player · Winger",
+        "theme": "Moving forward with confidence",
+        "quote": "After a scouting day, I finally had concrete feedback on my game. I went back to training with precise goals: my positioning, my runs, my final ball. Every session had a purpose and I saw my progress differently."
+      },
+      {
+        "name": "Mehdi",
+        "role": "Coach · Youth development",
+        "theme": "Making the meeting happen",
+        "quote": "A profile does not replace the pitch, but it can open the conversation. The videos let me discover players outside my usual network. Then a scouting day gave us the time to watch them play and to talk."
+      }
+    ],
+    "titleLine1": "Ambitions.",
+    "titleLine2": "Journeys.",
+    "titleAccent": "One passion.",
+    "portraitAlt": "AI-generated portrait of {name}, a fictional character",
+    "quoteOpen": "“",
+    "quoteClose": "”"
+  },
+  "scoutVideos": {
+    "previewsAria": "Three video previews of the Scout Days",
+    "railAria": "Three Scout Days video previews",
+    "announce": "Preview {id} now first, out of {total} videos.",
+    "playerAria": "Scout Days video preview {id}",
+    "unsupported": "Your browser does not support video.",
+    "openVideo": "Open the video",
+    "unmute": "Unmute video {id}",
+    "mute": "Mute video {id}",
+    "play": "Play video preview {id}"
+  },
+  "carousel": {
+    "regionAria": "Discover Ifriqiya Star",
+    "slidesAria": "Slides — use the arrow keys to navigate",
+    "slideAria": "{n} of {total}: {tag}",
+    "slides": [
+      {
+        "tag": "Scout Days",
+        "title": "Your talent deserves the pitch.",
+        "text": "Scouting days to show what you can do. Discover the path, the criteria and the steps to get noticed.",
+        "action": "Discover the path"
+      },
+      {
+        "tag": "Your turn",
+        "title": "Let your football speak.",
+        "text": "Your best moments, your journey, your progress. Gather your videos and photos on a profile professionals can see.",
+        "action": "Explore the app"
+      },
+      {
+        "tag": "Ifriqiya Star",
+        "title": "Football makes us grow.",
+        "text": "Excellence, discipline and team spirit bring us together. Discover the values that support every talent on the way up.",
+        "action": "Discover our values"
+      }
+    ],
+    "pickSlide": "Choose a slide",
+    "showSlide": "Show: {tag}"
+  }
+}

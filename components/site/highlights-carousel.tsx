@@ -3,37 +3,28 @@
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-const SLIDES = [
-  {
-    tag: "Scout Days",
-    title: "Ton talent mérite le terrain.",
-    description:
-      "Des journées de détection pour montrer ce que tu sais faire. Découvre le parcours, les critères et les étapes pour te faire remarquer.",
-    action: "Découvrir le parcours",
-    href: "#comment",
-    image: "/videos/football-hero-cover.webp",
-  },
-  {
-    tag: "À toi de jouer",
-    title: "Fais parler ton football.",
-    description:
-      "Tes plus belles actions, ton parcours, ta progression. Rassemble tes vidéos et tes photos sur un profil visible par les professionnels.",
-    action: "Explorer l’application",
-    href: "#fonctionnalites",
-    image: "/images/carousel-training.jpg",
-  },
-  {
-    tag: "Ifriqiya Star",
-    title: "Le football nous fait grandir.",
-    description:
-      "L’excellence, la discipline et l’esprit d’équipe nous rassemblent. Découvre les valeurs qui accompagnent chaque talent dans son ascension.",
-    action: "Découvrir nos valeurs",
-    href: "#valeurs",
-    image: "/images/carousel-football.jpg",
-  },
-];
+import { useI18n } from "@/lib/i18n/client";
+
+/**
+ * Ce qui ne se traduit pas : l'image et l'ancre de destination. Les ancres
+ * restent en francais comme dans l'entete — ce sont des identifiants de
+ * section, pas du texte. L'ordre doit suivre celui de `carousel.slides` dans
+ * les dictionnaires.
+ */
+const SLIDE_MEDIA = [
+  { href: "#comment", image: "/videos/football-hero-cover.webp" },
+  { href: "#fonctionnalites", image: "/images/carousel-training.jpg" },
+  { href: "#valeurs", image: "/images/carousel-football.jpg" },
+] as const;
 
 export function HighlightsCarousel() {
+  const { dict, dir } = useI18n();
+  const t = dict.carousel;
+  const SLIDES = t.slides;
+  // `SLIDES` vient desormais du dictionnaire, donc change avec la langue :
+  // l'effet de rotation doit dependre de sa longueur, pas la capturer.
+  const slideCount = SLIDES.length;
+
   const sectionRef = useRef<HTMLElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
@@ -76,14 +67,14 @@ export function HighlightsCarousel() {
 
   useEffect(() => {
     if (!rotating) return;
-    const timer = window.setTimeout(() => goTo((activeRef.current + 1) % SLIDES.length), 5000);
+    const timer = window.setTimeout(() => goTo((activeRef.current + 1) % slideCount), 5000);
     return () => window.clearTimeout(timer);
-  }, [cycle, goTo, rotating]);
+  }, [cycle, goTo, rotating, slideCount]);
 
   return (
     <section
       ref={sectionRef}
-      aria-label="À découvrir avec Ifriqiya Star"
+      aria-label={t.regionAria}
       aria-roledescription="carrousel"
       className="mx-auto max-w-7xl px-5 pt-8 pb-12 sm:px-8 sm:pt-12 sm:pb-16 [&_button]:cursor-pointer"
       onFocusCapture={(event) => {
@@ -99,11 +90,22 @@ export function HighlightsCarousel() {
         <div
           ref={trackRef}
           id="highlights-track"
+          // La piste reste en LTR, y compris en arabe : `scrollLeft` devient
+          // negatif en RTL sur une partie des navigateurs, et toute la
+          // mecanique ci-dessous (comparaison a `offsetLeft`, `scroll-snap`)
+          // suppose un axe croissant. Seul l'ordre des diapositives reste donc
+          // de gauche a droite ; leur contenu, lui, repasse en RTL juste en
+          // dessous. Inverser la piste demanderait de reecrire — et de tester
+          // dans trois navigateurs — un calcul qui fonctionne aujourd'hui.
+          dir="ltr"
           tabIndex={0}
-          aria-label="Diapositives — utilisez les flèches pour naviguer"
+          aria-label={t.slidesAria}
           className="relative flex snap-x snap-mandatory overflow-x-auto overscroll-x-contain [scrollbar-width:none] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-(--site-accent) [&::-webkit-scrollbar]:hidden"
           onKeyDown={(event) => {
             let target: number;
+            // La piste etant figee en LTR, fleche droite = diapositive
+            // suivante dans les trois langues : la touche suit ce que l'oeil
+            // voit bouger, pas le sens de lecture du texte.
             if (event.key === "ArrowRight") target = (active + 1) % SLIDES.length;
             else if (event.key === "ArrowLeft") target = (active + SLIDES.length - 1) % SLIDES.length;
             else if (event.key === "Home") target = 0;
@@ -126,16 +128,22 @@ export function HighlightsCarousel() {
               key={slide.tag}
               role="group"
               aria-roledescription="diapositive"
-              aria-label={`${index + 1} sur ${SLIDES.length} : ${slide.tag}`}
+              // Le contenu retrouve le sens de lecture de la langue, que la
+              // piste qui le porte a neutralise.
+              dir={dir}
+              aria-label={t.slideAria
+                .replace("{n}", String(index + 1))
+                .replace("{total}", String(SLIDES.length))
+                .replace("{tag}", slide.tag)}
               className="relative isolate flex min-h-[420px] w-full shrink-0 snap-start flex-col items-start overflow-hidden px-6 py-9 sm:min-h-[450px] sm:px-12 sm:py-12 lg:px-14"
             >
-              <Image src={slide.image} alt="" fill sizes="(min-width: 1280px) 1216px, 100vw" className="-z-20 object-cover grayscale" />
+              <Image src={SLIDE_MEDIA[index].image} alt="" fill sizes="(min-width: 1280px) 1216px, 100vw" className="-z-20 object-cover grayscale" />
               <div aria-hidden className="absolute inset-0 -z-10 bg-[linear-gradient(180deg,rgba(0,0,0,0.5),rgba(0,0,0,0.92)),linear-gradient(90deg,rgba(0,0,0,0.45),transparent)]" />
               <span className="rounded-full bg-(--site-accent) px-4 py-2 text-[0.625rem] font-extrabold tracking-wider text-black uppercase">{slide.tag}</span>
               <h2 className="font-heading mt-6 max-w-xl text-3xl leading-[1.05] font-extrabold tracking-tight text-white uppercase sm:text-4xl lg:text-5xl">{slide.title}</h2>
-              <p className="mt-5 max-w-lg text-sm leading-relaxed text-white/70 sm:text-base">{slide.description}</p>
+              <p className="mt-5 max-w-lg text-sm leading-relaxed text-white/70 sm:text-base">{slide.text}</p>
               <a
-                href={slide.href}
+                href={SLIDE_MEDIA[index].href}
                 tabIndex={active === index ? 0 : -1}
                 className="mt-7 mb-8 inline-flex min-h-12 items-center gap-3 rounded-full bg-(--site-accent) px-5 py-3 text-sm font-bold text-black shadow-[0_0_32px_-8px_var(--site-accent)] transition-shadow hover:shadow-[0_0_40px_-4px_var(--site-accent)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white sm:px-7"
               >
@@ -146,9 +154,9 @@ export function HighlightsCarousel() {
           ))}
         </div>
         <div className="mx-4 flex items-center justify-center border-t border-white/20 py-3 sm:mx-8">
-          <div className="flex items-center" aria-label="Choisir une diapositive">
+          <div className="flex items-center" aria-label={t.pickSlide}>
             {SLIDES.map((slide, index) => (
-              <button key={slide.tag} type="button" aria-label={`Afficher : ${slide.tag}`} aria-current={active === index ? "true" : undefined} aria-controls="highlights-track" onClick={() => goTo(index)} className="flex size-10 items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-(--site-accent)">
+              <button key={slide.tag} type="button" aria-label={t.showSlide.replace("{tag}", slide.tag)} aria-current={active === index ? "true" : undefined} aria-controls="highlights-track" onClick={() => goTo(index)} className="flex size-10 items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-(--site-accent)">
                 <span className={`h-2 rounded-full transition-all motion-reduce:transition-none ${active === index ? "w-6 bg-(--site-accent)" : "w-2 bg-white/25"}`} />
               </button>
             ))}

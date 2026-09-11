@@ -19,7 +19,7 @@ import { QUARANTINABLE, removalOptions } from "@/lib/moderation-targets";
  * necessaire pour instruire un signalement.
  */
 
-const REFRESH = () => revalidatePath("/admin", "layout");
+const REFRESH = () => revalidatePath("/[locale]/admin", "layout");
 
 
 /**

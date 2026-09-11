@@ -4,6 +4,7 @@ import {
   ClipboardCheckIcon,
   FlagIcon,
   LayoutDashboardIcon,
+  LanguagesIcon,
   ShieldCheckIcon,
   UsersIcon,
   WalletIcon,
@@ -13,6 +14,11 @@ import type { AdminPermission } from "@/lib/auth";
 /**
  * Les sections du back-office, dans l'ordre du cahier des charges §12.
  * `badge` designe le compteur passe par le layout (files d'attente).
+ *
+ * `permission: null` signifie « visible par tout administrateur ». Une seule
+ * entree l'utilise, Parametres : la langue d'affichage est une preference
+ * personnelle, pas un droit metier, et la cacher derriere une permission RBAC
+ * priverait un moderateur du seul reglage qui le concerne.
  */
 export const NAV_ITEMS = [
   {
@@ -77,6 +83,14 @@ export const NAV_ITEMS = [
     icon: WalletIcon,
     badge: null,
     permission: "finance.manage" as AdminPermission,
+    section: "Pilotage" as const,
+  },
+  {
+    href: "/admin/parametres",
+    label: "Parametres",
+    icon: LanguagesIcon,
+    badge: null,
+    permission: null,
     section: "Pilotage" as const,
   },
 ] as const;

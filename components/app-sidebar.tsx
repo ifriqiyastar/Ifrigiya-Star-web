@@ -40,7 +40,10 @@ export function AppSidebar({
   // Memes chiffres que la cloche, et vivants comme elle : les deux lisent le
   // meme instantane.
   const { tasks, badges } = useAdminQueue()
-  const items = NAV_ITEMS.filter((item) => permissions.includes(item.permission)).map((item) => ({
+  const items = NAV_ITEMS.filter(
+    // `permission: null` = accessible a tout administrateur (cf. nav-items.ts).
+    (item) => item.permission === null || permissions.includes(item.permission),
+  ).map((item) => ({
     title: item.label,
     url: item.href,
     icon: <item.icon />,

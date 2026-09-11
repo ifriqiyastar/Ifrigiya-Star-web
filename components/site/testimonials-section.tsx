@@ -2,36 +2,24 @@ import Image from "next/image";
 import { QuoteIcon } from "lucide-react";
 
 import { Pill } from "@/components/site/pieces";
+import { getDictionary } from "@/lib/i18n/dictionaries";
 
-// Demonstration content: these people, portraits and stories are fictional.
-const TESTIMONIALS = [
-  {
-    name: "Yassine",
-    role: "Joueur · Milieu de terrain",
-    image: "/images/testimonial-yassine.webp",
-    theme: "Oser se montrer",
-    quote:
-      "Je gardais mes vidéos de match sur mon téléphone sans savoir quoi en faire. En construisant mon profil, j’ai appris à montrer mon jeu et mes points forts. Mon premier Scout Day m’a surtout donné une chose : l’envie de viser plus haut.",
-  },
-  {
-    name: "Inès",
-    role: "Joueuse · Ailière",
-    image: "/images/testimonial-ines.webp",
-    theme: "Avancer avec confiance",
-    quote:
-      "Après une détection, j’avais enfin des retours concrets sur mon jeu. J’ai repris l’entraînement avec des objectifs précis : mon placement, mes appels, ma dernière passe. Chaque séance avait un sens et je voyais mes progrès autrement.",
-  },
-  {
-    name: "Mehdi",
-    role: "Entraîneur · Formation",
-    image: "/images/testimonial-mehdi.webp",
-    theme: "Créer la rencontre",
-    quote:
-      "Un profil ne remplace pas le terrain, mais il peut ouvrir la discussion. Les vidéos m’ont permis de découvrir des joueurs hors de mon réseau habituel. Ensuite, une journée de détection nous a donné le temps de les voir jouer et d’échanger.",
-  },
-];
+/**
+ * Contenu de demonstration : ces personnes, ces portraits et ces recits sont
+ * fictifs. Les textes vivent dans `messages/*.json` ; seules les images
+ * restent ici, puisqu'elles ne se traduisent pas et que l'ordre des deux
+ * listes doit rester le meme.
+ */
+const TESTIMONIAL_IMAGES = [
+  "/images/testimonial-yassine.webp",
+  "/images/testimonial-ines.webp",
+  "/images/testimonial-mehdi.webp",
+] as const;
 
-export function TestimonialsSection() {
+export async function TestimonialsSection() {
+  const dict = await getDictionary();
+  const t = dict.testimonials;
+
   return (
     <section
       id="temoignages"
@@ -41,28 +29,28 @@ export function TestimonialsSection() {
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between lg:gap-12">
           <div className="max-w-2xl">
-            <Pill>Témoignages · Exemples fictifs</Pill>
+            <Pill>{t.pill}</Pill>
             <h2 id="testimonials-heading" className="font-heading mt-5 text-3xl leading-[1.1] font-extrabold text-balance sm:text-4xl md:text-5xl">
-              Des ambitions.
+              {t.titleLine1}
               <br />
-              Des parcours. <span className="text-(--site-accent)">Une passion.</span>
+              {t.titleLine2} <span className="text-(--site-accent)">{t.titleAccent}</span>
             </h2>
           </div>
         </div>
 
         <div className="mt-10 grid gap-6 md:grid-cols-3 lg:mt-14">
-          {TESTIMONIALS.map((testimonial, index) => (
+          {t.items.map((testimonial, index) => (
             <figure key={testimonial.name} className="flex min-w-0 flex-col overflow-hidden rounded-3xl border border-(--site-line-strong) bg-black">
               <div className="relative aspect-[4/3] overflow-hidden">
                 <Image
-                  src={testimonial.image}
-                  alt={`Portrait généré par IA de ${testimonial.name}, personnage fictif`}
+                  src={TESTIMONIAL_IMAGES[index]}
+                  alt={t.portraitAlt.replace("{name}", testimonial.name)}
                   fill
                   sizes="(min-width: 1280px) 389px, (min-width: 768px) 33vw, 100vw"
                   className="object-cover object-[center_10%]"
                 />
                 <div aria-hidden className="absolute inset-0 bg-linear-to-t from-black/70 via-transparent to-transparent" />
-                <span aria-hidden className="font-heading absolute right-5 bottom-4 text-4xl font-extrabold text-white/80">
+                <span aria-hidden className="font-heading absolute end-5 bottom-4 text-4xl font-extrabold text-white/80">
                   0{index + 1}
                 </span>
               </div>
@@ -72,7 +60,11 @@ export function TestimonialsSection() {
                   <QuoteIcon className="size-6 shrink-0 text-(--site-accent)" aria-hidden />
                 </div>
                 <blockquote className="mt-4 flex-1 text-sm leading-7 text-(--site-muted)">
-                  <p>« {testimonial.quote} »</p>
+                  <p>
+                    {t.quoteOpen}
+                    {testimonial.quote}
+                    {t.quoteClose}
+                  </p>
                 </blockquote>
               </div>
               <figcaption className="mx-6 border-t border-(--site-line-strong) pt-5 pb-6 lg:mx-7 lg:pb-7">

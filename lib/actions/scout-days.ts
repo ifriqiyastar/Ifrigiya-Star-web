@@ -10,7 +10,7 @@ import type { RegistrationStatus, ScoutDayStatus } from "@/lib/labels";
 
 /** Actions §12.3 — validation / moderation des Scout Days et des inscriptions. */
 
-const REFRESH = () => revalidatePath("/admin", "layout");
+const REFRESH = () => revalidatePath("/[locale]/admin", "layout");
 
 const STATUS_MESSAGES: Record<ScoutDayStatus, string> = {
   brouillon: "Evenement repasse en brouillon.",

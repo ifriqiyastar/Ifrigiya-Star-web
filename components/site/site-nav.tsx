@@ -5,6 +5,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRightIcon, MenuIcon, XIcon } from "lucide-react";
 
+import { LanguageSwitcher } from "@/components/language-switcher";
+import { useI18n } from "@/lib/i18n/client";
+
 /**
  * L'entete du site public et son tiroir de navigation.
  *
@@ -31,16 +34,37 @@ import { ArrowUpRightIcon, MenuIcon, XIcon } from "lucide-react";
  * Le panneau reste monte pour pouvoir glisser ; `inert` le retire du parcours
  * clavier et de l'arbre d'accessibilite tant qu'il est ferme.
  */
-const NAV = [
-  { href: "/#academie", label: "L'academie" },
-  { href: "/#comment", label: "Comment ca marche" },
-  { href: "/#fonctionnalites", label: "Fonctionnalites" },
-  { href: "/#valeurs", label: "Nos valeurs" },
-  { href: "/#faq", label: "FAQ" },
-  { href: "/contact", label: "Contact" },
-];
+/**
+ * Les ancres restent en francais dans l'URL (`#academie`, `#fonctionnalites`)
+ * quelle que soit la langue : ce sont des identifiants de sections, pas du
+ * texte affiche. Les traduire casserait les liens deja partages et obligerait
+ * a renommer les `id` de `app/[locale]/page.tsx` dans chaque langue.
+ */
+const NAV_HREFS = [
+  "/#academie",
+  "/#comment",
+  "/#fonctionnalites",
+  "/#valeurs",
+  "/#faq",
+  "/contact",
+] as const;
 
 export function SiteNav() {
+  const { dict, locale } = useI18n();
+  const nav = dict.nav;
+  const labels: Record<(typeof NAV_HREFS)[number], string> = {
+    "/#academie": nav.academy,
+    "/#comment": nav.how,
+    "/#fonctionnalites": nav.features,
+    "/#valeurs": nav.values,
+    "/#faq": nav.faq,
+    "/contact": nav.contact,
+  };
+  // Le prefixe de langue : `/` en francais, `/en` et `/ar` sinon. Les liens
+  // internes de l'entete doivent le porter, sinon un clic depuis `/ar`
+  // renverrait le visiteur en francais.
+  const prefix = locale === "fr" ? "" : `/${locale}`;
+
   const [open, setOpen] = React.useState(false);
   const closeRef = React.useRef<HTMLButtonElement>(null);
   const burgerRef = React.useRef<HTMLButtonElement>(null);
@@ -84,29 +108,34 @@ export function SiteNav() {
           </Link>
 
           <nav className="hidden flex-1 items-center justify-center gap-4 lg:flex xl:gap-5">
-            {NAV.map((item) => (
+            {NAV_HREFS.map((href) => (
               <Link
-                key={item.href}
-                href={item.href}
+                key={href}
+                href={`${prefix}${href}`}
                 className="text-sm whitespace-nowrap text-[var(--site-muted)] transition-colors hover:text-[var(--site-fg)]"
               >
-                {item.label}
+                {labels[href]}
               </Link>
             ))}
           </nav>
 
-          <div className="ml-auto flex items-center gap-2 lg:ml-0">
+          <div className="ms-auto flex items-center gap-2 lg:ms-0">
+            {/* Le selecteur de langue, en haut de page comme demande. Il est
+                visible des le mobile — c'est le premier reglage qu'un
+                visiteur arabophone cherche, et l'enfouir dans le tiroir le
+                rendrait introuvable. */}
+            <LanguageSwitcher />
             <Link
-              href="/admin"
+              href={`${prefix}/admin`}
               className="hidden rounded-full px-4 py-2 text-sm whitespace-nowrap text-[var(--site-muted)] transition-colors hover:text-[var(--site-fg)] 2xl:inline-flex"
             >
-              Espace administration
+              {nav.admin}
             </Link>
             <Link
-              href="/#telecharger"
+              href={`${prefix}/#telecharger`}
               className="hidden rounded-full border border-[var(--site-accent)] px-5 py-2 text-sm font-semibold whitespace-nowrap text-[var(--site-accent)] transition-colors hover:bg-[var(--site-accent)] hover:text-[var(--site-ink)] sm:inline-flex"
             >
-              Telecharger l&apos;app
+              {nav.download}
             </Link>
 
             <button
@@ -115,7 +144,7 @@ export function SiteNav() {
               onClick={() => setOpen(true)}
               aria-expanded={open}
               aria-controls="tiroir-navigation"
-              aria-label="Ouvrir le menu"
+              aria-label={nav.openMenu}
               className="flex size-10 items-center justify-center rounded-full border border-[var(--site-line-strong)] text-[var(--site-fg)] transition-colors hover:border-[var(--site-accent)] hover:text-[var(--site-accent)] lg:hidden"
             >
               <MenuIcon className="size-5" />
@@ -136,10 +165,13 @@ export function SiteNav() {
 
       <aside
         id="tiroir-navigation"
-        aria-label="Navigation principale"
+        aria-label={nav.drawerLabel}
         inert={!open}
-        className={`fixed top-0 right-0 z-[70] flex h-dvh w-[86%] max-w-sm flex-col border-l border-[var(--site-line-strong)] bg-[var(--site-bg)] shadow-2xl transition-transform duration-300 ease-out lg:hidden ${
-          open ? "translate-x-0" : "translate-x-full"
+        // `end-0` et `border-s` : en arabe le tiroir s'ouvre a gauche, et sa
+        // bordure reste du cote du contenu. La translation de fermeture doit
+        // suivre le meme axe, d'ou la variante `rtl:`.
+        className={`fixed top-0 end-0 z-[70] flex h-dvh w-[86%] max-w-sm flex-col border-s border-[var(--site-line-strong)] bg-[var(--site-bg)] shadow-2xl transition-transform duration-300 ease-out lg:hidden ${
+          open ? "translate-x-0" : "translate-x-full rtl:-translate-x-full"
         }`}
       >
         <div className="flex h-16 shrink-0 items-center justify-between border-b border-[var(--site-line)] px-5">
@@ -151,7 +183,7 @@ export function SiteNav() {
             ref={closeRef}
             type="button"
             onClick={close}
-            aria-label="Fermer le menu"
+            aria-label={nav.closeMenu}
             className="flex size-10 items-center justify-center rounded-full border border-[var(--site-line-strong)] text-[var(--site-fg)] transition-colors hover:border-[var(--site-accent)] hover:text-[var(--site-accent)]"
           >
             <XIcon className="size-5" />
@@ -159,37 +191,35 @@ export function SiteNav() {
         </div>
 
         <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-4 py-5">
-          {NAV.map((item) => (
+          {NAV_HREFS.map((href) => (
             <Link
-              key={item.href}
-              href={item.href}
+              key={href}
+              href={`${prefix}${href}`}
               onClick={close}
               className="flex items-center justify-between rounded-xl px-3 py-3.5 text-base font-medium text-[var(--site-fg)] transition-colors hover:bg-white/5 hover:text-[var(--site-accent)]"
             >
-              {item.label}
-              <ArrowUpRightIcon className="size-4 text-[var(--site-muted)]" />
+              {labels[href]}
+              <ArrowUpRightIcon className="size-4 text-[var(--site-muted)] rtl:-scale-x-100" />
             </Link>
           ))}
         </nav>
 
         <div className="shrink-0 space-y-3 border-t border-[var(--site-line)] px-4 py-5">
           <Link
-            href="/#telecharger"
+            href={`${prefix}/#telecharger`}
             onClick={close}
             className="block rounded-full bg-[var(--site-accent)] px-5 py-3.5 text-center text-sm font-semibold text-[var(--site-ink)]"
           >
-            Telecharger l&apos;app
+            {nav.download}
           </Link>
           <Link
-            href="/admin"
+            href={`${prefix}/admin`}
             onClick={close}
             className="block rounded-full border border-[var(--site-line-strong)] px-5 py-3 text-center text-sm text-[var(--site-muted)] transition-colors hover:text-[var(--site-fg)]"
           >
-            Espace administration
+            {nav.admin}
           </Link>
-          <p className="pt-1 text-center text-xs text-[var(--site-muted)]">
-            Parce qu&apos;aucun talent africain ne doit rester invisible.
-          </p>
+          <p className="pt-1 text-center text-xs text-[var(--site-muted)]">{nav.slogan}</p>
         </div>
       </aside>
     </>

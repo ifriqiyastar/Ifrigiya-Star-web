@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { getDictionary, getLocale } from "@/lib/i18n/dictionaries";
+
 
 /** Le logo, en vectoriel — voir `components/site/site-nav.tsx` pour le detail. */
 function Logo({ size = 32 }: { size?: number }) {
@@ -9,47 +11,52 @@ function Logo({ size = 32 }: { size?: number }) {
   );
 }
 
-export function SiteFooter() {
+export async function SiteFooter() {
+  const dict = await getDictionary();
+  const t = dict.footer;
+  const locale = await getLocale();
+  // Comme dans l'entete : les ancres restent en francais, le prefixe porte la
+  // langue. Sans lui, chaque lien du pied de page ramenerait en francais.
+  const prefix = locale === "fr" ? "" : `/${locale}`;
+
   return (
     <footer className="border-t border-(--site-line) py-14">
       <div className="mx-auto grid max-w-7xl gap-10 px-5 sm:px-8 md:grid-cols-2 lg:grid-cols-4">
         <div className="flex flex-col gap-4">
-          <Link href="/" className="flex items-center gap-2.5">
+          <Link href={prefix || "/"} className="flex items-center gap-2.5">
             <Logo size={32} />
             <span className="font-heading text-base font-extrabold">Ifriqiya Star</span>
           </Link>
           <p className="max-w-xs text-sm leading-relaxed text-(--site-muted)">
-            L&apos;excellence footballistique au service de la jeunesse et de la performance.
+            {t.tagline}
           </p>
         </div>
 
         <FooterColumn
-          titre="L'academie"
+          titre={t.academyHeading}
           liens={[
-            { href: "/#academie", label: "Qui sommes-nous" },
-            { href: "/#comment", label: "Comment ca marche" },
-            { href: "/#scout-days-videos", label: "Scout Days en vidéo" },
-            { href: "/#fonctionnalites", label: "L'application" },
-            { href: "/#valeurs", label: "Nos valeurs" },
+            { href: `${prefix}/#academie`, label: t.about },
+            { href: `${prefix}/#comment`, label: t.how },
+            { href: `${prefix}/#scout-days-videos`, label: t.scoutDaysVideo },
+            { href: `${prefix}/#fonctionnalites`, label: t.app },
+            { href: `${prefix}/#valeurs`, label: t.values },
           ]}
         />
 
         <FooterColumn
-          titre="Ressources"
+          titre={t.resourcesHeading}
           liens={[
-            { href: "/#faq", label: "Questions frequentes" },
-            { href: "/#temoignages", label: "Témoignages illustratifs" },
-            { href: "/contact", label: "Contactez-nous" },
-            { href: "/#telecharger", label: "Telecharger l'app" },
-            { href: "/admin", label: "Espace administration" },
+            { href: `${prefix}/#faq`, label: t.faq },
+            { href: `${prefix}/#temoignages`, label: t.testimonials },
+            { href: `${prefix}/contact`, label: t.contact },
+            { href: `${prefix}/#telecharger`, label: t.download },
+            { href: `${prefix}/admin`, label: t.admin },
           ]}
         />
 
         <div className="flex flex-col gap-3">
-          <p className="font-heading text-sm font-bold tracking-wide uppercase">Nous ecrire</p>
-          <p className="text-sm leading-relaxed text-(--site-muted)">
-            Une question sur l&apos;academie, une detection ou un partenariat ? Notre equipe repond.
-          </p>
+          <p className="font-heading text-sm font-bold tracking-wide uppercase">{t.writeHeading}</p>
+          <p className="text-sm leading-relaxed text-(--site-muted)">{t.writeBody}</p>
           <a
             href="mailto:contact@ifriqiyastar.com"
             className="w-fit text-sm font-semibold text-(--site-accent) hover:underline"
@@ -60,8 +67,8 @@ export function SiteFooter() {
       </div>
 
       <div className="mx-auto mt-12 flex max-w-7xl flex-col gap-2 border-t border-(--site-line) px-5 pt-6 text-xs text-(--site-muted) sm:flex-row sm:items-center sm:justify-between sm:px-8">
-        <p>© {new Date().getFullYear()} Ifriqiya Star. Tous droits reserves.</p>
-        <p>Detection · Progression · Excellence</p>
+        <p>© {new Date().getFullYear()} Ifriqiya Star. {t.rights}</p>
+        <p>{t.motto}</p>
       </div>
     </footer>
   );

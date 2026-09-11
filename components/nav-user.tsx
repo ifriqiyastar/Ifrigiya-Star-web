@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
   Avatar,
@@ -95,13 +96,13 @@ export function NavUser({
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem render={<a href="/admin/validations" />}>
+              <DropdownMenuItem render={<Link href="/admin/validations" />}>
                 <ShieldCheckIcon />
                 Validations
               </DropdownMenuItem>
               {/* Le lien manquait : l'entree n'etait cliquable que pour ne
                   rien faire. */}
-              <DropdownMenuItem render={<a href="/admin/notifications" />}>
+              <DropdownMenuItem render={<Link href="/admin/notifications" />}>
                 <BellIcon />
                 Notifications
               </DropdownMenuItem>

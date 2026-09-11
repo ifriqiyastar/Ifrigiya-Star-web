@@ -54,7 +54,7 @@ export async function saveEvaluation(formData: FormData): Promise<ActionResult> 
     if (error) return fail(describeError(error));
 
     await logAdminAction("update_evaluation", "scout_evaluation", id, { scores, comment });
-    revalidatePath("/admin", "layout");
+    revalidatePath("/[locale]/admin", "layout");
     return ok("Evaluation mise a jour.");
   }
 
@@ -97,7 +97,7 @@ export async function saveEvaluation(formData: FormData): Promise<ActionResult> 
     createdByAdmin: admin.userId,
     scores,
   });
-  revalidatePath("/admin", "layout");
+  revalidatePath("/[locale]/admin", "layout");
   return ok("Evaluation creee. Elle reste privee jusqu'a publication au joueur.");
 }
 
@@ -110,7 +110,7 @@ export async function setEvaluationVisibility(id: string, visible: boolean): Pro
     .eq("id", id);
   if (error) return fail(describeError(error));
   await logAdminAction(visible ? "publish_evaluation" : "hide_evaluation", "scout_evaluation", id);
-  revalidatePath("/admin", "layout");
+  revalidatePath("/[locale]/admin", "layout");
   return ok(visible ? "Evaluation publiee au joueur." : "Evaluation masquee au joueur.");
 }
 

@@ -21,7 +21,7 @@ import type {
  * Toute action est ensuite tracee dans `admin_audit_log`.
  */
 
-const REFRESH = () => revalidatePath("/admin", "layout");
+const REFRESH = () => revalidatePath("/[locale]/admin", "layout");
 
 /** §12.1 — validation / refus / suspension d'un profil joueur. */
 export async function setPlayerStatus(

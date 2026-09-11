@@ -78,7 +78,7 @@ export async function sendNotification(formData: FormData): Promise<ActionResult
     channels,
     recipients: count,
   });
-  revalidatePath("/admin", "layout");
+  revalidatePath("/[locale]/admin", "layout");
 
   return count > 0
     ? ok(`Notification envoyee a ${count} destinataire(s).`)
@@ -166,7 +166,7 @@ export async function retryNotification(campaignId: string): Promise<ActionResul
     recipients: count,
     by: admin.userId,
   });
-  revalidatePath("/admin", "layout");
+  revalidatePath("/[locale]/admin", "layout");
   return count > 0
     ? ok(`Notification renvoyee a ${count} destinataire(s).`)
     : fail("Aucun destinataire ne correspond a cette cible.");

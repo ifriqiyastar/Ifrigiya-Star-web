@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/lib/i18n/client";
 import { useRef, useState } from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 
@@ -13,6 +14,8 @@ const VIDEOS = [
 ].map((video) => ({ ...video, src: "/videos/football-hero-720p.mp4" }));
 
 export function ScoutDaysVideosSection() {
+  const { dict } = useI18n();
+  const t = dict.scoutVideos;
   const railRef = useRef<HTMLDivElement>(null);
   const [firstIndex, setFirstIndex] = useState(0);
   const [announcement, setAnnouncement] = useState("");
@@ -22,7 +25,9 @@ export function ScoutDaysVideosSection() {
     railRef.current?.querySelectorAll("video").forEach((video) => { video.muted = true; });
     const nextIndex = (firstIndex + direction + VIDEOS.length) % VIDEOS.length;
     setFirstIndex(nextIndex);
-    setAnnouncement(`Aperçu ${VIDEOS[nextIndex].id} en première position, sur ${VIDEOS.length} vidéos.`);
+    setAnnouncement(
+      t.announce.replace("{id}", VIDEOS[nextIndex].id).replace("{total}", String(VIDEOS.length)),
+    );
     railRef.current?.scrollTo({ left: 0, behavior: "instant" });
   }
 
@@ -47,7 +52,7 @@ export function ScoutDaysVideosSection() {
           ref={railRef}
           id="scout-days-video-rail"
           role="group"
-          aria-label="Trois aperçus vidéo des Scout Days"
+          aria-label={t.railAria}
           onVolumeChangeCapture={(event) => {
             const activeVideo = event.target;
             if (!(activeVideo instanceof HTMLVideoElement) || activeVideo.muted) return;
