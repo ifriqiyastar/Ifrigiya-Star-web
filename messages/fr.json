@@ -50,6 +50,10 @@
     "title": "Comment ca marche",
     "lead": "Quatre etapes, de l'inscription a la detection. Le meme chemin pour tous, et un profil verifie avant d'etre montre a qui que ce soit.",
     "phoneAlt": "Recherche de joueurs par un recruteur dans l'application Ifriqiya Star",
+    "navAria": "Les quatre etapes du parcours",
+    "prev": "Etape precedente",
+    "next": "Etape suivante",
+    "goTo": "Etape {number} — {title}",
     "items": [
       {
         "number": "01",
@@ -313,6 +317,9 @@
     "unmute": "Activer le son de la vidéo {id}",
     "mute": "Couper le son de la vidéo {id}",
     "play": "Lire l’aperçu vidéo {id}",
+    "pause": "Mettre en pause l’aperçu vidéo {id}",
+    "labelPlay": "Lire",
+    "labelPause": "Pause",
     "heading": "Scout Days en action",
     "prev": "Vidéos précédentes",
     "next": "Vidéos suivantes"
@@ -347,6 +354,7 @@
   "video": {
     "unavailable": "La vidéo est momentanément indisponible.",
     "openDirect": "Ouvrir directement",
-    "playbackFailed": "La lecture n’a pas démarré. Appuyez sur lecture pour réessayer."
+    "playbackFailed": "La lecture n’a pas démarré. Appuyez sur lecture pour réessayer.",
+    "soundBlocked": "Cliquez sur le haut-parleur pour activer le son."
   }
 }

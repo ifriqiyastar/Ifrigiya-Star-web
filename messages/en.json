@@ -50,6 +50,10 @@
     "title": "How it works",
     "lead": "Four steps, from signing up to being scouted. The same path for everyone, and a profile verified before it is shown to anyone.",
     "phoneAlt": "A recruiter searching for players in the Ifriqiya Star app",
+    "navAria": "The four steps of the journey",
+    "prev": "Previous step",
+    "next": "Next step",
+    "goTo": "Step {number} — {title}",
     "items": [
       {
         "number": "01",
@@ -313,6 +317,9 @@
     "unmute": "Unmute video {id}",
     "mute": "Mute video {id}",
     "play": "Play video preview {id}",
+    "pause": "Pause video preview {id}",
+    "labelPlay": "Play",
+    "labelPause": "Pause",
     "heading": "Scout Days in action",
     "prev": "Previous videos",
     "next": "Next videos"
@@ -347,6 +354,7 @@
   "video": {
     "unavailable": "The video is temporarily unavailable.",
     "openDirect": "Open it directly",
-    "playbackFailed": "Playback did not start. Press play to try again."
+    "playbackFailed": "Playback did not start. Press play to try again.",
+    "soundBlocked": "Click the speaker to turn the sound on."
   }
 }

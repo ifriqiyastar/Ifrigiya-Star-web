@@ -4,8 +4,9 @@
 // Media observers and in-flight play promises must not reuse pre-edit refs.
 
 import { useEffect, useRef, useState } from "react";
-import { PlayIcon, Volume2Icon, VolumeXIcon } from "lucide-react";
+import { Volume2Icon, VolumeXIcon } from "lucide-react";
 
+import { PlayToggle } from "@/components/site/play-toggle";
 import { useI18n } from "@/lib/i18n/client";
 
 type ScoutDaysVideoPlayerProps = {
@@ -30,6 +31,9 @@ export function ScoutDaysVideoPlayer({ id, src, poster, position }: ScoutDaysVid
   const videoRef = useRef<HTMLVideoElement>(null);
   const visibleRef = useRef(false);
   const soundRequestRef = useRef(0);
+  // Une pause demandee a la main doit tenir : sans ce drapeau, le premier
+  // evenement de l'observateur relancerait la lecture juste apres le clic.
+  const pausedByUserRef = useRef(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -47,9 +51,13 @@ export function ScoutDaysVideoPlayer({ id, src, poster, position }: ScoutDaysVid
       cancelSoundRequest();
       video!.muted = true;
       if (!visibleRef.current || document.hidden) {
+        // Sortir du champ remet le compteur a zero : la pause vaut pour
+        // l'apercu qu'on regarde, elle ne le condamne pas pour la visite.
+        pausedByUserRef.current = false;
         video!.pause();
         return;
       }
+      if (pausedByUserRef.current) return;
       if (!sourceAttached) {
         video!.src = src;
         sourceAttached = true;
@@ -82,11 +90,17 @@ export function ScoutDaysVideoPlayer({ id, src, poster, position }: ScoutDaysVid
     setPlaybackNotice("");
   }
 
-  async function enableSound(fromClick = false) {
+  /**
+   * Rend le son, et demarre la lecture si l'apercu etait a l'arret.
+   *
+   * Le survol passait autrefois son tour sur une video en pause. Il la
+   * relance desormais : c'est le geste attendu quand on pose le curseur sur
+   * une vignette, et il n'y a pas de demi-mesure utile — une video qu'on
+   * survole et qui reste figee ne dit rien de plus que sa poster.
+   */
+  async function enableSound() {
     const video = videoRef.current;
     if (!video || !visibleRef.current || document.hidden) return;
-    // Hover changes sound without overriding a deliberate pause.
-    if (video.paused && !fromClick) return;
     const request = nextSoundRequest(soundRequestRef);
     video.muted = false;
     setPlaybackNotice("");
@@ -95,29 +109,49 @@ export function ScoutDaysVideoPlayer({ id, src, poster, position }: ScoutDaysVid
     } catch {
       if (request !== soundRequestRef.current) return;
       video.muted = true;
-      setPlaybackNotice("Cliquez sur le haut-parleur pour activer le son.");
+      setPlaybackNotice(dict.video.soundBlocked);
       // Some browsers pause the video when hover-unmuting is disallowed.
       void video.play().catch(() => {});
     }
   }
 
-  async function playVideo() {
+  async function togglePlayback() {
     const video = videoRef.current;
     if (!video) return;
     setPlaybackNotice("");
+    if (!video.paused) {
+      pausedByUserRef.current = true;
+      video.pause();
+      return;
+    }
+    pausedByUserRef.current = false;
     try {
       await video.play();
-      video.focus();
     } catch {
       setPlaybackNotice(dict.video.playbackFailed);
     }
   }
 
+  // Le survol lance l'apercu et lui rend le son ; le quitter le remet en
+  // sourdine sans l'arreter — il reste a l'ecran, il continue.
+  //
+  // `pointerenter` ne se declenche qu'en *entrant* dans la carte, et ne
+  // remonte pas depuis les boutons qu'elle contient : c'est ce qui permet a la
+  // pause manuelle de tenir. Sans cela, le curseur — encore pose sur le bouton
+  // qu'on vient de cliquer — relancerait aussitot la lecture, et la pause
+  // paraitrait cassee. Sortir de la carte puis y revenir relance, ce qui est
+  // bien ce qu'on demande alors.
+  //
+  // Filtre sur la souris : un telephone n'a pas de survol, et le
+  // `pointerenter` qu'il synthetise au toucher ferait sonner la video au
+  // premier effleurement de la page.
   return (
     <div
       className="relative aspect-[9/16]"
       onPointerEnter={(event) => {
-        if (event.pointerType === "mouse") void enableSound();
+        if (event.pointerType !== "mouse") return;
+        pausedByUserRef.current = false;
+        void enableSound();
       }}
       onPointerLeave={(event) => {
         if (event.pointerType === "mouse") muteVideo();
@@ -126,18 +160,23 @@ export function ScoutDaysVideoPlayer({ id, src, poster, position }: ScoutDaysVid
         if (!event.currentTarget.contains(event.relatedTarget)) muteVideo();
       }}
     >
+      {/* Pas de `controls` : la barre native s'affiche en permanence sur
+          telephone, doublait le bouton de son deja present et posait une
+          reglette de lecture sur un apercu de dix secondes qui demarre seul.
+          Les deux seuls gestes qui ont un sens ici — lecture/pause et son —
+          sont les deux boutons ci-dessous. Le `tabIndex` de la video a suivi :
+          sans commandes natives, ce n'etait plus qu'un arret de tabulation
+          sans action. */}
       <video
         ref={videoRef}
         poster={poster}
         width={1280}
         height={720}
-        controls
         autoPlay
         muted
         loop
         playsInline
         preload="none"
-        tabIndex={0}
         aria-label={t.playerAria.replace("{id}", id)}
         aria-describedby={`scout-days-video-caption-${id}`}
         onPlay={() => setIsPlaying(true)}
@@ -156,8 +195,13 @@ export function ScoutDaysVideoPlayer({ id, src, poster, position }: ScoutDaysVid
         <button
           type="button"
           onClick={() => {
-            if (videoRef.current?.muted) void enableSound(true);
-            else muteVideo();
+            if (!videoRef.current?.muted) {
+              muteVideo();
+              return;
+            }
+            // Demander le son sur un apercu a l'arret, c'est demander a le voir.
+            pausedByUserRef.current = false;
+            void enableSound();
           }}
           aria-label={(isMuted ? t.unmute : t.mute).replace("{id}", id)}
           aria-pressed={!isMuted}
@@ -168,17 +212,18 @@ export function ScoutDaysVideoPlayer({ id, src, poster, position }: ScoutDaysVid
         </button>
       )}
 
-      {!isPlaying && !failed && (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/20">
-          <button
-            type="button"
-            onClick={playVideo}
-            aria-label={t.play.replace("{id}", id)}
-            className="pointer-events-auto flex size-14 items-center justify-center rounded-full border border-white/10 bg-black/75 text-white backdrop-blur-sm transition-colors hover:border-white/40 hover:bg-black/90 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
-          >
-            <PlayIcon className="ml-0.5 size-6" strokeWidth={1.8} aria-hidden />
-          </button>
-        </div>
+      {/* Le voile n'apparait qu'a l'arret : sur une video qui joue il
+          assombrirait l'image pour rien. */}
+      {!isPlaying && !failed && <div aria-hidden className="pointer-events-none absolute inset-0 bg-black/25" />}
+
+      {!failed && (
+        <PlayToggle
+          playing={isPlaying}
+          label={isPlaying ? t.labelPause : t.labelPlay}
+          ariaLabel={(isPlaying ? t.pause : t.play).replace("{id}", id)}
+          onToggle={togglePlayback}
+          className="absolute bottom-3 left-3"
+        />
       )}
 
       {failed ? (

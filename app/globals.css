@@ -653,6 +653,43 @@ body:has(.admin-dashboard-shell) {
   }
 }
 
+/* 5. La pile d'etapes de « Comment ca marche ». Deux effets distincts :
+
+      - `.site-step-card` : le glissement en profondeur des cartes. La courbe
+        depasse legerement sa cible (1.16 > 1), ce qui rend le rebond du
+        ressort de la maquette d'origine sans moteur d'animation. Seules
+        `transform` et `opacity` bougent : les deux proprietes que le
+        compositeur sait animer sans remettre la page en page.
+
+      - `.site-step-in` : l'entree du texte de l'etape, mot a mot. Le flou de
+        depart est ce qui distingue une apparition d'un simple fondu — l'oeil
+        lit le mot au moment ou il devient net. `--step-delay` porte le retard
+        en millisecondes, pose par le composant. `both` garde l'etat initial
+        avant le declenchement, sans quoi les mots clignoteraient a leur
+        place finale pendant le retard. */
+.site-step-card {
+  transition:
+    transform 720ms cubic-bezier(0.22, 1.16, 0.36, 1),
+    opacity 520ms ease;
+}
+
+@keyframes site-step-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 0.6em, 0);
+    filter: blur(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+}
+.site-step-in {
+  animation: site-step-in 560ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--step-delay, 0) * 1ms);
+}
+
 @keyframes site-shimmer {
   0% {
     transform: translateX(-130%);
@@ -691,5 +728,13 @@ body:has(.admin-dashboard-shell) {
   }
   .site-lift:hover {
     transform: none;
+  }
+  /* La pile change toujours de carte — c'est le contenu, pas la decoration —
+     mais elle le fait d'un coup, et le texte s'affiche entier. */
+  .site-step-card {
+    transition: none;
+  }
+  .site-step-in {
+    animation: none;
   }
 }

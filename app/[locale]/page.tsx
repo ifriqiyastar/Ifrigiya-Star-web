@@ -7,6 +7,7 @@ import { SiteFooter } from "@/components/site/site-footer";
 import { ContactSection } from "@/components/site/contact-section";
 import { TestimonialsSection } from "@/components/site/testimonials-section";
 import { ScoutDaysVideosSection } from "@/components/site/scout-days-videos-section";
+import { StepsTimeMachine } from "@/components/site/steps-time-machine";
 import { HeroVideo } from "@/components/site/hero-video";
 import { HighlightsCarousel } from "@/components/site/highlights-carousel";
 import { Reveal } from "@/components/site/reveal";
@@ -84,7 +85,7 @@ export default async function LandingPage() {
         <Hero dict={dict} />
         <Piliers dict={dict} />
         <HighlightsCarousel />
-        <CommentCaMarche dict={dict} />
+        <StepsTimeMachine />
         <Pourquoi dict={dict} />
         <ScoutDaysVideosSection />
         <Fonctionnalites dict={dict} />
@@ -108,8 +109,8 @@ function Hero({ dict }: { dict: Dictionary }) {
     <section id="academie" className="relative isolate scroll-mt-16 overflow-hidden bg-black">
       <HeroVideo />
 
-      <div className="relative z-10 mx-auto flex min-h-[calc(100svh-4rem)] max-w-7xl items-center px-5 pt-14 pb-28 sm:px-8 sm:pt-20 sm:pb-28 lg:min-h-[max(720px,calc(100svh-4rem))] lg:pt-24 lg:pb-32">
-        <div className="flex w-full max-w-4xl flex-col items-start gap-6">
+      <div className="relative z-10 mx-auto flex min-h-[calc(100svh-4rem)] max-w-7xl items-center px-5 pt-10 pb-16 sm:px-8 sm:pt-20 sm:pb-28 lg:min-h-[max(720px,calc(100svh-4rem))] lg:pt-24 lg:pb-32">
+        <div className="flex w-full max-w-4xl flex-col items-start gap-5 sm:gap-6">
           <Reveal>
             <Pill>
               <span className="size-1.5 rounded-full bg-(--site-accent)" />
@@ -117,20 +118,38 @@ function Hero({ dict }: { dict: Dictionary }) {
             </Pill>
           </Reveal>
 
-          <Reveal as="h1" delay={80} className="font-heading text-[clamp(1rem,6.2vw,2.25rem)] leading-[1.08] font-extrabold drop-shadow-sm sm:text-5xl lg:text-7xl">
-            <span className="block whitespace-nowrap">{t.titleLine1}</span>
-            <span className="block whitespace-nowrap">
+          {/* Le titre tenait sur deux lignes insecables a toutes les tailles,
+              et c'est ce qui le cassait sur telephone : pour que « ne doit
+              rester (invisible) » tienne sur 360 px sans se couper, la borne
+              haute du `clamp` devait descendre a 22 px — soit six pixels de
+              plus que le paragraphe juste en dessous. Le titre n'etait plus
+              un titre. Il se coupe donc librement en dessous de `sm`, ou la
+              place manque, et ne redevient insecable qu'a partir de la ou les
+              deux lignes de la maquette rentrent vraiment.
+
+              Une fois le retour a la ligne autorise, la taille ne sert plus a
+              faire tenir le texte : elle sert a lui donner sa presence. Le
+              `clamp` monte donc a 36-48 px — quatre lignes sur un telephone,
+              et les deux appels a l'action toujours visibles sans defiler. Sa
+              borne haute (3 rem) rejoint exactement le `sm:text-5xl` qui prend
+              le relais a 640 px, pour qu'aucune marche ne se voie au passage
+              du palier. */}
+          <Reveal as="h1" delay={80} className="font-heading text-[clamp(2.25rem,11.5vw,3rem)] leading-[1.04] font-extrabold drop-shadow-sm sm:text-5xl sm:leading-[1.08] lg:text-7xl">
+            <span className="block sm:whitespace-nowrap">{t.titleLine1}</span>
+            <span className="block sm:whitespace-nowrap">
               {t.titleLine2}{" "}
               {/* Le mot cercle de la maquette : ici il porte la promesse
-                  entiere, donc il merite l'accent. */}
-              <span className="relative inline-block px-4 py-0.5">
+                  entiere, donc il merite l'accent. `inline-block` garde le
+                  cercle d'un seul tenant : le mot passe a la ligne entier ou
+                  pas du tout, jamais coupe en deux moities cerclees. */}
+              <span className="relative inline-block px-3 py-0.5 sm:px-4">
                 <span className="absolute inset-0 rounded-full border-2 border-(--site-accent)" aria-hidden />
                 <span className="relative text-(--site-accent)">{t.titleAccent}</span>
               </span>
             </span>
           </Reveal>
 
-          <Reveal as="p" delay={160} className="max-w-xl text-base leading-relaxed text-(--site-muted)">
+          <Reveal as="p" delay={160} className="max-w-xl text-[0.9375rem] leading-relaxed text-(--site-muted) sm:text-base">
             {t.lead}
           </Reveal>
 
@@ -200,79 +219,6 @@ function Piliers({ dict }: { dict: Dictionary }) {
         </div>
       </div>
     </section>
-  );
-}
-
-/* ---------------------------------------------------------- comment ca marche */
-
-function CommentCaMarche({ dict }: { dict: Dictionary }) {
-  const t = dict.steps;
-  const etapes = t.items;
-  return (
-    <section id="comment" className="scroll-mt-20 relative overflow-hidden py-16 sm:py-24 lg:py-28">
-      <div className="mx-auto max-w-7xl px-5 sm:px-8">
-        <SectionHeading
-          pill={t.pill}
-          title={t.title}
-          lead={t.lead}
-        />
-
-        <div className="mt-16 grid items-center gap-10 lg:grid-cols-[1fr_auto_1fr] lg:gap-14">
-          {/* Les deux colonnes de texte passent **devant** : le disque est un
-              decor, il ne doit jamais pouvoir recouvrir une etape. */}
-          <div className="relative z-10 flex flex-col gap-12">
-            {etapes.slice(0, 2).map((etape, i) => (
-              <Reveal key={etape.number} variant="left" delay={i * 110}>
-                <Etape numero={etape.number} titre={etape.title} texte={etape.text} />
-              </Reveal>
-            ))}
-          </div>
-
-          {/* Le disque vert vit **dans** cette colonne, et la colonne lui fait
-              de la place avec son propre padding : il debordait de 53 px de
-              chaque cote sur les colonnes de texte, et comme `isolate` place
-              tout ce bloc au-dessus du precedent, il recouvrait les etapes 01
-              et 02. La largeur du disque reste desormais inferieure a celle de
-              la colonne (262 px de maquette + 2 x 48 px). */}
-          <div className="relative isolate mx-auto flex w-full justify-center px-2 sm:px-12">
-            <div
-              className="absolute top-1/2 left-1/2 z-0 aspect-square w-68 -translate-x-1/2 sm:w-76 -translate-y-1/2 rounded-full bg-(--site-accent)"
-              aria-hidden
-            />
-            {/* L'ecran de recherche des recruteurs : c'est la que menent les
-                quatre etapes — apparaitre dans leurs resultats. Il tient le
-                centre parce qu'il montre l'aboutissement, pas une etape. */}
-            <Reveal variant="zoom" delay={120} className="relative z-10">
-              <Phone
-                screen={APP_SCREENS["recherche-joueurs"]}
-                alt={t.phoneAlt}
-                width={262}
-              />
-            </Reveal>
-          </div>
-
-          <div className="relative z-10 flex flex-col gap-12">
-            {etapes.slice(2).map((etape, i) => (
-              <Reveal key={etape.number} variant="right" delay={i * 110}>
-                <Etape numero={etape.number} titre={etape.title} texte={etape.text} />
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function Etape({ numero, titre, texte }: { numero: string; titre: string; texte: string }) {
-  return (
-    <div className="flex flex-col gap-3">
-      <span className="font-heading flex size-12 items-center justify-center rounded-full bg-(--site-accent) text-sm font-extrabold text-(--site-ink)">
-        {numero}
-      </span>
-      <h3 className="font-heading text-xl font-extrabold">{titre}</h3>
-      <p className="max-w-sm text-sm leading-relaxed text-(--site-muted)">{texte}</p>
-    </div>
   );
 }
 
