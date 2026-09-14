@@ -2,10 +2,11 @@ import Link from "next/link";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { initials } from "@/lib/format";
+import { getAdminDict } from "@/lib/i18n/admin";
 import { cn } from "@/lib/utils";
 
 /** Identite compacte pour les cellules de tableau : avatar + nom + sous-ligne. */
-export function UserCell({
+export async function UserCell({
   name,
   secondary,
   avatarUrl,
@@ -18,7 +19,8 @@ export function UserCell({
   href?: string;
   className?: string;
 }) {
-  const displayName = name?.trim() || "Sans nom";
+  const dict = await getAdminDict();
+  const displayName = name?.trim() || dict.common.noName;
   const body = (
     <span className="flex min-w-0 items-center gap-3">
       <Avatar className="size-9 shrink-0 rounded-full">

@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import {
   CalendarDaysIcon,
@@ -8,6 +10,10 @@ import {
 } from "lucide-react";
 
 import type { AdminTask, NextAdminEvent } from "@/lib/queries/admin-queue";
+import { makeFormat } from "@/lib/format";
+import { fill } from "@/lib/i18n/admin-shared";
+import { useAdminI18n } from "@/lib/i18n/admin-client";
+import { localePath } from "@/lib/i18n/config";
 
 export function TodayCard({
   tasks,
@@ -16,14 +22,17 @@ export function TodayCard({
   tasks: AdminTask[];
   nextEvent: NextAdminEvent | null;
 }) {
+  const { locale, dict } = useAdminI18n();
+  const { formatShortDay } = makeFormat(locale);
+  // Regroupement par **cle** et non par libelle : le libelle est traduit.
   const validations = tasks
-    .filter((task) => task.section === "Validations")
+    .filter((task) => task.group === "validations")
     .reduce((sum, task) => sum + task.count, 0);
   const reports = tasks
-    .filter((task) => task.section === "Moderation")
+    .filter((task) => task.group === "moderation")
     .reduce((sum, task) => sum + task.count, 0);
   const total = tasks.reduce((sum, task) => sum + task.count, 0);
-  const href = tasks[0]?.href ?? "/admin";
+  const href = localePath(locale, tasks[0]?.href ?? "/admin");
 
   return (
     <section
@@ -34,24 +43,24 @@ export function TodayCard({
         <div className="flex items-center gap-2">
           <span className="size-1.5 rounded-full bg-brand shadow-[0_0_8px_rgba(158,233,57,0.65)]" />
           <h2 id="today-card-title" className="micro-label text-sidebar-foreground">
-            Aujourd’hui
+            {dict.today.title}
           </h2>
         </div>
         <span className="micro-label text-muted-foreground">
-          {total ? `${total} à traiter` : "À jour"}
+          {total ? fill(dict.today.pending, { count: total }) : dict.today.clear}
         </span>
       </div>
 
       <div className="grid grid-cols-2 gap-px bg-sidebar-border">
         <QueueMetric
           icon={ShieldCheckIcon}
-          label="Validations"
+          label={dict.today.validations}
           value={validations}
           urgent={validations > 0}
         />
         <QueueMetric
           icon={FlagIcon}
-          label="Signalements"
+          label={dict.today.reports}
           value={reports}
           urgent={reports > 0}
         />
@@ -63,17 +72,19 @@ export function TodayCard({
             <CalendarDaysIcon className="size-3.5" />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="micro-label text-muted-foreground">Prochain Scout Day</p>
+            <p className="micro-label text-muted-foreground">{dict.today.nextEvent}</p>
             {nextEvent ? (
               <>
                 <Link
-                  href={`/admin/scout-days/${nextEvent.id}`}
+                  href={localePath(locale, `/admin/scout-days/${nextEvent.id}`)}
                   className="mt-1 block truncate text-[0.6875rem] font-semibold text-sidebar-foreground transition-colors hover:text-brand"
                 >
                   {nextEvent.title}
                 </Link>
                 <p className="mt-1 flex min-w-0 items-center gap-1 text-[0.5625rem] text-muted-foreground">
-                  <span className="shrink-0 text-brand">{shortDate(nextEvent.event_date)}</span>
+                  <span className="shrink-0 text-brand">
+                    {formatShortDay(`${nextEvent.event_date}T12:00:00Z`)}
+                  </span>
                   {nextEvent.start_time ? (
                     <span className="shrink-0">· {nextEvent.start_time.slice(0, 5)}</span>
                   ) : null}
@@ -87,7 +98,7 @@ export function TodayCard({
               </>
             ) : (
               <p className="mt-1 text-[0.625rem] leading-relaxed text-muted-foreground">
-                Aucun événement publié à venir.
+                {dict.today.noEvent}
               </p>
             )}
           </div>
@@ -98,7 +109,7 @@ export function TodayCard({
         href={href}
         className="flex items-center justify-between border-t border-sidebar-border bg-secondary/35 px-3 py-2.5 text-[0.6875rem] font-semibold text-sidebar-foreground transition-colors hover:bg-secondary hover:text-brand"
       >
-        <span>{total ? "Voir les tâches" : "Ouvrir le tableau de bord"}</span>
+        <span>{total ? dict.today.seeTasks : dict.today.openDashboard}</span>
         <ChevronRightIcon className="size-3.5" />
       </Link>
     </section>
@@ -133,11 +144,4 @@ function QueueMetric({
       <p className="mt-1 truncate text-[0.5625rem] text-muted-foreground">{label}</p>
     </div>
   );
-}
-
-function shortDate(value: string) {
-  return new Intl.DateTimeFormat("fr-FR", {
-    day: "2-digit",
-    month: "short",
-  }).format(new Date(`${value}T12:00:00Z`));
 }

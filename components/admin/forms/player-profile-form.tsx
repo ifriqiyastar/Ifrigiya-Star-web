@@ -1,5 +1,8 @@
 "use client";
 
+import { useAdminTranslations } from "@/lib/i18n/admin-client";
+
+
 import * as React from "react";
 import { toast } from "sonner";
 
@@ -8,7 +11,7 @@ import { SubmitRow } from "@/components/admin/forms/submit-row";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
-import { FOOT_PREFERENCE, PLAYER_LEVEL, options } from "@/lib/labels";
+import { FOOT_PREFERENCE, PLAYER_LEVEL } from "@/lib/labels";
 import type { ActionResult } from "@/lib/actions/result";
 
 export type PlayerProfileValues = {
@@ -56,6 +59,8 @@ export function PlayerProfileForm({
   values: PlayerProfileValues;
   action: (formData: FormData) => Promise<ActionResult>;
 }) {
+  const i18n = useAdminTranslations();
+
   const [pending, setPending] = React.useState(false);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
@@ -83,13 +88,13 @@ export function PlayerProfileForm({
     <form onSubmit={submit}>
       <div className="space-y-5 px-4 py-5 sm:px-5">
         <FieldGrid>
-          <Field label="Prenom" htmlFor="first_name">
+          <Field label={i18n.t("Prenom")} htmlFor="first_name">
             <Input id="first_name" name="first_name" defaultValue={values.first_name ?? ""} required />
           </Field>
-          <Field label="Nom" htmlFor="last_name">
+          <Field label={i18n.t("Nom")} htmlFor="last_name">
             <Input id="last_name" name="last_name" defaultValue={values.last_name ?? ""} required />
           </Field>
-          <Field label="Date de naissance" htmlFor="birth_date">
+          <Field label={i18n.t("Date de naissance")} htmlFor="birth_date">
             <Input
               id="birth_date"
               name="birth_date"
@@ -98,70 +103,70 @@ export function PlayerProfileForm({
               required
             />
           </Field>
-          <Field label="Nationalite" htmlFor="nationality">
+          <Field label={i18n.t("Nationalite")} htmlFor="nationality">
             <Input id="nationality" name="nationality" defaultValue={values.nationality ?? ""} />
           </Field>
-          <Field label="Pays" htmlFor="country">
+          <Field label={i18n.t("Pays")} htmlFor="country">
             <Input id="country" name="country" defaultValue={values.country ?? ""} />
           </Field>
-          <Field label="Ville" htmlFor="city">
+          <Field label={i18n.t("Ville")} htmlFor="city">
             <Input id="city" name="city" defaultValue={values.city ?? ""} />
           </Field>
-          <Field label="Poste principal" htmlFor="main_position">
+          <Field label={i18n.t("Poste principal")} htmlFor="main_position">
             <NativeSelect
               id="main_position"
               name="main_position"
               defaultValue={values.main_position ?? ""}
             >
-              <option value="">Non renseigne</option>
+              <option value="">{i18n.t("Non renseigne")}</option>
               {positionOptions.map((position) => (
                 <option key={position} value={position}>
-                  {position}
+                  {i18n.labels.position(position)}
                 </option>
               ))}
             </NativeSelect>
           </Field>
-          <Field label="Poste secondaire" htmlFor="secondary_position">
+          <Field label={i18n.t("Poste secondaire")} htmlFor="secondary_position">
             <NativeSelect
               id="secondary_position"
               name="secondary_position"
               defaultValue={values.secondary_position ?? ""}
             >
-              <option value="">Non renseigne</option>
+              <option value="">{i18n.t("Non renseigne")}</option>
               {positionOptions.map((position) => (
                 <option key={position} value={position}>
-                  {position}
+                  {i18n.labels.position(position)}
                 </option>
               ))}
             </NativeSelect>
           </Field>
-          <Field label="Pied fort" htmlFor="foot_preference">
+          <Field label={i18n.t("Pied fort")} htmlFor="foot_preference">
             <NativeSelect
               id="foot_preference"
               name="foot_preference"
               defaultValue={values.foot_preference ?? ""}
             >
-              <option value="">Non renseigne</option>
-              {options(FOOT_PREFERENCE).map((option) => (
+              <option value="">{i18n.t("Non renseigne")}</option>
+              {i18n.labels.options(FOOT_PREFERENCE).map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
               ))}
             </NativeSelect>
           </Field>
-          <Field label="Niveau" htmlFor="level">
+          <Field label={i18n.t("Niveau")} htmlFor="level">
             <NativeSelect id="level" name="level" defaultValue={values.level}>
-              {options(PLAYER_LEVEL).map((option) => (
+              {i18n.labels.options(PLAYER_LEVEL).map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
               ))}
             </NativeSelect>
           </Field>
-          <Field label="Club actuel" htmlFor="current_club">
+          <Field label={i18n.t("Club actuel")} htmlFor="current_club">
             <Input id="current_club" name="current_club" defaultValue={values.current_club ?? ""} />
           </Field>
-          <Field label="Taille (cm)" htmlFor="height_cm" hint="Entre 100 et 230 (contrainte en base).">
+          <Field label={i18n.t("Taille (cm)")} htmlFor="height_cm" hint={i18n.t("Entre 100 et 230 (contrainte en base).")}>
             <Input
               id="height_cm"
               name="height_cm"
@@ -172,7 +177,7 @@ export function PlayerProfileForm({
               defaultValue={values.height_cm ?? ""}
             />
           </Field>
-          <Field label="Poids (kg)" htmlFor="weight_kg" hint="Entre 30 et 150 (contrainte en base).">
+          <Field label={i18n.t("Poids (kg)")} htmlFor="weight_kg" hint={i18n.t("Entre 30 et 150 (contrainte en base).")}>
             <Input
               id="weight_kg"
               name="weight_kg"
@@ -192,10 +197,9 @@ export function PlayerProfileForm({
             defaultChecked={values.is_free_agent}
             className="size-4 accent-brand"
           />
-          Joueur libre
-        </label>
+          {i18n.t("Joueur libre")}</label>
 
-        <Field label="A propos" htmlFor="about">
+        <Field label={i18n.t("A propos")} htmlFor="about">
           <Textarea id="about" name="about" rows={4} defaultValue={values.about ?? ""} />
         </Field>
       </div>

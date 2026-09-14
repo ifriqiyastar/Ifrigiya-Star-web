@@ -12,6 +12,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { buttonVariants } from "@/components/ui/button";
+import { useAdminI18n } from "@/lib/i18n/admin-client";
 import { cn } from "@/lib/utils";
 
 /**
@@ -30,7 +31,7 @@ import { cn } from "@/lib/utils";
  * rendu client, ce qui casse l'hydratation de la page entiere.
  */
 export function DetailDialog({
-  label = "Detail",
+  label,
   title,
   description,
   className,
@@ -42,6 +43,7 @@ export function DetailDialog({
   className?: string;
   children: React.ReactNode;
 }) {
+  const { dict } = useAdminI18n();
   const [open, setOpen] = React.useState(false);
 
   return (
@@ -50,7 +52,7 @@ export function DetailDialog({
         className={cn(buttonVariants({ variant: "outline", size: "xs" }), className)}
       >
         <EyeIcon />
-        {label}
+        {label ?? dict.common.details}
       </DialogTrigger>
       <DialogContent className="max-h-[85vh] gap-0 overflow-y-auto sm:max-w-2xl">
         <DialogHeader>

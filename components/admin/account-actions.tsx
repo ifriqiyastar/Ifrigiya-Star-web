@@ -1,3 +1,4 @@
+import { getAdminI18n } from "@/lib/i18n/admin";
 import { BanIcon, CheckIcon, EyeIcon, EyeOffIcon, Trash2Icon, Undo2Icon, XIcon } from "lucide-react";
 
 import { ActionButton } from "@/components/admin/action-button";
@@ -30,7 +31,7 @@ import { hasServiceRole } from "@/lib/supabase/service";
  * frontiere, et React refuse le rendu avec « Functions cannot be passed
  * directly to Client Components ».
  */
-export function AccountActions({
+export async function AccountActions({
   profileId,
   role,
   isActive,
@@ -46,6 +47,8 @@ export function AccountActions({
   /** L'administrateur consulte sa propre fiche. */
   self: boolean;
 }) {
+  const i18n = await getAdminI18n();
+
   const isPlayer = role === "player";
   const isProfessional = role === "professional";
   const setStatus = isPlayer ? setPlayerStatus : setProfessionalStatus;
@@ -61,8 +64,7 @@ export function AccountActions({
           size="sm"
         >
           <CheckIcon />
-          Valider le compte
-        </ActionButton>
+          {i18n.t("Valider le compte")}</ActionButton>
       ) : null}
 
       {canSetStatus && businessStatus !== "refuse" ? (
@@ -71,12 +73,11 @@ export function AccountActions({
           trigger={
             <Button variant="outline" size="sm">
               <XIcon />
-              Refuser
-            </Button>
+              {i18n.t("Refuser")}</Button>
           }
-          title="Refuser ce compte"
-          description="Le motif est enregistre sur le compte et explique la decision a l'utilisateur."
-          submitLabel="Refuser"
+          title={i18n.t("Refuser ce compte")}
+          description={i18n.t("Le motif est enregistre sur le compte et explique la decision a l'utilisateur.")}
+          submitLabel={i18n.t("Refuser")}
         />
       ) : null}
 
@@ -86,7 +87,7 @@ export function AccountActions({
           size="sm"
         >
           {isVisible ? <EyeOffIcon /> : <EyeIcon />}
-          {isVisible ? "Retirer de la recherche" : "Rendre visible"}
+          {isVisible ? i18n.t("Retirer de la recherche") : i18n.t("Rendre visible")}
         </ActionButton>
       ) : null}
 
@@ -103,35 +104,33 @@ export function AccountActions({
           variant="default"
           size="sm"
           confirm={{
-            title: "Lever la suspension",
+            title: i18n.t("Lever la suspension"),
             description:
-              "Le compte redevient actif et son profil metier repasse a « valide » : l'utilisateur retrouve l'acces a l'application immediatement, et recoit une notification lui annoncant que son profil est valide. Les deux etapes sont enchainees — reactiver seul laisserait le compte bloque en « en attente de validation ».",
-            actionLabel: "Lever la suspension",
+              i18n.t("Le compte redevient actif et son profil metier repasse a « valide » : l'utilisateur retrouve l'acces a l'application immediatement, et recoit une notification lui annoncant que son profil est valide. Les deux etapes sont enchainees — reactiver seul laisserait le compte bloque en « en attente de validation »."),
+            actionLabel: i18n.t("Lever la suspension"),
           }}
         >
           <Undo2Icon />
-          Lever la suspension
-        </ActionButton>
+          {i18n.t("Lever la suspension")}</ActionButton>
       ) : isActive && self ? (
         /* Son propre compte, actif : aucun geste d'etat. `disabled` sur
            l'element passe en `render` d'un `DialogTrigger` Base UI diverge
            entre le rendu serveur et le rendu client et casse l'hydratation,
            donc on n'offre pas le geste plutot que de le griser — et on dit
            pourquoi, ce qu'un bouton grise ne faisait pas. */
-        <StatusPill tone="neutral">Votre compte : suspension impossible</StatusPill>
+        <StatusPill tone="neutral">{i18n.t("Votre compte : suspension impossible")}</StatusPill>
       ) : isActive ? (
         <ReasonDialog
           action={suspendUser.bind(null, profileId)}
           trigger={
             <Button variant="destructive" size="sm">
               <BanIcon />
-              Suspendre
-            </Button>
+              {i18n.t("Suspendre")}</Button>
           }
-          title="Suspendre cet utilisateur"
-          description="Le compte est desactive et son profil metier passe au statut « suspendu » — ce que verifie l'application mobile a la connexion."
-          placeholder="Comportement abusif, contenu inapproprie…"
-          submitLabel="Suspendre le compte"
+          title={i18n.t("Suspendre cet utilisateur")}
+          description={i18n.t("Le compte est desactive et son profil metier passe au statut « suspendu » — ce que verifie l'application mobile a la connexion.")}
+          placeholder={i18n.t("Comportement abusif, contenu inapproprie…")}
+          submitLabel={i18n.t("Suspendre le compte")}
         />
       ) : (
         /* Compte desactive **sans** suspension du profil metier : demande de
@@ -142,15 +141,14 @@ export function AccountActions({
           variant="outline"
           size="sm"
           confirm={{
-            title: "Reactiver ce compte",
+            title: i18n.t("Reactiver ce compte"),
             description:
-              "Le compte redevient actif. Si son profil metier avait ete suspendu, il repasse en « en attente de validation » — un statut que l'application bloque aussi, et le dossier retourne dans « Files de validation ».",
-            actionLabel: "Reactiver",
+              i18n.t("Le compte redevient actif. Si son profil metier avait ete suspendu, il repasse en « en attente de validation » — un statut que l'application bloque aussi, et le dossier retourne dans « Files de validation »."),
+            actionLabel: i18n.t("Reactiver"),
           }}
         >
           <Undo2Icon />
-          Reactiver
-        </ActionButton>
+          {i18n.t("Reactiver")}</ActionButton>
       )}
 
       {/* Un administrateur ne peut pas supprimer son propre compte : il se
@@ -161,16 +159,15 @@ export function AccountActions({
           variant="destructive"
           size="sm"
           confirm={{
-            title: "Supprimer ce compte",
+            title: i18n.t("Supprimer ce compte"),
             description: hasServiceRole()
-              ? "La suppression est definitive : le compte d'authentification et toutes ses donnees liees (profil, videos, inscriptions) partent en cascade."
-              : "SUPABASE_SERVICE_ROLE_KEY n'est pas configuree : le compte sera desactive et marque « suppression demandee » plutot que supprime definitivement.",
-            actionLabel: hasServiceRole() ? "Supprimer definitivement" : "Desactiver et marquer",
+              ? i18n.t("La suppression est definitive : le compte d'authentification et toutes ses donnees liees (profil, videos, inscriptions) partent en cascade.")
+              : i18n.t("SUPABASE_SERVICE_ROLE_KEY n'est pas configuree : le compte sera desactive et marque « suppression demandee » plutot que supprime definitivement."),
+            actionLabel: hasServiceRole() ? i18n.t("Supprimer definitivement") : i18n.t("Desactiver et marquer"),
           }}
         >
           <Trash2Icon />
-          Supprimer
-        </ActionButton>
+          {i18n.t("Supprimer")}</ActionButton>
       )}
     </div>
   );

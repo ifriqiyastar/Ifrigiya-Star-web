@@ -1,8 +1,11 @@
 "use server";
 
+import { getRequestAdminI18n } from "@/lib/i18n/admin";
+
+
 import { revalidatePath } from "next/cache";
 
-import { describeError, fail, ok, type ActionResult } from "@/lib/actions/result";
+import { makeErrors, fail, ok, type ActionResult } from "@/lib/actions/result";
 import { logAdminAction, requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
@@ -25,6 +28,8 @@ import { createClient } from "@/lib/supabase/server";
  * `comment`, seule colonne de texte de la table.
  */
 export async function saveEvaluation(formData: FormData): Promise<ActionResult> {
+  const i18n = await getRequestAdminI18n();
+
   const admin = await requirePermission("evaluations.manage");
   const supabase = await createClient();
 
@@ -33,7 +38,7 @@ export async function saveEvaluation(formData: FormData): Promise<ActionResult> 
     (key) => Number(formData.get(key)),
   );
   if (scores.some((value) => !Number.isFinite(value) || value < 0 || value > 100)) {
-    return fail("Les quatre notes sont attendues entre 0 et 100.");
+    return fail(i18n.t("Les quatre notes sont attendues entre 0 et 100."));
   }
   const comment = String(formData.get("report") ?? "").trim() || null;
 
@@ -51,17 +56,17 @@ export async function saveEvaluation(formData: FormData): Promise<ActionResult> 
         updated_at: new Date().toISOString(),
       })
       .eq("id", id);
-    if (error) return fail(describeError(error));
+    if (error) return fail(makeErrors(i18n.locale).describeError(error));
 
     await logAdminAction("update_evaluation", "scout_evaluation", id, { scores, comment });
     revalidatePath("/[locale]/admin", "layout");
-    return ok("Evaluation mise a jour.");
+    return ok(i18n.t("Evaluation mise a jour."));
   }
 
   const registrationId = String(formData.get("registration_id") ?? "").trim();
   const evaluatorId = String(formData.get("evaluator_id") ?? "").trim();
-  if (!registrationId) return fail("Selectionnez l'inscription evaluee.");
-  if (!evaluatorId) return fail("Selectionnez le professionnel qui signe l'evaluation.");
+  if (!registrationId) return fail(i18n.t("Selectionnez l'inscription evaluee."));
+  if (!evaluatorId) return fail(i18n.t("Selectionnez le professionnel qui signe l'evaluation."));
 
   const { data: evaluator } = await supabase
     .from("professional_profiles")
@@ -70,7 +75,7 @@ export async function saveEvaluation(formData: FormData): Promise<ActionResult> 
     .maybeSingle();
   if (!evaluator) {
     return fail(
-      "Ce professionnel n'a pas de fiche professionnelle valide : il ne peut pas signer une evaluation.",
+      i18n.t("Ce professionnel n'a pas de fiche professionnelle valide : il ne peut pas signer une evaluation."),
     );
   }
 
@@ -87,7 +92,7 @@ export async function saveEvaluation(formData: FormData): Promise<ActionResult> 
     })
     .select("id")
     .single();
-  if (error) return fail(describeError(error));
+  if (error) return fail(makeErrors(i18n.locale).describeError(error));
 
   await logAdminAction("create_evaluation", "scout_evaluation", data.id, {
     registrationId,
@@ -98,20 +103,22 @@ export async function saveEvaluation(formData: FormData): Promise<ActionResult> 
     scores,
   });
   revalidatePath("/[locale]/admin", "layout");
-  return ok("Evaluation creee. Elle reste privee jusqu'a publication au joueur.");
+  return ok(i18n.t("Evaluation creee. Elle reste privee jusqu'a publication au joueur."));
 }
 
 export async function setEvaluationVisibility(id: string, visible: boolean): Promise<ActionResult> {
+  const i18n = await getRequestAdminI18n();
+
   await requirePermission("evaluations.manage");
   const supabase = await createClient();
   const { error } = await supabase
     .from("scout_evaluations")
     .update({ visible_to_player: visible, updated_at: new Date().toISOString() })
     .eq("id", id);
-  if (error) return fail(describeError(error));
+  if (error) return fail(makeErrors(i18n.locale).describeError(error));
   await logAdminAction(visible ? "publish_evaluation" : "hide_evaluation", "scout_evaluation", id);
   revalidatePath("/[locale]/admin", "layout");
-  return ok(visible ? "Evaluation publiee au joueur." : "Evaluation masquee au joueur.");
+  return ok(visible ? i18n.t("Evaluation publiee au joueur.") : i18n.t("Evaluation masquee au joueur."));
 }
 
 /**
@@ -121,9 +128,11 @@ export async function setEvaluationVisibility(id: string, visible: boolean): Pro
  * laisser l'utilisateur buter sur un refus RLS opaque, on l'explique.
  */
 export async function deleteEvaluation(id: string): Promise<ActionResult> {
+  const i18n = await getRequestAdminI18n();
+
   await requirePermission("evaluations.manage");
   await logAdminAction("delete_evaluation_refused", "scout_evaluation", id);
   return fail(
-    "Les evaluations ne sont pas supprimables : elles sont historisees. Masquez-la au joueur si elle ne doit plus etre visible.",
+    i18n.t("Les evaluations ne sont pas supprimables : elles sont historisees. Masquez-la au joueur si elle ne doit plus etre visible."),
   );
 }

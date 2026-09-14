@@ -1,3 +1,4 @@
+import { getAdminI18n } from "@/lib/i18n/admin";
 import {
   GaugeIcon,
   GlobeIcon,
@@ -9,7 +10,7 @@ import {
   UserCheckIcon,
 } from "lucide-react";
 
-import { PLAYER_LEVEL, label } from "@/lib/labels";
+import { PLAYER_LEVEL } from "@/lib/labels";
 
 /**
  * Rendu des `scout_days.eligibility_criteria`.
@@ -59,7 +60,9 @@ const asNumber = (value: unknown): number | null => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
-export function EligibilityCriteria({ criteria }: { criteria: Criteria }) {
+export async function EligibilityCriteria({ criteria }: { criteria: Criteria }) {
+  const i18n = await getAdminI18n();
+
   const ageMin = asNumber(criteria.age_min);
   const ageMax = asNumber(criteria.age_max);
   const positions = asList(criteria.positions);
@@ -79,33 +82,33 @@ export function EligibilityCriteria({ criteria }: { criteria: Criteria }) {
 
   const age =
     ageMin !== null && ageMax !== null
-      ? `${ageMin} a ${ageMax} ans`
+      ? i18n.t("{0} a {1} ans", { "0": ageMin, "1": ageMax })
       : ageMin !== null
-        ? `${ageMin} ans et plus`
+        ? i18n.t("{0} ans et plus", { "0": ageMin })
         : ageMax !== null
-          ? `${ageMax} ans au maximum`
+          ? i18n.t("{0} ans au maximum", { "0": ageMax })
           : null;
 
   const sections: Section[] = [
-    age ? { title: "Tranche d'age", icon: HourglassIcon, text: age } : null,
+    age ? { title: i18n.t("Tranche d'age"), icon: HourglassIcon, text: age } : null,
     positions.length
-      ? { title: "Postes recherches", icon: ShirtIcon, chips: positions }
+      ? { title: i18n.t("Postes recherches"), icon: ShirtIcon, chips: positions.map(i18n.labels.position) }
       : null,
     levels.length
       ? {
-          title: "Niveaux",
+          title: i18n.t("Niveaux"),
           icon: GaugeIcon,
-          chips: levels.map((level) => label(PLAYER_LEVEL, level)),
+          chips: levels.map((level) => i18n.labels.label(PLAYER_LEVEL, level)),
         }
       : null,
     // Pays et villes restent deux lignes : fondus dans une seule liste de
     // pastilles, « Tunisie » et « Houmt El Souk » ne se distinguent plus.
-    countries.length ? { title: "Pays", icon: GlobeIcon, chips: countries } : null,
-    cities.length ? { title: "Villes", icon: MapPinIcon, chips: cities } : null,
+    countries.length ? { title: i18n.t("Pays"), icon: GlobeIcon, chips: countries } : null,
+    cities.length ? { title: i18n.t("Villes"), icon: MapPinIcon, chips: cities } : null,
     freeAgentOnly
-      ? { title: "Situation", icon: UserCheckIcon, text: "Joueurs sans club uniquement" }
+      ? { title: i18n.t("Situation"), icon: UserCheckIcon, text: i18n.t("Joueurs sans club uniquement") }
       : null,
-    other ? { title: "Autres exigences", icon: InfoIcon, text: other } : null,
+    other ? { title: i18n.t("Autres exigences"), icon: InfoIcon, text: other } : null,
     ...extras.map(([key, value]) => ({
       title: key.replace(/_/g, " "),
       icon: TagIcon,
@@ -118,8 +121,7 @@ export function EligibilityCriteria({ criteria }: { criteria: Criteria }) {
       <div className="flex items-center gap-3 rounded-xl bg-secondary/60 px-4 py-3">
         <UserCheckIcon className="size-4 shrink-0 text-foreground/70" />
         <p className="text-sm text-muted-foreground">
-          Ouvert a tous les profils — aucun critere ne restreint l&apos;inscription.
-        </p>
+          {i18n.t("Ouvert a tous les profils — aucun critere ne restreint l'inscription.")}</p>
       </div>
     );
   }

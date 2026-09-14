@@ -1,5 +1,8 @@
 "use client";
 
+import { useAdminTranslations } from "@/lib/i18n/admin-client";
+
+
 import * as React from "react";
 import { CheckCheckIcon, Loader2Icon } from "lucide-react";
 import { toast } from "sonner";
@@ -29,6 +32,8 @@ export function QueueBulkForm({
   children: React.ReactNode;
   className?: string;
 }) {
+  const i18n = useAdminTranslations();
+
   const formRef = React.useRef<HTMLFormElement>(null);
   const [count, setCount] = React.useState(0);
   const [pending, startTransition] = React.useTransition();
@@ -73,7 +78,7 @@ export function QueueBulkForm({
     <form ref={formRef} onChange={onChange} onSubmit={submit} className={className}>
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-2.5">
         <p className="micro-label text-muted-foreground">
-          {count > 0 ? `${count} dossier(s) selectionne(s)` : "Selection multiple"}
+          {count > 0 ? i18n.t("{0} dossier(s) selectionne(s)", { "0": count }) : i18n.t("Selection multiple")}
         </p>
         <button
           type="submit"
@@ -90,7 +95,7 @@ export function QueueBulkForm({
           ) : (
             <CheckCheckIcon className="size-3.5 text-brand" />
           )}
-          Validation groupee{count > 0 ? ` (${count})` : ""}
+          {i18n.t("Validation groupee")}{count > 0 ? ` (${count})` : ""}
         </button>
       </div>
       {children}

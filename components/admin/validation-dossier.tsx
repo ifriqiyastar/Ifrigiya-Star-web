@@ -1,3 +1,4 @@
+import { getAdminI18n } from "@/lib/i18n/admin";
 import Link from "next/link";
 import {
   BadgeCheckIcon,
@@ -13,17 +14,8 @@ import {
 import { DefinitionList, type DefinitionItem } from "@/components/admin/definition-list";
 import { DocumentFrame, DocumentLink } from "@/components/admin/document-frame";
 import { StatusPill } from "@/components/admin/status-pill";
-import { formatDate, formatDateTime, ageFromBirthDate } from "@/lib/format";
-import {
-  ACCOUNT_STATUS,
-  DOCUMENT_STATUS,
-  FOOT_PREFERENCE,
-  IDENTITY_STATUS,
-  PLAYER_LEVEL,
-  PROFESSIONAL_TYPE,
-  entry,
-  label,
-} from "@/lib/labels";
+import { ageFromBirthDate } from "@/lib/format";
+import { ACCOUNT_STATUS, DOCUMENT_STATUS, FOOT_PREFERENCE, IDENTITY_STATUS, PLAYER_LEVEL, PROFESSIONAL_TYPE } from "@/lib/labels";
 import { displayName, type ProfileSummary } from "@/lib/queries/profiles";
 import { privateStorageUrl } from "@/lib/supabase/config";
 
@@ -60,7 +52,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 /** L'identite du compte, commune aux quatre files. */
-function AccountHeader({
+async function AccountHeader({
   profile,
   fallbackName,
   extra,
@@ -69,6 +61,8 @@ function AccountHeader({
   fallbackName?: string;
   extra?: React.ReactNode;
 }) {
+  const i18n = await getAdminI18n();
+
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-background p-4">
       {profile?.avatar_url ? (
@@ -84,19 +78,18 @@ function AccountHeader({
         </span>
       )}
       <div className="min-w-0">
-        <p className="font-medium">{displayName(profile, [fallbackName])}</p>
-        <p className="text-xs text-muted-foreground">{profile?.email ?? "Email inconnu"}</p>
+        <p className="font-medium">{displayName(profile, [fallbackName], i18n.locale)}</p>
+        <p className="text-xs text-muted-foreground">{profile?.email ?? i18n.t("Email inconnu")}</p>
       </div>
       <span className="flex-1" />
       <div className="flex flex-wrap items-center gap-2">
         {extra}
         {profile ? (
           <Link
-            href={`/admin/utilisateurs/${profile.id}`}
+            href={i18n.path(`/admin/utilisateurs/${profile.id}`)}
             className="text-xs font-medium text-brand hover:underline"
           >
-            Fiche complete
-          </Link>
+            {i18n.t("Fiche complete")}</Link>
         ) : null}
       </div>
     </div>
@@ -142,7 +135,7 @@ export type IdentityRow = {
   created_at: string;
 };
 
-export function PlayerDossier({
+export async function PlayerDossier({
   player,
   profile,
   identity,
@@ -157,34 +150,36 @@ export function PlayerDossier({
   clubs: ClubHistoryRow[];
   mediaCounts: { videos: number; photos: number };
 }) {
+  const i18n = await getAdminI18n();
+
   const age = ageFromBirthDate(player.birth_date as string | null);
   const isMinor = Boolean(profile?.is_minor) || (age !== null && age < 18);
 
   const items: DefinitionItem[] = [
-    { label: "Nom complet", icon: UserIcon, value: orDash(
+    { label: i18n.t("Nom complet"), icon: UserIcon, value: orDash(
       [player.first_name, player.last_name].filter(Boolean).join(" ") || null) },
-    { label: "Date de naissance", icon: CalendarIcon, value: player.birth_date
-      ? `${formatDate(player.birth_date as string)}${age !== null ? ` — ${age} ans` : ""}`
+    { label: i18n.t("Date de naissance"), icon: CalendarIcon, value: player.birth_date
+      ? `${i18n.format.formatDate(player.birth_date as string)}${age !== null ? i18n.t(" — {0} ans", { "0": age }) : ""}`
       : "—" },
-    { label: "Nationalite", icon: FlagIcon, value: orDash(player.nationality) },
-    { label: "Localisation", icon: MapPinIcon, value: orDash(
+    { label: i18n.t("Nationalite"), icon: FlagIcon, value: orDash(player.nationality) },
+    { label: i18n.t("Localisation"), icon: MapPinIcon, value: orDash(
       [player.city, player.country].filter(Boolean).join(", ") || null) },
-    { label: "Email", icon: MailIcon, value: orDash(profile?.email) },
-    { label: "Telephone", icon: PhoneIcon, value: orDash(profile?.phone) },
-    { label: "Poste principal", value: orDash(player.main_position) },
-    { label: "Poste secondaire", value: orDash(player.secondary_position) },
-    { label: "Niveau", value: player.level ? label(PLAYER_LEVEL, player.level as string) : "—" },
-    { label: "Pied fort", value: player.foot_preference
-      ? label(FOOT_PREFERENCE, player.foot_preference as string)
+    { label: i18n.t("Email"), icon: MailIcon, value: orDash(profile?.email) },
+    { label: i18n.t("Telephone"), icon: PhoneIcon, value: orDash(profile?.phone) },
+    { label: i18n.t("Poste principal"), value: i18n.labels.position(player.main_position ? String(player.main_position) : null) },
+    { label: i18n.t("Poste secondaire"), value: i18n.labels.position(player.secondary_position ? String(player.secondary_position) : null) },
+    { label: i18n.t("Niveau"), value: player.level ? i18n.labels.label(PLAYER_LEVEL, player.level as string) : "—" },
+    { label: i18n.t("Pied fort"), value: player.foot_preference
+      ? i18n.labels.label(FOOT_PREFERENCE, player.foot_preference as string)
       : "—" },
-    { label: "Gabarit", value: orDash(
-      [player.height_cm ? `${player.height_cm} cm` : null,
-       player.weight_kg ? `${player.weight_kg} kg` : null].filter(Boolean).join(" · ") || null) },
-    { label: "Club actuel", value: player.is_free_agent
-      ? "Libre de tout contrat"
+    { label: i18n.t("Gabarit"), value: orDash(
+      [player.height_cm ? i18n.t("{0} cm", { "0": player.height_cm }) : null,
+       player.weight_kg ? i18n.t("{0} kg", { "0": player.weight_kg }) : null].filter(Boolean).join(" · ") || null) },
+    { label: i18n.t("Club actuel"), value: player.is_free_agent
+      ? i18n.t("Libre de tout contrat")
       : orDash(player.current_club) },
-    { label: "Compte cree le", value: formatDateTime(player.created_at as string) },
-    { label: "Derniere modification", value: formatDateTime(player.updated_at as string) },
+    { label: i18n.t("Compte cree le"), value: i18n.format.formatDateTime(player.created_at as string) },
+    { label: i18n.t("Derniere modification"), value: i18n.format.formatDateTime(player.updated_at as string) },
   ];
 
   return (
@@ -194,23 +189,23 @@ export function PlayerDossier({
         fallbackName={[player.first_name, player.last_name].filter(Boolean).join(" ")}
         extra={
           <>
-            <StatusPill tone={entry(ACCOUNT_STATUS, player.status as string).tone}>
-              {label(ACCOUNT_STATUS, player.status as string)}
+            <StatusPill tone={i18n.labels.entry(ACCOUNT_STATUS, player.status as string).tone}>
+              {i18n.labels.label(ACCOUNT_STATUS, player.status as string)}
             </StatusPill>
-            {isMinor ? <StatusPill tone="warning">Mineur</StatusPill> : null}
+            {isMinor ? <StatusPill tone="warning">{i18n.t("Mineur")}</StatusPill> : null}
             {player.is_visible === false ? (
-              <StatusPill tone="neutral">Profil masque</StatusPill>
+              <StatusPill tone="neutral">{i18n.t("Profil masque")}</StatusPill>
             ) : null}
           </>
         }
       />
 
-      <Section title="Profil sportif et identite">
+      <Section title={i18n.t("Profil sportif et identite")}>
         <DefinitionList items={items} />
       </Section>
 
       {player.about ? (
-        <Section title="Presentation">
+        <Section title={i18n.t("Presentation")}>
           <p className="rounded-xl border border-border bg-background p-4 text-sm leading-relaxed whitespace-pre-line">
             {player.about as string}
           </p>
@@ -218,18 +213,17 @@ export function PlayerDossier({
       ) : null}
 
       {player.status_reason ? (
-        <Section title="Motif du precedent passage">
+        <Section title={i18n.t("Motif du precedent passage")}>
           <p className="rounded-xl border border-warning/30 bg-warning/10 p-4 text-sm leading-relaxed">
             {player.status_reason as string}
           </p>
         </Section>
       ) : null}
 
-      <Section title="Parcours en club">
+      <Section title={i18n.t("Parcours en club")}>
         {!clubs.length ? (
           <p className="rounded-xl border border-border bg-background px-4 py-3 text-xs text-muted-foreground">
-            Aucun club declare. Ce n&apos;est pas bloquant : le parcours est facultatif.
-          </p>
+            {i18n.t("Aucun club declare. Ce n'est pas bloquant : le parcours est facultatif.")}</p>
         ) : (
           <ul className="divide-y divide-border rounded-xl border border-border bg-background">
             {clubs.map((club) => (
@@ -237,8 +231,8 @@ export function PlayerDossier({
                 <span className="font-medium">{club.club_name}</span>
                 <span className="flex-1" />
                 <span className="text-xs text-muted-foreground">
-                  {club.start_date ? formatDate(club.start_date) : "?"} →{" "}
-                  {club.end_date ? formatDate(club.end_date) : "aujourd'hui"}
+                  {club.start_date ? i18n.format.formatDate(club.start_date) : "?"} →{" "}
+                  {club.end_date ? i18n.format.formatDate(club.end_date) : i18n.t("aujourd'hui")}
                 </span>
               </li>
             ))}
@@ -246,76 +240,72 @@ export function PlayerDossier({
         )}
       </Section>
 
-      <Section title="Piece d'identite (KYC)">
+      <Section title={i18n.t("Piece d'identite (KYC)")}>
         {!identity ? (
           <p className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-xs text-destructive">
-            Aucun dossier d&apos;identite depose. Valider le profil ouvre l&apos;acces a
-            l&apos;application sans qu&apos;aucune piece n&apos;ait ete verifiee.
-          </p>
+            {i18n.t("Aucun dossier d'identite depose. Valider le profil ouvre l'acces a l'application sans qu'aucune piece n'ait ete verifiee.")}</p>
         ) : (
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
-              <StatusPill tone={entry(IDENTITY_STATUS, identity.status).tone}>
-                {label(IDENTITY_STATUS, identity.status)}
+              <StatusPill tone={i18n.labels.entry(IDENTITY_STATUS, identity.status).tone}>
+                {i18n.labels.label(IDENTITY_STATUS, identity.status)}
               </StatusPill>
               <StatusPill tone="neutral">{identity.document_type.toUpperCase()}</StatusPill>
               {identity.facial_check_provider ? (
                 <StatusPill tone={identity.facial_check_passed ? "success" : "danger"}>
-                  Controle facial {identity.facial_check_passed ? "reussi" : "echoue"}
+                  {i18n.t("Controle facial")} {identity.facial_check_passed ? "reussi" : "echoue"}
                 </StatusPill>
               ) : (
-                <StatusPill tone="neutral">Controle facial non realise</StatusPill>
+                <StatusPill tone="neutral">{i18n.t("Controle facial non realise")}</StatusPill>
               )}
               <span className="text-xs text-muted-foreground">
-                Depose le {formatDateTime(identity.created_at)}
+                {i18n.t("Depose le")} {i18n.format.formatDateTime(identity.created_at)}
               </span>
             </div>
             {identity.rejection_reason ? (
-              <p className="text-xs text-destructive">Motif de refus : {identity.rejection_reason}</p>
+              <p className="text-xs text-destructive">{i18n.t("Motif de refus :")} {identity.rejection_reason}</p>
             ) : null}
             {identity.storage_path ? (
               <DocumentFrame
                 url={privateStorageUrl("identity-documents", identity.storage_path)!}
-                label={`Piece d'identite — ${identity.document_type.toUpperCase()}`}
+                label={i18n.t("Piece d'identite — {0}", { "0": identity.document_type.toUpperCase() })}
               />
             ) : (
-              <DocumentLink url={null} label="Piece d'identite" />
+              <DocumentLink url={null} label={i18n.t("Piece d'identite")} />
             )}
           </div>
         )}
       </Section>
 
       {isMinor ? (
-        <Section title="Representant legal (§4.2)">
+        <Section title={i18n.t("Representant legal (§4.2)")}>
           {!guardian ? (
             <p className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-xs text-destructive">
-              Compte mineur sans representant legal declare. Le consentement d&apos;un
-              representant est requis avant toute validation.
-            </p>
+              {i18n.t("Compte mineur sans representant legal declare. Le consentement d'un representant est requis avant toute validation.")}</p>
           ) : (
             <div className="space-y-2">
               <DefinitionList
                 items={[
-                  { label: "Representant", icon: UserIcon, value: guardian.full_name },
-                  { label: "Lien", value: orDash(guardian.relationship) },
-                  { label: "Email", icon: MailIcon, value: orDash(guardian.email) },
-                  { label: "Telephone", icon: PhoneIcon, value: orDash(guardian.phone) },
+                  { label: i18n.t("Representant"), icon: UserIcon, value: guardian.full_name },
+                  { label: i18n.t("Lien"), value: orDash(guardian.relationship) },
+                  { label: i18n.t("Email"), icon: MailIcon, value: orDash(guardian.email) },
+                  { label: i18n.t("Telephone"), icon: PhoneIcon, value: orDash(guardian.phone) },
                   {
-                    label: "Consentement",
+                    label: i18n.t("Consentement"),
                     icon: BadgeCheckIcon,
                     value: guardian.consent_given ? (
                       <StatusPill tone="success">
-                        Donne le {formatDate(guardian.consent_given_at)}
+                        {i18n.t("Donne le")} {i18n.format.formatDate(guardian.consent_given_at)}
                       </StatusPill>
                     ) : (
-                      <StatusPill tone="danger">Non donne</StatusPill>
+                      <StatusPill tone="danger">{i18n.t("Non donne")}</StatusPill>
                     ),
                   },
                   {
-                    label: "Dossier representant",
+                    label: i18n.t("Dossier representant"),
                     value: (
-                      <StatusPill tone={entry(DOCUMENT_STATUS, guardian.status).tone}>
-                        {label(DOCUMENT_STATUS, guardian.status)}
+                      <StatusPill tone={i18n.labels.entry(DOCUMENT_STATUS, guardian.status).tone}>
+                        {i18n.labels.label(DOCUMENT_STATUS, guardian.status)}
                       </StatusPill>
                     ),
                   },
@@ -324,14 +314,14 @@ export function PlayerDossier({
               <div className="grid gap-2 sm:grid-cols-2">
                 <DocumentLink
                   url={privateStorageUrl("guardian-documents", guardian.id_document_storage_path)}
-                  label="Piece d'identite du representant"
+                  label={i18n.t("Piece d'identite du representant")}
                 />
                 <DocumentLink
                   url={privateStorageUrl(
                     "guardian-documents",
                     guardian.consent_document_storage_path,
                   )}
-                  label="Attestation de consentement"
+                  label={i18n.t("Attestation de consentement")}
                 />
               </div>
             </div>
@@ -339,13 +329,12 @@ export function PlayerDossier({
         </Section>
       ) : null}
 
-      <Section title="Medias deposes">
+      <Section title={i18n.t("Medias deposes")}>
         <div className="flex flex-wrap items-center gap-2">
-          <StatusPill tone="neutral">{mediaCounts.videos} video(s)</StatusPill>
-          <StatusPill tone="neutral">{mediaCounts.photos} photo(s)</StatusPill>
+          <StatusPill tone="neutral">{mediaCounts.videos}  {i18n.t("video(s)")}</StatusPill>
+          <StatusPill tone="neutral">{mediaCounts.photos}  {i18n.t("photo(s)")}</StatusPill>
           <span className="text-xs text-muted-foreground">
-            Les medias se moderent depuis l&apos;ecran Moderation, pas ici.
-          </span>
+            {i18n.t("Les medias se moderent depuis l'ecran Moderation, pas ici.")}</span>
         </div>
       </Section>
     </div>
@@ -363,7 +352,7 @@ export type ProDocumentRow = {
   created_at?: string;
 };
 
-export function ProfessionalDossier({
+export async function ProfessionalDossier({
   pro,
   profile,
   documents,
@@ -372,6 +361,8 @@ export function ProfessionalDossier({
   profile?: ProfileSummary;
   documents: ProDocumentRow[];
 }) {
+  const i18n = await getAdminI18n();
+
   const pending = documents.filter((document) => document.status === "en_attente").length;
 
   return (
@@ -381,62 +372,60 @@ export function ProfessionalDossier({
         fallbackName={pro.contact_full_name ?? pro.organization_name ?? undefined}
         extra={
           <>
-            <StatusPill tone={entry(ACCOUNT_STATUS, pro.status as string).tone}>
-              {label(ACCOUNT_STATUS, pro.status as string)}
+            <StatusPill tone={i18n.labels.entry(ACCOUNT_STATUS, pro.status as string).tone}>
+              {i18n.labels.label(ACCOUNT_STATUS, pro.status as string)}
             </StatusPill>
             {pending ? (
-              <StatusPill tone="warning">{pending} piece(s) non tranchee(s)</StatusPill>
+              <StatusPill tone="warning">{pending}  {i18n.t("piece(s) non tranchee(s)")}</StatusPill>
             ) : null}
           </>
         }
       />
 
-      <Section title="Structure et contact">
+      <Section title={i18n.t("Structure et contact")}>
         <DefinitionList
           items={[
             {
-              label: "Type",
+              label: i18n.t("Type"),
               icon: BadgeCheckIcon,
               value: pro.professional_type
-                ? label(PROFESSIONAL_TYPE, pro.professional_type)
+                ? i18n.labels.label(PROFESSIONAL_TYPE, pro.professional_type)
                 : "—",
             },
-            { label: "Organisation", value: orDash(pro.organization_name) },
-            { label: "Contact", icon: UserIcon, value: orDash(pro.contact_full_name) },
-            { label: "Fonction", value: orDash(pro.position_title) },
+            { label: i18n.t("Organisation"), value: orDash(pro.organization_name) },
+            { label: i18n.t("Contact"), icon: UserIcon, value: orDash(pro.contact_full_name) },
+            { label: i18n.t("Fonction"), value: orDash(pro.position_title) },
             {
-              label: "Localisation",
+              label: i18n.t("Localisation"),
               icon: MapPinIcon,
               value: orDash([pro.city, pro.country].filter(Boolean).join(", ") || null),
             },
-            { label: "Email", icon: MailIcon, value: orDash(profile?.email) },
-            { label: "Telephone", icon: PhoneIcon, value: orDash(profile?.phone) },
-            { label: "Compte cree le", value: formatDateTime(pro.created_at) },
+            { label: i18n.t("Email"), icon: MailIcon, value: orDash(profile?.email) },
+            { label: i18n.t("Telephone"), icon: PhoneIcon, value: orDash(profile?.phone) },
+            { label: i18n.t("Compte cree le"), value: i18n.format.formatDateTime(pro.created_at) },
           ]}
         />
       </Section>
 
       {pro.status_reason ? (
-        <Section title="Motif du precedent passage">
+        <Section title={i18n.t("Motif du precedent passage")}>
           <p className="rounded-xl border border-warning/30 bg-warning/10 p-4 text-sm leading-relaxed">
             {pro.status_reason}
           </p>
         </Section>
       ) : null}
 
-      <Section title="Justificatifs professionnels">
+      <Section title={i18n.t("Justificatifs professionnels")}>
         {!documents.length ? (
           <p className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-xs text-destructive">
-            Aucun justificatif depose. Valider ce compte lui ouvre la base joueurs sans
-            qu&apos;aucune piece n&apos;ait ete produite.
-          </p>
+            {i18n.t("Aucun justificatif depose. Valider ce compte lui ouvre la base joueurs sans qu'aucune piece n'ait ete produite.")}</p>
         ) : (
           <div className="space-y-2">
             {documents.map((document) => (
               <div key={document.id} className="space-y-1.5">
                 <div className="flex flex-wrap items-center gap-2">
-                  <StatusPill tone={entry(DOCUMENT_STATUS, document.status).tone}>
-                    {label(DOCUMENT_STATUS, document.status)}
+                  <StatusPill tone={i18n.labels.entry(DOCUMENT_STATUS, document.status).tone}>
+                    {i18n.labels.label(DOCUMENT_STATUS, document.status)}
                   </StatusPill>
                   <span className="text-sm font-medium">{document.document_label}</span>
                 </div>
@@ -451,9 +440,7 @@ export function ProfessionalDossier({
               </div>
             ))}
             <p className="text-xs text-muted-foreground">
-              Chaque piece se valide ou se refuse dans l&apos;onglet « Justificatifs pro » :
-              le statut du compte et celui des pieces sont deux decisions distinctes.
-            </p>
+              {i18n.t("Chaque piece se valide ou se refuse dans l'onglet « Justificatifs pro » : le statut du compte et celui des pieces sont deux decisions distinctes.")}</p>
           </div>
         )}
       </Section>
@@ -463,7 +450,7 @@ export function ProfessionalDossier({
 
 /* ------------------------------------------------------- piece d'identite */
 
-export function IdentityDossier({
+export async function IdentityDossier({
   identity,
   profile,
   player,
@@ -474,6 +461,8 @@ export function IdentityDossier({
   player?: Record<string, string | null>;
   guardian?: GuardianRow;
 }) {
+  const i18n = await getAdminI18n();
+
   const age = ageFromBirthDate(player?.birth_date ?? null);
   const declared = [player?.first_name, player?.last_name].filter(Boolean).join(" ");
 
@@ -484,84 +473,82 @@ export function IdentityDossier({
         fallbackName={declared}
         extra={
           <>
-            <StatusPill tone={entry(IDENTITY_STATUS, identity.status).tone}>
-              {label(IDENTITY_STATUS, identity.status)}
+            <StatusPill tone={i18n.labels.entry(IDENTITY_STATUS, identity.status).tone}>
+              {i18n.labels.label(IDENTITY_STATUS, identity.status)}
             </StatusPill>
             {profile?.is_minor || (age !== null && age < 18) ? (
-              <StatusPill tone="warning">Mineur</StatusPill>
+              <StatusPill tone="warning">{i18n.t("Mineur")}</StatusPill>
             ) : null}
           </>
         }
       />
 
-      <Section title="Ce qui doit concorder avec la piece">
+      <Section title={i18n.t("Ce qui doit concorder avec la piece")}>
         <DefinitionList
           items={[
-            { label: "Nom declare", icon: UserIcon, value: orDash(declared || null) },
+            { label: i18n.t("Nom declare"), icon: UserIcon, value: orDash(declared || null) },
             {
-              label: "Date de naissance declaree",
+              label: i18n.t("Date de naissance declaree"),
               icon: CalendarIcon,
               value: player?.birth_date
-                ? `${formatDate(player.birth_date)}${age !== null ? ` — ${age} ans` : ""}`
+                ? `${i18n.format.formatDate(player.birth_date)}${age !== null ? i18n.t(" — {0} ans", { "0": age }) : ""}`
                 : "—",
             },
-            { label: "Nationalite declaree", icon: FlagIcon, value: orDash(player?.nationality) },
-            { label: "Type de piece", icon: ShieldCheckIcon, value: identity.document_type.toUpperCase() },
+            { label: i18n.t("Nationalite declaree"), icon: FlagIcon, value: orDash(player?.nationality) },
+            { label: i18n.t("Type de piece"), icon: ShieldCheckIcon, value: identity.document_type.toUpperCase() },
             {
-              label: "Controle facial",
+              label: i18n.t("Controle facial"),
               value: identity.facial_check_provider ? (
                 <StatusPill tone={identity.facial_check_passed ? "success" : "danger"}>
-                  {identity.facial_check_passed ? "Reussi" : "Echoue"} —{" "}
+                  {identity.facial_check_passed ? i18n.t("Reussi") : i18n.t("Echoue")} —{" "}
                   {identity.facial_check_provider}
                 </StatusPill>
               ) : (
-                "Non realise"
+                i18n.t("Non realise")
               ),
             },
-            { label: "Depose le", value: formatDateTime(identity.created_at) },
+            { label: i18n.t("Depose le"), value: i18n.format.formatDateTime(identity.created_at) },
           ]}
         />
       </Section>
 
       {guardian ? (
-        <Section title="Representant legal">
+        <Section title={i18n.t("Representant legal")}>
           <div className="grid gap-2 sm:grid-cols-2">
             <DocumentLink
               url={privateStorageUrl("guardian-documents", guardian.id_document_storage_path)}
-              label={`Piece de ${guardian.full_name}`}
+              label={i18n.t("Piece de {0}", { "0": guardian.full_name })}
               hint={guardian.relationship ?? undefined}
             />
             <DocumentLink
               url={privateStorageUrl("guardian-documents", guardian.consent_document_storage_path)}
-              label="Attestation de consentement"
-              hint={guardian.consent_given ? "Consentement donne" : "Consentement non donne"}
+              label={i18n.t("Attestation de consentement")}
+              hint={guardian.consent_given ? i18n.t("Consentement donne") : i18n.t("Consentement non donne")}
             />
           </div>
         </Section>
       ) : null}
 
-      <Section title="Document">
+      <Section title={i18n.t("Document")}>
         {identity.storage_path ? (
           <DocumentFrame
             url={privateStorageUrl("identity-documents", identity.storage_path)!}
-            label={`Piece d'identite — ${identity.document_type.toUpperCase()}`}
+            label={i18n.t("Piece d'identite — {0}", { "0": identity.document_type.toUpperCase() })}
           />
         ) : (
-          <DocumentLink url={null} label="Piece d'identite" />
+          <DocumentLink url={null} label={i18n.t("Piece d'identite")} />
         )}
       </Section>
 
       <p className="rounded-xl border border-border bg-background px-4 py-3 text-xs leading-relaxed text-muted-foreground">
-        Valider ici ne valide <strong>pas</strong> le compte : l&apos;application mobile lit le
-        statut du profil joueur, qui se tranche dans la file « Profils joueurs ».
-      </p>
+        {i18n.t("Valider ici ne valide")} <strong>{i18n.t("pas")}</strong>  {i18n.t("le compte : l'application mobile lit le statut du profil joueur, qui se tranche dans la file « Profils joueurs ».")}</p>
     </div>
   );
 }
 
 /* -------------------------------------------------------- justificatif pro */
 
-export function DocumentDossier({
+export async function DocumentDossier({
   document,
   profile,
   pro,
@@ -572,6 +559,8 @@ export function DocumentDossier({
   pro?: Record<string, string | null>;
   siblings: ProDocumentRow[];
 }) {
+  const i18n = await getAdminI18n();
+
   const others = siblings.filter((row) => row.id !== document.id);
 
   return (
@@ -580,27 +569,27 @@ export function DocumentDossier({
         profile={profile}
         fallbackName={pro?.contact_full_name ?? pro?.organization_name ?? undefined}
         extra={
-          <StatusPill tone={entry(DOCUMENT_STATUS, document.status).tone}>
-            {label(DOCUMENT_STATUS, document.status)}
+          <StatusPill tone={i18n.labels.entry(DOCUMENT_STATUS, document.status).tone}>
+            {i18n.labels.label(DOCUMENT_STATUS, document.status)}
           </StatusPill>
         }
       />
 
-      <Section title="Compte rattache">
+      <Section title={i18n.t("Compte rattache")}>
         <DefinitionList
           items={[
             {
-              label: "Type",
+              label: i18n.t("Type"),
               icon: BadgeCheckIcon,
-              value: pro?.professional_type ? label(PROFESSIONAL_TYPE, pro.professional_type) : "—",
+              value: pro?.professional_type ? i18n.labels.label(PROFESSIONAL_TYPE, pro.professional_type) : "—",
             },
-            { label: "Organisation", value: orDash(pro?.organization_name) },
-            { label: "Fonction", value: orDash(pro?.position_title) },
+            { label: i18n.t("Organisation"), value: orDash(pro?.organization_name) },
+            { label: i18n.t("Fonction"), value: orDash(pro?.position_title) },
             {
-              label: "Statut du compte",
+              label: i18n.t("Statut du compte"),
               value: pro?.status ? (
-                <StatusPill tone={entry(ACCOUNT_STATUS, pro.status).tone}>
-                  {label(ACCOUNT_STATUS, pro.status)}
+                <StatusPill tone={i18n.labels.entry(ACCOUNT_STATUS, pro.status).tone}>
+                  {i18n.labels.label(ACCOUNT_STATUS, pro.status)}
                 </StatusPill>
               ) : (
                 "—"
@@ -615,7 +604,7 @@ export function DocumentDossier({
           <DocumentFrame
             url={privateStorageUrl("professional-documents", document.storage_path)!}
             label={document.document_label}
-            hint={document.created_at ? `Depose le ${formatDate(document.created_at)}` : undefined}
+            hint={document.created_at ? i18n.t("Depose le {0}", { "0": i18n.format.formatDate(document.created_at) }) : undefined}
           />
         ) : (
           <DocumentLink url={null} label={document.document_label} />
@@ -623,14 +612,14 @@ export function DocumentDossier({
       </Section>
 
       {others.length ? (
-        <Section title="Autres pieces du meme compte">
+        <Section title={i18n.t("Autres pieces du meme compte")}>
           <div className="space-y-2">
             {others.map((row) => (
               <DocumentLink
                 key={row.id}
                 url={privateStorageUrl("professional-documents", row.storage_path)}
                 label={row.document_label}
-                hint={label(DOCUMENT_STATUS, row.status)}
+                hint={i18n.labels.label(DOCUMENT_STATUS, row.status)}
               />
             ))}
           </div>

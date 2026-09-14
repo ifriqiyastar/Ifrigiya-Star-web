@@ -1,8 +1,11 @@
 "use server";
 
+import { getRequestAdminI18n } from "@/lib/i18n/admin";
+
+
 import { revalidatePath } from "next/cache";
 
-import { describeError, fail, ok, type ActionResult } from "@/lib/actions/result";
+import { makeErrors, fail, ok, type ActionResult } from "@/lib/actions/result";
 import { logAdminAction, requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
@@ -21,6 +24,8 @@ import { createClient } from "@/lib/supabase/server";
  * avec le nombre de destinataires reellement servis.
  */
 export async function sendNotification(formData: FormData): Promise<ActionResult> {
+  const i18n = await getRequestAdminI18n();
+
   const admin = await requirePermission("notifications.manage");
   const supabase = await createClient();
   const title = String(formData.get("title") ?? "").trim();
@@ -28,7 +33,7 @@ export async function sendNotification(formData: FormData): Promise<ActionResult
   const targetType = String(formData.get("target_type") ?? "all");
   const targetValue = String(formData.get("target_value") ?? "").trim() || null;
   const channels = formData.getAll("channels").map(String);
-  if (!title || !body || channels.length === 0) return fail("Titre, message et canal requis.");
+  if (!title || !body || channels.length === 0) return fail(i18n.t("Titre, message et canal requis."));
 
   const { data: recipients, error: sendError } = await supabase.rpc(
     "admin_broadcast_notification",
@@ -45,8 +50,8 @@ export async function sendNotification(formData: FormData): Promise<ActionResult
       sendError.code === "PGRST202" || /admin_broadcast_notification/i.test(sendError.message ?? "");
     return fail(
       missing
-        ? "Envoi indisponible : appliquez la migration 0046_admin_broadcast_notification.sql (depot mobile)."
-        : describeError(sendError),
+        ? i18n.t("Envoi indisponible : appliquez la migration 0046_admin_broadcast_notification.sql (depot mobile).")
+        : makeErrors(i18n.locale).describeError(sendError),
     );
   }
 
@@ -65,12 +70,12 @@ export async function sendNotification(formData: FormData): Promise<ActionResult
       channels,
       status: count > 0 ? "sent" : "failed",
       recipient_count: count,
-      error_message: count > 0 ? null : "Aucun destinataire ne correspond a cette cible.",
+      error_message: count > 0 ? null : i18n.t("Aucun destinataire ne correspond a cette cible."),
       created_by: admin.userId,
     })
     .select("id")
     .single();
-  if (error) return fail(describeError(error));
+  if (error) return fail(makeErrors(i18n.locale).describeError(error));
 
   await logAdminAction("send_notification", "notification_campaign", data.id, {
     targetType,
@@ -81,8 +86,8 @@ export async function sendNotification(formData: FormData): Promise<ActionResult
   revalidatePath("/[locale]/admin", "layout");
 
   return count > 0
-    ? ok(`Notification envoyee a ${count} destinataire(s).`)
-    : fail("Aucun destinataire ne correspond a cette cible : rien n'a ete envoye.");
+    ? ok(i18n.t("Notification envoyee a {0} destinataire(s).", { "0": count }))
+    : fail(i18n.t("Aucun destinataire ne correspond a cette cible : rien n'a ete envoye."));
 }
 
 /**
@@ -94,11 +99,13 @@ export async function sendNotification(formData: FormData): Promise<ActionResult
  * ecrit dans l'historique des campagnes : un test n'est pas une diffusion.
  */
 export async function sendTestNotification(formData: FormData): Promise<ActionResult> {
+  const i18n = await getRequestAdminI18n();
+
   const admin = await requirePermission("notifications.manage");
   const supabase = await createClient();
   const title = String(formData.get("title") ?? "").trim();
   const body = String(formData.get("body") ?? "").trim();
-  if (!title || !body) return fail("Titre et message requis pour un envoi test.");
+  if (!title || !body) return fail(i18n.t("Titre et message requis pour un envoi test."));
 
   const { data: recipients, error } = await supabase.rpc("admin_broadcast_notification", {
     p_title: `[Test] ${title}`.slice(0, 120),
@@ -112,14 +119,14 @@ export async function sendTestNotification(formData: FormData): Promise<ActionRe
       error.code === "PGRST202" || /admin_broadcast_notification/i.test(error.message ?? "");
     return fail(
       missing
-        ? "Envoi indisponible : appliquez la migration 0046_admin_broadcast_notification.sql (depot mobile)."
-        : describeError(error),
+        ? i18n.t("Envoi indisponible : appliquez la migration 0046_admin_broadcast_notification.sql (depot mobile).")
+        : makeErrors(i18n.locale).describeError(error),
     );
   }
 
   return Number(recipients ?? 0) > 0
-    ? ok("Envoi test recu sur votre propre compte.")
-    : fail("Votre compte n'a pas recu le test : il doit etre actif pour etre destinataire.");
+    ? ok(i18n.t("Envoi test recu sur votre propre compte."))
+    : fail(i18n.t("Votre compte n'a pas recu le test : il doit etre actif pour etre destinataire."));
 }
 
 /**
@@ -128,6 +135,8 @@ export async function sendTestNotification(formData: FormData): Promise<ActionRe
  * personne ne depile — c'etait le cas jusqu'ici.
  */
 export async function retryNotification(campaignId: string): Promise<ActionResult> {
+  const i18n = await getRequestAdminI18n();
+
   const admin = await requirePermission("notifications.manage");
   const supabase = await createClient();
 
@@ -136,8 +145,8 @@ export async function retryNotification(campaignId: string): Promise<ActionResul
     .select("id, title, body, target_type, target_value, status")
     .eq("id", campaignId)
     .maybeSingle();
-  if (!campaign) return fail("Campagne introuvable.");
-  if (campaign.status === "sent") return fail("Cette campagne a deja ete envoyee.");
+  if (!campaign) return fail(i18n.t("Campagne introuvable."));
+  if (campaign.status === "sent") return fail(i18n.t("Cette campagne a deja ete envoyee."));
 
   const { data: recipients, error: sendError } = await supabase.rpc(
     "admin_broadcast_notification",
@@ -148,7 +157,7 @@ export async function retryNotification(campaignId: string): Promise<ActionResul
       p_target_value: campaign.target_value,
     },
   );
-  if (sendError) return fail(describeError(sendError));
+  if (sendError) return fail(makeErrors(i18n.locale).describeError(sendError));
 
   const count = Number(recipients ?? 0);
   const { error } = await supabase
@@ -156,11 +165,11 @@ export async function retryNotification(campaignId: string): Promise<ActionResul
     .update({
       status: count > 0 ? "sent" : "failed",
       recipient_count: count,
-      error_message: count > 0 ? null : "Aucun destinataire ne correspond a cette cible.",
+      error_message: count > 0 ? null : i18n.t("Aucun destinataire ne correspond a cette cible."),
       updated_at: new Date().toISOString(),
     })
     .eq("id", campaignId);
-  if (error) return fail(describeError(error));
+  if (error) return fail(makeErrors(i18n.locale).describeError(error));
 
   await logAdminAction("retry_notification", "notification_campaign", campaignId, {
     recipients: count,
@@ -168,6 +177,6 @@ export async function retryNotification(campaignId: string): Promise<ActionResul
   });
   revalidatePath("/[locale]/admin", "layout");
   return count > 0
-    ? ok(`Notification renvoyee a ${count} destinataire(s).`)
-    : fail("Aucun destinataire ne correspond a cette cible.");
+    ? ok(i18n.t("Notification renvoyee a {0} destinataire(s).", { "0": count }))
+    : fail(i18n.t("Aucun destinataire ne correspond a cette cible."));
 }

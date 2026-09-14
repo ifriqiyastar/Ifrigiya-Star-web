@@ -1,4 +1,5 @@
 import type { AdminPermission } from "@/lib/auth";
+import type { AdminDictionary } from "@/lib/i18n/admin-shared";
 import { hasServiceRole } from "@/lib/supabase/service";
 import { createClient } from "@/lib/supabase/server";
 
@@ -42,7 +43,9 @@ export type Diagnostic = {
  */
 export async function fetchDiagnostics(
   permissions: AdminPermission[],
+  dict: AdminDictionary,
 ): Promise<Diagnostic[]> {
+  const copy = dict.diagnostics;
   const issues: Diagnostic[] = [];
   const supabase = await createClient();
 
@@ -55,18 +58,16 @@ export async function fetchDiagnostics(
   if (error) {
     issues.push({
       id: "rbac-missing",
-      title: "Roles et permissions non installes",
-      detail:
-        "Chaque administrateur dispose de tous les droits, y compris les gestes reserves au super administrateur.",
+      title: copy.rbacMissing.title,
+      detail: copy.rbacMissing.detail,
       hint: "202608240001_admin_platform.sql",
       tone: "danger",
     });
   } else if (!count) {
     issues.push({
       id: "rbac-empty",
-      title: "Aucune permission enregistree",
-      detail:
-        "Le referentiel des droits est vide : les ecrans s'ouvrent en entier pour tous les administrateurs.",
+      title: copy.rbacEmpty.title,
+      detail: copy.rbacEmpty.detail,
       hint: "202608240001_admin_platform.sql",
       tone: "warning",
     });
@@ -75,9 +76,8 @@ export async function fetchDiagnostics(
   if (!hasServiceRole()) {
     issues.push({
       id: "service-key",
-      title: "Suppression de compte indisponible",
-      detail:
-        "Supprimer definitivement un compte demande une cle serveur qui n'est pas configuree. Le geste echouera au moment de l'appliquer.",
+      title: copy.serviceKey.title,
+      detail: copy.serviceKey.detail,
       hint: "SUPABASE_SERVICE_ROLE_KEY",
       tone: "warning",
       permission: "users.write",

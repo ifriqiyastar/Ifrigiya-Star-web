@@ -2,11 +2,12 @@ import Link from "next/link";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
-import { formatNumber } from "@/lib/format";
+import { makeFormat } from "@/lib/format";
+import { fill, getAdminDict, getAdminLocale } from "@/lib/i18n/admin";
 import { cn } from "@/lib/utils";
 
 /** Pagination par liens (pas d'etat client) : `?page=n` sur la route courante. */
-export function Pagination({
+export async function Pagination({
   basePath,
   params,
   page,
@@ -21,6 +22,8 @@ export function Pagination({
   total: number;
   pageParam?: string;
 }) {
+  const [locale, dict] = await Promise.all([getAdminLocale(), getAdminDict()]);
+  const { formatNumber } = makeFormat(locale);
   const lastPage = Math.max(1, Math.ceil(total / pageSize));
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const to = Math.min(page * pageSize, total);
@@ -39,19 +42,23 @@ export function Pagination({
     <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-3 sm:px-5">
       <p className="text-xs text-muted-foreground">
         {total === 0
-          ? "Aucun resultat"
-          : `${formatNumber(from)}–${formatNumber(to)} sur ${formatNumber(total)}`}
+          ? dict.common.noResult
+          : fill(dict.common.range, {
+              from: formatNumber(from),
+              to: formatNumber(to),
+              total: formatNumber(total),
+            })}
       </p>
       <div className="flex items-center gap-2">
         {page > 1 ? (
           <Link href={href(page - 1)} className={cn(buttonVariants({ variant: "outline", size: "xs" }))}>
             <ChevronLeftIcon />
-            Precedent
+            {dict.common.previous}
           </Link>
         ) : (
           <span className={cn(buttonVariants({ variant: "outline", size: "xs" }), "pointer-events-none opacity-40")}>
             <ChevronLeftIcon />
-            Precedent
+            {dict.common.previous}
           </span>
         )}
         <span className="text-xs tabular-nums text-muted-foreground">
@@ -59,12 +66,12 @@ export function Pagination({
         </span>
         {page < lastPage ? (
           <Link href={href(page + 1)} className={cn(buttonVariants({ variant: "outline", size: "xs" }))}>
-            Suivant
+            {dict.common.next}
             <ChevronRightIcon />
           </Link>
         ) : (
           <span className={cn(buttonVariants({ variant: "outline", size: "xs" }), "pointer-events-none opacity-40")}>
-            Suivant
+            {dict.common.next}
             <ChevronRightIcon />
           </span>
         )}

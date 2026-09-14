@@ -1,5 +1,6 @@
-import { formatAmount, formatMonth } from "@/lib/format";
+import { makeFormat } from "@/lib/format";
 import { EmptyState } from "@/components/admin/empty-state";
+import { getAdminDict, getAdminLocale } from "@/lib/i18n/admin";
 import { TrendingUpIcon } from "lucide-react";
 
 export type RevenueRow = {
@@ -17,15 +18,23 @@ export type RevenueRow = {
  * mais la legende et les valeurs affichees portent l'information : la couleur
  * seule ne distingue rien.
  */
-export function RevenueChart({ rows, currency = "TND" }: { rows: RevenueRow[]; currency?: string }) {
+export async function RevenueChart({
+  rows,
+  currency = "TND",
+}: {
+  rows: RevenueRow[];
+  currency?: string;
+}) {
+  const [locale, dict] = await Promise.all([getAdminLocale(), getAdminDict()]);
+  const { formatAmount, formatMonth } = makeFormat(locale);
   const max = Math.max(...rows.map((row) => row.abonnement + row.scout_day), 0);
 
   if (!rows.length || max === 0) {
     return (
       <EmptyState
         icon={TrendingUpIcon}
-        title="Aucun revenu encaisse"
-        description="Les paiements au statut « reussi » alimenteront ce graphique des qu'ils seront enregistres."
+        title={dict.dashboard.chartEmptyTitle}
+        description={dict.dashboard.chartEmptyDesc}
       />
     );
   }
@@ -35,11 +44,11 @@ export function RevenueChart({ rows, currency = "TND" }: { rows: RevenueRow[]; c
       <ul className="flex flex-wrap items-center gap-x-5 gap-y-2">
         <li className="flex items-center gap-2 text-xs text-muted-foreground">
           <span className="size-2.5 rounded-sm bg-viz-1" />
-          Abonnements
+          {dict.common.subscriptions}
         </li>
         <li className="flex items-center gap-2 text-xs text-muted-foreground">
           <span className="size-2.5 rounded-sm bg-viz-2" />
-          Scout Days
+          {dict.common.scoutDays}
         </li>
       </ul>
 
@@ -60,7 +69,9 @@ export function RevenueChart({ rows, currency = "TND" }: { rows: RevenueRow[]; c
                     className="group/seg relative rounded-sm bg-viz-1"
                     style={{ width: `${(row.abonnement / max) * 100}%` }}
                   >
-                    <Tip>Abonnements — {formatAmount(row.abonnement, currency)}</Tip>
+                    <Tip>
+                      {dict.common.subscriptions} — {formatAmount(row.abonnement, currency)}
+                    </Tip>
                   </div>
                 ) : null}
                 {row.scout_day > 0 ? (
@@ -68,7 +79,9 @@ export function RevenueChart({ rows, currency = "TND" }: { rows: RevenueRow[]; c
                     className="group/seg relative rounded-sm bg-viz-2"
                     style={{ width: `${(row.scout_day / max) * 100}%` }}
                   >
-                    <Tip>Scout Days — {formatAmount(row.scout_day, currency)}</Tip>
+                    <Tip>
+                      {dict.common.scoutDays} — {formatAmount(row.scout_day, currency)}
+                    </Tip>
                   </div>
                 ) : null}
               </div>

@@ -15,7 +15,10 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { useAdminQueue } from "@/components/admin/queue-live"
+import { LanguageMenu } from "@/components/admin/language-menu"
 import { initials } from "@/lib/format"
+import { useAdminI18n } from "@/lib/i18n/admin-client"
+import { localePath, stripLocale } from "@/lib/i18n/config"
 import { cn } from "@/lib/utils"
 
 /**
@@ -48,7 +51,14 @@ export function SiteHeader({
   user: { name: string; email: string; roleLabel: string }
 }) {
   const { tasks } = useAdminQueue()
+  const { locale, dict } = useAdminI18n()
   const pathname = usePathname()
+  // Le chemin **sans son prefixe de langue** : sur /en/admin le test
+  // `pathname === "/admin"` etait faux, et le titre du bandeau mobile
+  // retombait sur le dernier segment de l'URL — « admin » — au lieu du
+  // tableau de bord.
+  const route = stripLocale(pathname)
+  const href = (path: string) => localePath(locale, path)
   const router = useRouter()
   const [query, setQuery] = React.useState("")
   const searchRef = React.useRef<HTMLInputElement>(null)
@@ -74,7 +84,11 @@ export function SiteHeader({
   // pastilles du rail, qui additionnent les dossiers de leur section : les
   // deux disaient donc deux choses differentes.
   const pending = tasks.reduce((total, task) => total + task.count, 0)
-  const title = pathname === "/admin" ? "Tableau de bord" : pathname.split("/").filter(Boolean).at(-1)?.replaceAll("-", " ") ?? "Administration"
+  const title =
+    route === "/admin"
+      ? dict.header.dashboard
+      : route.split("/").filter(Boolean).at(-1)?.replaceAll("-", " ") ??
+        dict.header.fallbackTitle
   return (
     <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b border-border bg-[#101318] transition-[width,height] ease-linear">
       <div className="flex w-full items-center gap-2 px-3 sm:px-5 lg:px-6">
@@ -84,15 +98,18 @@ export function SiteHeader({
           className="mx-2 h-4 data-vertical:self-auto md:hidden"
         />
         <h1 className="text-sm font-semibold capitalize sm:text-base lg:hidden">{title}</h1>
-        <form className="relative ml-1 hidden w-full max-w-sm lg:block" onSubmit={(event) => { event.preventDefault(); if (query.trim()) router.push(`/admin/utilisateurs?q=${encodeURIComponent(query.trim())}`); }}>
+        <form className="relative ml-1 hidden w-full max-w-sm lg:block" onSubmit={(event) => { event.preventDefault(); if (query.trim()) router.push(`${href("/admin/utilisateurs")}?q=${encodeURIComponent(query.trim())}`); }}>
           <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <kbd className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 rounded border border-border bg-secondary px-1.5 py-0.5 text-[0.625rem] text-muted-foreground">⌘K</kbd>
-          <input ref={searchRef} value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Rechercher un utilisateur" placeholder="Rechercher un joueur, email ou telephone..." className="h-8 w-full rounded-md border border-border bg-card pr-14 pl-9 text-[0.6875rem] text-foreground outline-none placeholder:text-muted-foreground focus:border-brand/50" />
+          <input ref={searchRef} value={query} onChange={(event) => setQuery(event.target.value)} aria-label={dict.header.searchLabel} placeholder={dict.header.searchPlaceholder} className="h-8 w-full rounded-md border border-border bg-card pr-14 pl-9 text-[0.6875rem] text-foreground outline-none placeholder:text-muted-foreground focus:border-brand/50" />
         </form>
         <div className="ml-auto flex items-center gap-2 sm:gap-3">
+          {/* Meme place que sur le site public : le selecteur de langue
+              precede immediatement la cloche, dans la grappe de droite. */}
+          <LanguageMenu />
           <DropdownMenu>
             <DropdownMenuTrigger
-              aria-label="Ouvrir les notifications"
+              aria-label={dict.header.bellLabel}
               className={cn(
                 buttonVariants({ variant: "ghost", size: "icon-sm" }),
                 "relative rounded-full border border-border bg-card",
@@ -108,23 +125,21 @@ export function SiteHeader({
 
             <DropdownMenuContent align="end" className="w-(--available-width) max-w-96 p-0">
               <div className="border-b border-border px-4 py-3">
-                <p className="text-sm font-semibold">A traiter</p>
-                <p className="text-[10px] text-muted-foreground">
-                  Les files d&apos;attente du back-office, limitees a vos droits.
-                </p>
+                <p className="text-sm font-semibold">{dict.header.queueTitle}</p>
+                <p className="text-[10px] text-muted-foreground">{dict.header.queueHint}</p>
               </div>
 
               {tasks.length === 0 ? (
                 <p className="flex items-center justify-center gap-2 px-4 py-6 text-center text-xs text-muted-foreground">
                   <CheckCircle2Icon className="size-4 text-brand" />
-                  Aucune file en attente.
+                  {dict.header.queueEmpty}
                 </p>
               ) : (
                 <ul className="max-h-96 divide-y divide-border overflow-y-auto">
                   {tasks.map((task) => (
                     <li key={task.key}>
                       <Link
-                        href={task.href}
+                        href={href(task.href)}
                         className="flex items-center gap-3 px-4 py-3 hover:bg-secondary/60"
                       >
                         <span className="flex min-w-8 shrink-0 justify-center rounded-full bg-brand/15 px-2 py-0.5 text-xs font-bold text-brand tabular-nums">
@@ -143,10 +158,10 @@ export function SiteHeader({
 
               <div className="border-t border-border p-2">
                 <Link
-                  href="/admin/notifications"
+                  href={href("/admin/notifications")}
                   className={cn(buttonVariants({ variant: "ghost", size: "xs" }), "w-full")}
                 >
-                  Campagnes de notification
+                  {dict.header.campaigns}
                 </Link>
               </div>
             </DropdownMenuContent>

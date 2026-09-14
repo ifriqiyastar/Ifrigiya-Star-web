@@ -7,13 +7,14 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import type { ActionResult } from "@/lib/actions/result";
+import { useAdminI18n } from "@/lib/i18n/admin-client";
 
 const INITIAL: ActionResult = { ok: true, message: "" };
 
 export function ServerForm({
   action,
   children,
-  submitLabel = "Enregistrer",
+  submitLabel,
   className,
   onSuccess,
 }: {
@@ -23,6 +24,7 @@ export function ServerForm({
   className?: string;
   onSuccess?: () => void;
 }) {
+  const { dict } = useAdminI18n();
   const [state, formAction, pending] = useActionState(
     async (_previous: ActionResult, formData: FormData) => action(formData),
     INITIAL,
@@ -42,7 +44,7 @@ export function ServerForm({
       {children}
       <Button type="submit" disabled={pending}>
         {pending ? <Loader2Icon className="animate-spin" /> : null}
-        {submitLabel}
+        {submitLabel ?? dict.common.save}
       </Button>
     </form>
   );

@@ -1,5 +1,8 @@
 "use client";
 
+import { useAdminTranslations } from "@/lib/i18n/admin-client";
+
+
 import * as React from "react";
 import { Loader2Icon } from "lucide-react";
 
@@ -30,6 +33,8 @@ export function CountryCitySelect({
   defaultCountry?: string;
   defaultCity?: string;
 }) {
+  const i18n = useAdminTranslations();
+
   const [country, setCountry] = React.useState(defaultCountry ?? "");
   // Les villes sont retenues **avec le pays qui les a produites** : on derive
   // la liste affichee au lieu de la remettre a zero dans l'effet, ce qui
@@ -58,7 +63,7 @@ export function CountryCitySelect({
       if (!english) return;
       setLoading(true);
       try {
-        const response = await fetch(`/admin/geo/cities?pays=${encodeURIComponent(english)}`);
+        const response = await fetch(i18n.path(`/admin/geo/cities?pays=${encodeURIComponent(english)}`));
         const json = await response.json();
         setLoaded({ country: nextCountry, list: json.cities ?? [] });
       } catch {
@@ -78,10 +83,10 @@ export function CountryCitySelect({
     // Service indisponible : saisie libre, en le disant.
     return (
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Pays" htmlFor="country" hint="Liste indisponible, saisie libre.">
+        <Field label={i18n.t("Pays")} htmlFor="country" hint={i18n.t("Liste indisponible, saisie libre.")}>
           <Input id="country" name="country" defaultValue={defaultCountry ?? ""} />
         </Field>
-        <Field label="Ville" htmlFor="city">
+        <Field label={i18n.t("Ville")} htmlFor="city">
           <Input id="city" name="city" defaultValue={defaultCity ?? ""} />
         </Field>
       </div>
@@ -95,7 +100,7 @@ export function CountryCitySelect({
 
   return (
     <div className="grid grid-cols-2 gap-3">
-      <Field label="Pays" htmlFor="country">
+      <Field label={i18n.t("Pays")} htmlFor="country">
         <NativeSelect
           id="country"
           name="country"
@@ -105,7 +110,7 @@ export function CountryCitySelect({
             void loadCities(event.target.value);
           }}
         >
-          <option value="">Tous les pays</option>
+          <option value="">{i18n.t("Tous les pays")}</option>
           {countries.map((row) => (
             // ⚠️ La `value` reste le nom francais **nu** : c'est elle qui est
             // stockee et comparee par le controle d'eligibilite. Le drapeau
@@ -118,9 +123,9 @@ export function CountryCitySelect({
       </Field>
 
       <Field
-        label="Ville"
+        label={i18n.t("Ville")}
         htmlFor="city"
-        hint={loading ? undefined : country ? undefined : "Choisissez d'abord un pays."}
+        hint={loading ? undefined : country ? undefined : i18n.t("Choisissez d'abord un pays.")}
       >
         <div className="relative">
           <NativeSelect
@@ -132,7 +137,7 @@ export function CountryCitySelect({
               if (country && cities.length === 0) void loadCities(country);
             }}
           >
-            <option value="">Toutes les villes</option>
+            <option value="">{i18n.t("Toutes les villes")}</option>
             {cityOptions.map((city) => (
               <option key={city} value={city}>
                 {city}

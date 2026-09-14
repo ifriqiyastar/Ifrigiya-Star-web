@@ -1,5 +1,8 @@
 "use client";
 
+import { useAdminTranslations } from "@/lib/i18n/admin-client";
+
+
 import { ExternalLinkIcon, PlayIcon } from "lucide-react";
 
 import {
@@ -58,6 +61,8 @@ export function MediaPreviewDialog({
   /** Declencheur personnalise — une vignette, par exemple. */
   trigger?: React.ReactNode;
 }) {
+  const i18n = useAdminTranslations();
+
   const videoId = kind === "youtube" ? youtubeId(url) : null;
 
   return (
@@ -67,13 +72,12 @@ export function MediaPreviewDialog({
           "cursor-pointer rounded-lg text-left transition-opacity hover:opacity-85",
           "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
         )}
-        aria-label={`Apercu : ${label}`}
+        aria-label={i18n.t("Apercu : {0}", { "0": label })}
       >
         {trigger ?? (
           <span className="inline-flex items-center gap-1.5 text-sm hover:text-brand">
             <PlayIcon className="size-3.5" />
-            Apercu
-          </span>
+            {i18n.t("Apercu")}</span>
         )}
       </DialogTrigger>
 
@@ -81,15 +85,14 @@ export function MediaPreviewDialog({
         <DialogHeader className="pr-12">
           <DialogTitle className="normal-case tracking-normal">{label}</DialogTitle>
           <DialogDescription className="flex flex-wrap items-center justify-between gap-2">
-            <span>{description ?? "Verifiez le media avant de prendre une decision."}</span>
+            <span>{description ?? i18n.t("Verifiez le media avant de prendre une decision.")}</span>
             <a
               href={url}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-1 font-medium text-foreground hover:text-brand"
             >
-              Ouvrir dans un onglet
-              <ExternalLinkIcon className="size-3.5" />
+              {i18n.t("Ouvrir dans un onglet")}<ExternalLinkIcon className="size-3.5" />
             </a>
           </DialogDescription>
         </DialogHeader>
@@ -128,9 +131,7 @@ export function MediaPreviewDialog({
             />
           ) : (
             <p className="rounded-xl border border-border bg-background px-4 py-3 text-sm text-muted-foreground">
-              Lien YouTube non reconnu : aucun identifiant de video n&apos;a pu en etre extrait.
-              Ouvrez-le dans un onglet pour le verifier.
-            </p>
+              {i18n.t("Lien YouTube non reconnu : aucun identifiant de video n'a pu en etre extrait. Ouvrez-le dans un onglet pour le verifier.")}</p>
           )
         ) : null}
       </DialogContent>

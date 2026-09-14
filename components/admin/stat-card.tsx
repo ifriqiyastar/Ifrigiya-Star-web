@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowUpRightIcon } from "lucide-react";
 
+import { getAdminDict } from "@/lib/i18n/admin";
 import { cn } from "@/lib/utils";
 
 /** Accent de la tuile : chaque indicateur porte la couleur de son domaine. */
@@ -48,7 +49,7 @@ const BADGE: Record<string, string> = {
  * les autres ecrans les utilisent deja et retombent naturellement dans cette
  * anatomie.
  */
-export function StatCard({
+export async function StatCard({
   label,
   value,
   unit,
@@ -89,6 +90,7 @@ export function StatCard({
   href?: string;
   className?: string;
 }) {
+  const dict = await getAdminDict();
   const body = (
     <>
       {glow ? (
@@ -153,7 +155,7 @@ export function StatCard({
           <span className="min-w-0 truncate">{hint}</span>
           {footHref ? (
             <span className={cn("shrink-0 font-semibold", accent === "error" ? "text-destructive" : accent === "tertiary" ? "text-warning" : "text-brand")}>
-              {footLabel ?? "Ouvrir"}
+              {footLabel ?? dict.common.open}
             </span>
           ) : footNote ? (
             <span className="shrink-0 text-muted-foreground/70">{footNote}</span>

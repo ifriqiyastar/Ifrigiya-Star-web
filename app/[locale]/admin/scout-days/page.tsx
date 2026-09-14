@@ -1,3 +1,4 @@
+import { getAdminI18n } from "@/lib/i18n/admin";
 import Link from "next/link";
 import type { Metadata } from "next";
 import {
@@ -39,19 +40,24 @@ import {
   setScoutDayStatus,
   validateScoutDay,
 } from "@/lib/actions/scout-days";
-import { formatAmount, formatDate, formatDateTime, formatNumber } from "@/lib/format";
-import { SCOUT_DAY_STATUS, entry, label, options } from "@/lib/labels";
+
+import { SCOUT_DAY_STATUS } from "@/lib/labels";
 import { displayName, fetchProfilesByIds } from "@/lib/queries/profiles";
 import { fetchCountries } from "@/lib/countries-api";
 import { createClient } from "@/lib/supabase/server";
 import { getAdminAccess, requirePermission } from "@/lib/auth";
 
-export const metadata: Metadata = { title: "Scout Days" };
+export async function generateMetadata(): Promise<Metadata> {
+  const i18n = await getAdminI18n();
+  return { title: i18n.t("Scout Days") };
+}
 
 const EMPTY_UUID = "00000000-0000-0000-0000-000000000000";
 const PAGE_SIZE = 20;
 
 export default async function ScoutDaysPage({ searchParams }: PageProps<"/[locale]/admin/scout-days">) {
+  const i18n = await getAdminI18n();
+
   const admin = await requirePermission("events.manage");
   // Valider est reserve au super administrateur (migration 0040). On cache le
   // geste plutot que de laisser un « Responsable evenements » decouvrir la
@@ -168,46 +174,46 @@ export default async function ScoutDaysPage({ searchParams }: PageProps<"/[local
   return (
     <>
       <PageHeader
-        breadcrumb={[{ label: "Scout Days" }, { label: "Evenements de detection" }]}
-        title="Evenements de detection & tournois"
+        breadcrumb={[{ label: i18n.t("Scout Days") }, { label: i18n.t("Evenements de detection") }]}
+        title={i18n.t("Evenements de detection & tournois")}
         meta={
           pending.length ? (
-            <HeaderMeta tone="brand">{pending.length} a valider</HeaderMeta>
+            <HeaderMeta tone="brand">{pending.length}  {i18n.t("a valider")}</HeaderMeta>
           ) : (
-            <HeaderMeta>Aucun en attente</HeaderMeta>
+            <HeaderMeta>{i18n.t("Aucun en attente")}</HeaderMeta>
           )
         }
-        description="Tous les Scout Days, quel que soit leur organisateur. L'administration peut publier, remettre en brouillon, annuler ou cloturer un evenement, et suivre inscriptions et paiements."
+        description={i18n.t("Tous les Scout Days, quel que soit leur organisateur. L'administration peut publier, remettre en brouillon, annuler ou cloturer un evenement, et suivre inscriptions et paiements.")}
         actions={<ScoutDayDialog organizers={organizers ?? []} countries={countries} />}
       />
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <StatCard
-          label="Evenements"
-          value={formatNumber(rows.length)}
+          label={i18n.t("Evenements")}
+          value={i18n.format.formatNumber(rows.length)}
           icon={CalendarDaysIcon}
         />
         <StatCard
-          label="A valider"
-          value={formatNumber(pending.length)}
+          label={i18n.t("A valider")}
+          value={i18n.format.formatNumber(pending.length)}
           icon={ClockIcon}
           accent="secondary"
         />
         <StatCard
-          label="Publies"
-          value={formatNumber(published)}
+          label={i18n.t("Publies")}
+          value={i18n.format.formatNumber(published)}
           icon={CheckIcon}
-          href="/admin/scout-days?statut=publie"
+          href={i18n.path("/admin/scout-days?statut=publie")}
         />
         <StatCard
-          label="Brouillons"
-          value={formatNumber(drafts)}
+          label={i18n.t("Brouillons")}
+          value={i18n.format.formatNumber(drafts)}
           icon={ClockIcon}
-          href="/admin/scout-days?statut=brouillon"
+          href={i18n.path("/admin/scout-days?statut=brouillon")}
         />
         <StatCard
-          label="Inscriptions"
-          value={formatNumber(totalRegistrations)}
+          label={i18n.t("Inscriptions")}
+          value={i18n.format.formatNumber(totalRegistrations)}
           icon={UsersIcon}
           accent="secondary"
         />
@@ -217,22 +223,22 @@ export default async function ScoutDaysPage({ searchParams }: PageProps<"/[local
         <Panel highlighted>
           <PanelHeader
             icon={ShieldCheckIcon}
-            title={`Scout Days a valider (${pending.length})`}
+            title={i18n.t("Scout Days a valider ({0})", { "0": pending.length })}
             description={
               canValidate
-                ? "Un evenement cree par un professionnel arrive ici automatiquement. Valider le publie et previent l'organisateur ; refuser le renvoie en brouillon avec le motif, qu'il recevra tel quel — et il revient dans cette file des qu'il enregistre une correction."
-                : "Un evenement cree par un professionnel arrive ici automatiquement. Seul un super administrateur peut le valider ou le refuser."
+                ? i18n.t("Un evenement cree par un professionnel arrive ici automatiquement. Valider le publie et previent l'organisateur ; refuser le renvoie en brouillon avec le motif, qu'il recevra tel quel — et il revient dans cette file des qu'il enregistre une correction.")
+                : i18n.t("Un evenement cree par un professionnel arrive ici automatiquement. Seul un super administrateur peut le valider ou le refuser.")
             }
           />
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Evenement</TableHead>
-                <TableHead>Organisateur</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Soumis le</TableHead>
-                <TableHead>Tarif</TableHead>
-                <TableHead className="text-right">Decision</TableHead>
+                <TableHead>{i18n.t("Evenement")}</TableHead>
+                <TableHead>{i18n.t("Organisateur")}</TableHead>
+                <TableHead>{i18n.t("Date")}</TableHead>
+                <TableHead>{i18n.t("Soumis le")}</TableHead>
+                <TableHead>{i18n.t("Tarif")}</TableHead>
+                <TableHead className="text-right">{i18n.t("Decision")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -242,37 +248,37 @@ export default async function ScoutDaysPage({ searchParams }: PageProps<"/[local
                   <TableRow key={row.id}>
                     <TableCell>
                       <Link
-                        href={`/admin/scout-days/${row.id}`}
+                        href={i18n.path(`/admin/scout-days/${row.id}`)}
                         className="block max-w-64 truncate font-medium hover:text-brand"
                       >
                         {row.title}
                       </Link>
                       <span className="text-xs text-muted-foreground">
                         {row.location ?? "—"}
-                        {row.capacity ? ` · ${row.capacity} places` : ""}
+                        {row.capacity ? i18n.t(" · {0} places", { "0": row.capacity }) : ""}
                       </span>
                     </TableCell>
                     <TableCell>
                       <UserCell
-                        name={displayName(organizer)}
+                        name={displayName(organizer, undefined, i18n.locale)}
                         secondary={organizer?.email}
                         avatarUrl={organizer?.avatar_url}
-                        href={`/admin/utilisateurs/${row.organizer_id}`}
+                        href={i18n.path(`/admin/utilisateurs/${row.organizer_id}`)}
                       />
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {formatDate(row.event_date)}
+                      {i18n.format.formatDate(row.event_date)}
                       {row.start_time ? (
                         <span className="ml-1 text-xs">{String(row.start_time).slice(0, 5)}</span>
                       ) : null}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
-                      {formatDateTime(row.submitted_at)}
+                      {i18n.format.formatDateTime(row.submitted_at)}
                     </TableCell>
                     <TableCell className="tabular-nums text-muted-foreground">
                       {row.is_paid
-                        ? formatAmount(row.price_amount, row.price_currency ?? "TND")
-                        : "Gratuit"}
+                        ? i18n.format.formatAmount(row.price_amount, row.price_currency ?? "TND")
+                        : i18n.t("Gratuit")}
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap items-center justify-end gap-2">
@@ -280,8 +286,7 @@ export default async function ScoutDaysPage({ searchParams }: PageProps<"/[local
                           <>
                             <ActionButton action={validateScoutDay.bind(null, row.id)}>
                               <CheckIcon />
-                              Valider
-                            </ActionButton>
+                              {i18n.t("Valider")}</ActionButton>
                             <ReasonDialog
                               action={refuseScoutDay.bind(null, row.id)}
                               trigger={
@@ -290,18 +295,17 @@ export default async function ScoutDaysPage({ searchParams }: PageProps<"/[local
                                   className="inline-flex h-8 items-center gap-1.5 rounded-full border border-destructive/40 px-3 text-xs font-medium text-destructive hover:bg-destructive/10"
                                 >
                                   <XIcon className="size-3.5" />
-                                  Refuser
-                                </button>
+                                  {i18n.t("Refuser")}</button>
                               }
-                              title="Refuser cet evenement"
-                              description="L'evenement retourne en brouillon chez son organisateur, qui recoit le motif en notification."
-                              label="Motif du refus"
-                              placeholder="Lieu imprecis, tarif incoherent, date a confirmer…"
-                              submitLabel="Refuser l'evenement"
+                              title={i18n.t("Refuser cet evenement")}
+                              description={i18n.t("L'evenement retourne en brouillon chez son organisateur, qui recoit le motif en notification.")}
+                              label={i18n.t("Motif du refus")}
+                              placeholder={i18n.t("Lieu imprecis, tarif incoherent, date a confirmer…")}
+                              submitLabel={i18n.t("Refuser l'evenement")}
                             />
                           </>
                         ) : (
-                          <StatusPill tone="warning">Super administrateur requis</StatusPill>
+                          <StatusPill tone="warning">{i18n.t("Super administrateur requis")}</StatusPill>
                         )}
                       </div>
                     </TableCell>
@@ -316,7 +320,7 @@ export default async function ScoutDaysPage({ searchParams }: PageProps<"/[local
       <ScoutDayCalendar
         events={(calendarRows ?? []) as CalendarEvent[]}
         month={month}
-        basePath="/admin/scout-days"
+        basePath={i18n.path("/admin/scout-days")}
         params={params}
         today={today}
       />
@@ -324,21 +328,21 @@ export default async function ScoutDaysPage({ searchParams }: PageProps<"/[local
       <Panel>
         <PanelHeader
           icon={ListChecksIcon}
-          title="Liste des evenements enregistres"
-          description="Annuler previent les inscrits via une notification ; supprimer est irreversible et efface les inscriptions en cascade."
+          title={i18n.t("Liste des evenements enregistres")}
+          description={i18n.t("Annuler previent les inscrits via une notification ; supprimer est irreversible et efface les inscriptions en cascade.")}
         />
         <FilterBar
-          basePath="/admin/scout-days"
+          basePath={i18n.path("/admin/scout-days")}
           params={params}
-          searchPlaceholder="Rechercher un titre, un lieu…"
+          searchPlaceholder={i18n.t("Rechercher un titre, un lieu…")}
           filters={[
-            { name: "statut", label: "Statut", options: options(SCOUT_DAY_STATUS) },
+            { name: "statut", label: i18n.t("Statut"), options: i18n.labels.options(SCOUT_DAY_STATUS) },
             {
               name: "paye",
-              label: "Payant",
+              label: i18n.t("Payant"),
               options: [
-                { value: "oui", label: "Payant" },
-                { value: "non", label: "Gratuit" },
+                { value: "oui", label: i18n.t("Payant") },
+                { value: "non", label: i18n.t("Gratuit") },
               ],
             },
           ]}
@@ -346,27 +350,27 @@ export default async function ScoutDaysPage({ searchParams }: PageProps<"/[local
 
         {error ? (
           <p className="border-b border-destructive/30 bg-destructive/10 px-4 py-3 text-xs text-destructive sm:px-5">
-            Lecture impossible : {error.message}
+            {i18n.t("Lecture impossible :")} {error.message}
           </p>
         ) : null}
 
         {!rows.length ? (
           <EmptyState
             icon={CalendarDaysIcon}
-            title="Aucun evenement"
-            description="Aucun Scout Day ne correspond a ces criteres."
+            title={i18n.t("Aucun evenement")}
+            description={i18n.t("Aucun Scout Day ne correspond a ces criteres.")}
           />
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Evenement</TableHead>
-                <TableHead>Organisateur</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Statut</TableHead>
-                <TableHead>Inscriptions</TableHead>
-                <TableHead>Tarif</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{i18n.t("Evenement")}</TableHead>
+                <TableHead>{i18n.t("Organisateur")}</TableHead>
+                <TableHead>{i18n.t("Date")}</TableHead>
+                <TableHead>{i18n.t("Statut")}</TableHead>
+                <TableHead>{i18n.t("Inscriptions")}</TableHead>
+                <TableHead>{i18n.t("Tarif")}</TableHead>
+                <TableHead className="text-right">{i18n.t("Actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -379,7 +383,7 @@ export default async function ScoutDaysPage({ searchParams }: PageProps<"/[local
                   <TableRow key={row.id}>
                     <TableCell>
                       <Link
-                        href={`/admin/scout-days/${row.id}`}
+                        href={i18n.path(`/admin/scout-days/${row.id}`)}
                         className="block max-w-64 truncate font-medium hover:text-brand"
                       >
                         {row.title}
@@ -388,21 +392,21 @@ export default async function ScoutDaysPage({ searchParams }: PageProps<"/[local
                     </TableCell>
                     <TableCell>
                       <UserCell
-                        name={displayName(organizer)}
+                        name={displayName(organizer, undefined, i18n.locale)}
                         secondary={organizer?.email}
                         avatarUrl={organizer?.avatar_url}
-                        href={`/admin/utilisateurs/${row.organizer_id}`}
+                        href={i18n.path(`/admin/utilisateurs/${row.organizer_id}`)}
                       />
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {formatDate(row.event_date)}
+                      {i18n.format.formatDate(row.event_date)}
                       {row.start_time ? (
                         <span className="ml-1 text-xs">{String(row.start_time).slice(0, 5)}</span>
                       ) : null}
                     </TableCell>
                     <TableCell>
-                      <StatusPill tone={entry(SCOUT_DAY_STATUS, row.status).tone}>
-                        {label(SCOUT_DAY_STATUS, row.status)}
+                      <StatusPill tone={i18n.labels.entry(SCOUT_DAY_STATUS, row.status).tone}>
+                        {i18n.labels.label(SCOUT_DAY_STATUS, row.status)}
                       </StatusPill>
                     </TableCell>
                     <TableCell>
@@ -412,21 +416,19 @@ export default async function ScoutDaysPage({ searchParams }: PageProps<"/[local
                       </span>
                       {full ? (
                         <StatusPill tone="danger" className="ml-2">
-                          Complet
-                        </StatusPill>
+                          {i18n.t("Complet")}</StatusPill>
                       ) : null}
                     </TableCell>
                     <TableCell className="tabular-nums text-muted-foreground">
                       {row.is_paid
-                        ? formatAmount(row.price_amount, row.price_currency ?? "TND")
-                        : "Gratuit"}
+                        ? i18n.format.formatAmount(row.price_amount, row.price_currency ?? "TND")
+                        : i18n.t("Gratuit")}
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap items-center justify-end gap-2">
                         {row.status === "publie" ? (
                           <ActionButton action={setScoutDayStatus.bind(null, row.id, "brouillon")}>
-                            Depublier
-                          </ActionButton>
+                            {i18n.t("Depublier")}</ActionButton>
                         ) : canValidate ? (
                           <ActionButton
                             action={
@@ -436,7 +438,7 @@ export default async function ScoutDaysPage({ searchParams }: PageProps<"/[local
                             }
                           >
                             <CheckIcon />
-                            {row.status === "en_attente_validation" ? "Valider" : "Publier"}
+                            {row.status === "en_attente_validation" ? i18n.t("Valider") : i18n.t("Publier")}
                           </ActionButton>
                         ) : null}
                         {row.status === "en_attente_validation" && canValidate ? (
@@ -447,14 +449,13 @@ export default async function ScoutDaysPage({ searchParams }: PageProps<"/[local
                                 type="button"
                                 className="inline-flex h-8 items-center gap-1.5 rounded-full border border-destructive/40 px-3 text-xs font-medium text-destructive hover:bg-destructive/10"
                               >
-                                Refuser
-                              </button>
+                                {i18n.t("Refuser")}</button>
                             }
-                            title="Refuser cet evenement"
-                            description="L'evenement retourne en brouillon chez son organisateur, qui recoit le motif en notification."
-                            label="Motif du refus"
-                            placeholder="Lieu imprecis, tarif incoherent, date a confirmer…"
-                            submitLabel="Refuser l'evenement"
+                            title={i18n.t("Refuser cet evenement")}
+                            description={i18n.t("L'evenement retourne en brouillon chez son organisateur, qui recoit le motif en notification.")}
+                            label={i18n.t("Motif du refus")}
+                            placeholder={i18n.t("Lieu imprecis, tarif incoherent, date a confirmer…")}
+                            submitLabel={i18n.t("Refuser l'evenement")}
                           />
                         ) : null}
                         {row.status !== "annule" ? (
@@ -463,17 +464,16 @@ export default async function ScoutDaysPage({ searchParams }: PageProps<"/[local
                             action={setScoutDayStatus.bind(null, row.id, "annule")}
                           >
                             <XIcon />
-                            Annuler
-                          </ActionButton>
+                            {i18n.t("Annuler")}</ActionButton>
                         ) : null}
                         <ActionButton
                           variant="ghost"
                           action={deleteScoutDay.bind(null, row.id)}
                           confirm={{
-                            title: "Supprimer cet evenement",
+                            title: i18n.t("Supprimer cet evenement"),
                             description:
-                              "L'evenement et toutes ses inscriptions seront supprimes definitivement. Pour un evenement qui n'aura pas lieu, preferez le statut « annule », qui previent les inscrits.",
-                            actionLabel: "Supprimer definitivement",
+                              i18n.t("L'evenement et toutes ses inscriptions seront supprimes definitivement. Pour un evenement qui n'aura pas lieu, preferez le statut « annule », qui previent les inscrits."),
+                            actionLabel: i18n.t("Supprimer definitivement"),
                           }}
                         >
                           <Trash2Icon />
@@ -487,7 +487,7 @@ export default async function ScoutDaysPage({ searchParams }: PageProps<"/[local
           </Table>
         )}
         <Pagination
-          basePath="/admin/scout-days"
+          basePath={i18n.path("/admin/scout-days")}
           params={params}
           page={page}
           pageSize={PAGE_SIZE}
@@ -499,18 +499,18 @@ export default async function ScoutDaysPage({ searchParams }: PageProps<"/[local
         notes={[
           {
             icon: ShieldCheckIcon,
-            title: "Publier est un geste de super administrateur",
-            body: "Un professionnel soumet son evenement, et seul un super administrateur le fait passer a « publie ». La regle est appliquee par la base de donnees : la permission affichee ici ne fait que cacher un bouton que la base refuserait de toute facon.",
+            title: i18n.t("Publier est un geste de super administrateur"),
+            body: i18n.t("Un professionnel soumet son evenement, et seul un super administrateur le fait passer a « publie ». La regle est appliquee par la base de donnees : la permission affichee ici ne fait que cacher un bouton que la base refuserait de toute facon."),
           },
           {
             icon: XIcon,
-            title: "Un refus est toujours motive",
-            body: "Refuser renvoie l'evenement en brouillon chez son organisateur et exige un motif, qu'il recoit tel quel en notification. Il revient dans la file des qu'il enregistre une correction.",
+            title: i18n.t("Un refus est toujours motive"),
+            body: i18n.t("Refuser renvoie l'evenement en brouillon chez son organisateur et exige un motif, qu'il recoit tel quel en notification. Il revient dans la file des qu'il enregistre une correction."),
           },
           {
             icon: SlidersHorizontalIcon,
-            title: "Les criteres filtrent vraiment",
-            body: "Age, postes, niveaux, pays et villes sont compares par egalite de chaine au profil du joueur. Un critere ecrit en texte libre s'affiche mais ne filtre personne : le formulaire n'ecrit que les cles reconnues par l'application mobile.",
+            title: i18n.t("Les criteres filtrent vraiment"),
+            body: i18n.t("Age, postes, niveaux, pays et villes sont compares par egalite de chaine au profil du joueur. Un critere ecrit en texte libre s'affiche mais ne filtre personne : le formulaire n'ecrit que les cles reconnues par l'application mobile."),
           },
         ]}
       />

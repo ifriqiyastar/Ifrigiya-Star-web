@@ -1,11 +1,17 @@
 "use server";
 
+import { getRequestAdminI18n } from "@/lib/i18n/admin";
+import type { AdminTranslations } from "@/lib/i18n/admin-shared";
+
+
+import { ACCOUNT_STATUS, IDENTITY_STATUS } from "@/lib/labels";
+
 import { revalidatePath } from "next/cache";
 
 import { logAdminAction, requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { describeError, describeRpcError, fail, ok, type ActionResult } from "@/lib/actions/result";
+import { makeErrors, fail, ok, type ActionResult } from "@/lib/actions/result";
 import type {
   DocumentStatus,
   IdentityVerificationStatus,
@@ -29,6 +35,8 @@ export async function setPlayerStatus(
   status: PlayerProfileStatus,
   reason?: string,
 ): Promise<ActionResult> {
+  const i18n = await getRequestAdminI18n();
+
   const admin = await requirePermission("verifications.review");
   const supabase = await createClient();
 
@@ -44,7 +52,7 @@ export async function setPlayerStatus(
     })
     .eq("id", playerId);
 
-  if (error) return fail(describeStatusError(error));
+  if (error) return fail(describeStatusError(i18n, error));
 
   await logAdminAction(`player_status_${status}`, "player_profile", playerId, {
     status,
@@ -53,8 +61,8 @@ export async function setPlayerStatus(
   REFRESH();
   return ok(
     status === "valide"
-      ? "Profil joueur valide."
-      : `Statut du profil joueur mis a jour : ${status.replace(/_/g, " ")}.`,
+      ? i18n.t("Profil joueur valide.")
+      : i18n.t("Statut du profil joueur mis a jour : {0}.", { "0": i18n.labels.label(ACCOUNT_STATUS, status) }),
   );
 }
 
@@ -69,9 +77,11 @@ export async function setPlayerStatus(
  * masquerait un echec silencieux.
  */
 export async function bulkValidatePlayers(formData: FormData): Promise<ActionResult> {
+  const i18n = await getRequestAdminI18n();
+
   const admin = await requirePermission("verifications.review");
   const ids = formData.getAll("ids").map(String).filter(Boolean);
-  if (!ids.length) return fail("Selectionnez au moins un dossier.");
+  if (!ids.length) return fail(i18n.t("Selectionnez au moins un dossier."));
 
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -86,7 +96,7 @@ export async function bulkValidatePlayers(formData: FormData): Promise<ActionRes
     .eq("status", "en_attente_validation")
     .select("id");
 
-  if (error) return fail(describeStatusError(error));
+  if (error) return fail(describeStatusError(i18n, error));
 
   const updated = data?.length ?? 0;
   for (const id of data ?? []) {
@@ -96,13 +106,13 @@ export async function bulkValidatePlayers(formData: FormData): Promise<ActionRes
 
   if (!updated) {
     return fail(
-      "Aucun profil n'a change d'etat : la selection a peut-etre deja ete traitee ailleurs.",
+      i18n.t("Aucun profil n'a change d'etat : la selection a peut-etre deja ete traitee ailleurs."),
     );
   }
   return updated === ids.length
-    ? ok(`${updated} profil(s) joueur valide(s).`)
+    ? ok(i18n.t("{0} profil(s) joueur valide(s).", { "0": updated }))
     : ok(
-        `${updated} profil(s) valide(s) sur ${ids.length} : les autres n'etaient plus en attente.`,
+        i18n.t("{0} profil(s) valide(s) sur {1} : les autres n'etaient plus en attente.", { "0": updated, "1": ids.length }),
       );
 }
 
@@ -112,6 +122,8 @@ export async function setProfessionalStatus(
   status: PlayerProfileStatus,
   reason?: string,
 ): Promise<ActionResult> {
+  const i18n = await getRequestAdminI18n();
+
   const admin = await requirePermission("verifications.review");
   const supabase = await createClient();
 
@@ -125,7 +137,7 @@ export async function setProfessionalStatus(
     })
     .eq("id", professionalId);
 
-  if (error) return fail(describeStatusError(error));
+  if (error) return fail(describeStatusError(i18n, error));
 
   await logAdminAction(`professional_status_${status}`, "professional_profile", professionalId, {
     status,
@@ -134,8 +146,8 @@ export async function setProfessionalStatus(
   REFRESH();
   return ok(
     status === "valide"
-      ? "Compte professionnel valide."
-      : `Statut du compte professionnel mis a jour : ${status.replace(/_/g, " ")}.`,
+      ? i18n.t("Compte professionnel valide.")
+      : i18n.t("Statut du compte professionnel mis a jour : {0}.", { "0": i18n.labels.label(ACCOUNT_STATUS, status) }),
   );
 }
 
@@ -144,6 +156,8 @@ export async function setDocumentStatus(
   documentId: string,
   status: DocumentStatus,
 ): Promise<ActionResult> {
+  const i18n = await getRequestAdminI18n();
+
   const admin = await requirePermission("verifications.review");
   const supabase = await createClient();
 
@@ -152,11 +166,11 @@ export async function setDocumentStatus(
     .update({ status, reviewed_by: admin.userId, reviewed_at: new Date().toISOString() })
     .eq("id", documentId);
 
-  if (error) return fail(describeError(error));
+  if (error) return fail(makeErrors(i18n.locale).describeError(error));
 
   await logAdminAction(`document_${status}`, "professional_document", documentId, { status });
   REFRESH();
-  return ok(status === "valide" ? "Justificatif valide." : "Justificatif refuse.");
+  return ok(status === "valide" ? i18n.t("Justificatif valide.") : i18n.t("Justificatif refuse."));
 }
 
 /**
@@ -173,6 +187,8 @@ export async function setIdentityStatus(
   status: IdentityVerificationStatus,
   rejectionReason?: string,
 ): Promise<ActionResult> {
+  const i18n = await getRequestAdminI18n();
+
   const admin = await requirePermission("verifications.review");
   const supabase = await createClient();
 
@@ -186,11 +202,11 @@ export async function setIdentityStatus(
     })
     .eq("id", verificationId);
 
-  if (error) return fail(describeError(error));
+  if (error) return fail(makeErrors(i18n.locale).describeError(error));
 
   await logAdminAction(`identity_${status}`, "identity_verification", verificationId, { status });
   REFRESH();
-  return ok(`Verification d'identite : ${status.replace(/_/g, " ")}.`);
+  return ok(i18n.t("Verification d'identite : {0}.", { "0": i18n.labels.label(IDENTITY_STATUS, status) }));
 }
 
 /**
@@ -205,11 +221,11 @@ export async function setIdentityStatus(
  * ecran. C'est ce que corrige la migration 0017, qui n'est pas dans la plage
  * appliquee (« 0016, 0018-0029 ») du depot mobile.
  */
-function describeStatusError(error: { code?: string; message: string; hint?: string | null }) {
+function describeStatusError(i18n: AdminTranslations, error: { code?: string; message: string; hint?: string | null }) {
   if (error.code === "42804" || /notification_type/i.test(error.message)) {
-    return "Validation impossible : appliquez la migration 0017_notification_type_cast.sql (depot mobile). Sans elle, le trigger de notification refuse tout passage a « valide » ou « refuse » (42804).";
+    return i18n.t("Validation impossible : appliquez la migration 0017_notification_type_cast.sql (depot mobile). Sans elle, le trigger de notification refuse tout passage a « valide » ou « refuse » (42804).");
   }
-  return describeError(error);
+  return makeErrors(i18n.locale).describeError(error);
 }
 
 /** §12.1 — desactivation / reactivation d'un compte (reversible). */
@@ -217,6 +233,8 @@ export async function setAccountActive(
   profileId: string,
   isActive: boolean,
 ): Promise<ActionResult> {
+  const i18n = await getRequestAdminI18n();
+
   await requirePermission("users.write");
   const supabase = await createClient();
 
@@ -234,14 +252,14 @@ export async function setAccountActive(
 
   if (error) {
     return fail(
-      describeRpcError(
+      makeErrors(i18n.locale).describeRpcError(
         error,
         "admin_set_account_active",
-        isActive ? "Reactivation indisponible" : "Desactivation indisponible",
+        isActive ? i18n.t("Reactivation indisponible") : i18n.t("Desactivation indisponible"),
       ),
     );
   }
-  if (data === false) return fail("Compte introuvable.");
+  if (data === false) return fail(i18n.t("Compte introuvable."));
 
   await logAdminAction(isActive ? "reactivate_user" : "deactivate_user", "profile", profileId);
   REFRESH();
@@ -251,8 +269,8 @@ export async function setAccountActive(
   // donc pas l'acces — il rend le dossier a la file de validation.
   return ok(
     isActive
-      ? "Compte reactive. Le profil metier repasse en « en attente de validation » : l'utilisateur reste bloque a la connexion jusqu'a ce que vous validiez son dossier dans Validations."
-      : "Compte desactive et profil metier passe en « suspendu » : l'application refuse la connexion et deconnecte le compte au prochain demarrage.",
+      ? i18n.t("Compte reactive. Le profil metier repasse en « en attente de validation » : l'utilisateur reste bloque a la connexion jusqu'a ce que vous validiez son dossier dans Validations.")
+      : i18n.t("Compte desactive et profil metier passe en « suspendu » : l'application refuse la connexion et deconnecte le compte au prochain demarrage."),
   );
 }
 
@@ -278,6 +296,8 @@ export async function setAccountActive(
  * silence.
  */
 export async function liftSuspension(profileId: string): Promise<ActionResult> {
+  const i18n = await getRequestAdminI18n();
+
   const admin = await requirePermission("users.write");
   const supabase = await createClient();
 
@@ -286,7 +306,7 @@ export async function liftSuspension(profileId: string): Promise<ActionResult> {
     .select("role")
     .eq("id", profileId)
     .maybeSingle();
-  if (!profile) return fail("Compte introuvable.");
+  if (!profile) return fail(i18n.t("Compte introuvable."));
 
   // Etape 1 : `is_active` n'est pas ecrivable par une session administrateur
   // (colonne revoquee par 0025), d'ou la RPC de 0044.
@@ -296,10 +316,10 @@ export async function liftSuspension(profileId: string): Promise<ActionResult> {
   );
   if (activeError) {
     return fail(
-      describeRpcError(activeError, "admin_set_account_active", "Levee de suspension indisponible"),
+      makeErrors(i18n.locale).describeRpcError(activeError, "admin_set_account_active", i18n.t("Levee de suspension indisponible")),
     );
   }
-  if (reactivated === false) return fail("Compte introuvable.");
+  if (reactivated === false) return fail(i18n.t("Compte introuvable."));
 
   // Etape 2 : le statut metier, ecrit directement — `player_profiles` et
   // `professional_profiles` n'ont subi aucun revoke de colonne, et les
@@ -317,14 +337,14 @@ export async function liftSuspension(profileId: string): Promise<ActionResult> {
       .eq("id", profileId);
     if (error) {
       return fail(
-        `Compte reactive, mais le profil metier est reste en attente de validation : ${describeStatusError(error)}`,
+        i18n.t("Compte reactive, mais le profil metier est reste en attente de validation : {0}", { "0": describeStatusError(i18n, error) }),
       );
     }
   }
 
   await logAdminAction("lift_suspension", "profile", profileId, { role: profile.role });
   REFRESH();
-  return ok("Suspension levee : le compte est actif et son profil de nouveau valide.");
+  return ok(i18n.t("Suspension levee : le compte est actif et son profil de nouveau valide."));
 }
 
 /** Visibilite du profil joueur dans la recherche professionnelle (§5.1). */
@@ -332,6 +352,8 @@ export async function setPlayerVisibility(
   playerId: string,
   isVisible: boolean,
 ): Promise<ActionResult> {
+  const i18n = await getRequestAdminI18n();
+
   await requirePermission("users.write");
   const supabase = await createClient();
 
@@ -340,7 +362,7 @@ export async function setPlayerVisibility(
     .update({ is_visible: isVisible })
     .eq("id", playerId);
 
-  if (error) return fail(describeError(error));
+  if (error) return fail(makeErrors(i18n.locale).describeError(error));
 
   await logAdminAction(
     isVisible ? "show_player_profile" : "hide_player_profile",
@@ -348,7 +370,7 @@ export async function setPlayerVisibility(
     playerId,
   );
   REFRESH();
-  return ok(isVisible ? "Profil rendu visible." : "Profil retire de la recherche.");
+  return ok(isVisible ? i18n.t("Profil rendu visible.") : i18n.t("Profil retire de la recherche."));
 }
 
 /**
@@ -363,6 +385,8 @@ export async function setPlayerVisibility(
  * `deletion_requested_at` : la demande reste tracee et reversible.
  */
 export async function deleteAccount(profileId: string): Promise<ActionResult> {
+  const i18n = await getRequestAdminI18n();
+
   await requirePermission("users.write");
   const service = createServiceClient();
 
@@ -377,17 +401,17 @@ export async function deleteAccount(profileId: string): Promise<ActionResult> {
 
     if (error) {
       return fail(
-        describeRpcError(error, "admin_request_account_deletion", "Suppression indisponible"),
+        makeErrors(i18n.locale).describeRpcError(error, "admin_request_account_deletion", i18n.t("Suppression indisponible")),
       );
     }
-    if (data === false) return fail("Compte introuvable.");
+    if (data === false) return fail(i18n.t("Compte introuvable."));
 
     await logAdminAction("request_account_deletion", "profile", profileId, {
-      reason: "SUPABASE_SERVICE_ROLE_KEY absente",
+      reason: i18n.t("SUPABASE_SERVICE_ROLE_KEY absente"),
     });
     REFRESH();
     return ok(
-      "Compte desactive et suppression demandee. La suppression definitive necessite SUPABASE_SERVICE_ROLE_KEY dans .env.",
+      i18n.t("Compte desactive et suppression demandee. La suppression definitive necessite SUPABASE_SERVICE_ROLE_KEY dans .env."),
     );
   }
 
@@ -398,7 +422,7 @@ export async function deleteAccount(profileId: string): Promise<ActionResult> {
 
   await logAdminAction("delete_account", "profile", profileId);
   REFRESH();
-  return ok("Compte supprime definitivement.");
+  return ok(i18n.t("Compte supprime definitivement."));
 }
 
 /** §12.1 — modification de la fiche compte selon les droits administrateur. */
@@ -406,6 +430,8 @@ export async function updateProfileCore(
   profileId: string,
   formData: FormData,
 ): Promise<ActionResult> {
+  const i18n = await getRequestAdminI18n();
+
   await requirePermission("users.write");
   const supabase = await createClient();
 
@@ -425,7 +451,7 @@ export async function updateProfileCore(
   };
 
   const { error } = await supabase.from("profiles").update(payload).eq("id", profileId);
-  if (error) return fail(describeError(error));
+  if (error) return fail(makeErrors(i18n.locale).describeError(error));
 
   if (role && ["player", "professional", "admin"].includes(role)) {
     const { data: current } = await supabase
@@ -442,7 +468,7 @@ export async function updateProfileCore(
       });
       if (roleError) {
         return fail(
-          describeRpcError(roleError, "admin_set_account_role", "Changement de role indisponible"),
+          makeErrors(i18n.locale).describeRpcError(roleError, "admin_set_account_role", i18n.t("Changement de role indisponible")),
         );
       }
       payload.role = role;
@@ -451,7 +477,7 @@ export async function updateProfileCore(
 
   await logAdminAction("update_profile", "profile", profileId, payload);
   REFRESH();
-  return ok("Fiche compte enregistree.");
+  return ok(i18n.t("Fiche compte enregistree."));
 }
 
 /** §12.1 — modification du profil sportif d'un joueur. */
@@ -459,6 +485,8 @@ export async function updatePlayerProfile(
   playerId: string,
   formData: FormData,
 ): Promise<ActionResult> {
+  const i18n = await getRequestAdminI18n();
+
   await requirePermission("users.write");
   const supabase = await createClient();
 
@@ -477,7 +505,7 @@ export async function updatePlayerProfile(
   const lastName = text("last_name");
   const birthDate = text("birth_date");
   if (!firstName || !lastName || !birthDate) {
-    return fail("Prenom, nom et date de naissance sont obligatoires.");
+    return fail(i18n.t("Prenom, nom et date de naissance sont obligatoires."));
   }
 
   const payload = {
@@ -499,11 +527,11 @@ export async function updatePlayerProfile(
   };
 
   const { error } = await supabase.from("player_profiles").update(payload).eq("id", playerId);
-  if (error) return fail(describeError(error));
+  if (error) return fail(makeErrors(i18n.locale).describeError(error));
 
   await logAdminAction("update_player_profile", "player_profile", playerId);
   REFRESH();
-  return ok("Profil sportif enregistre.");
+  return ok(i18n.t("Profil sportif enregistre."));
 }
 
 /** §12.1 — modification de la fiche d'un compte professionnel. */
@@ -511,6 +539,8 @@ export async function updateProfessionalProfile(
   professionalId: string,
   formData: FormData,
 ): Promise<ActionResult> {
+  const i18n = await getRequestAdminI18n();
+
   await requirePermission("users.write");
   const supabase = await createClient();
 
@@ -522,7 +552,7 @@ export async function updateProfessionalProfile(
   const contactFullName = text("contact_full_name");
   const professionalType = text("professional_type");
   if (!contactFullName || !professionalType) {
-    return fail("Le type de compte et le nom du contact sont obligatoires.");
+    return fail(i18n.t("Le type de compte et le nom du contact sont obligatoires."));
   }
 
   const payload = {
@@ -538,9 +568,9 @@ export async function updateProfessionalProfile(
     .from("professional_profiles")
     .update(payload)
     .eq("id", professionalId);
-  if (error) return fail(describeError(error));
+  if (error) return fail(makeErrors(i18n.locale).describeError(error));
 
   await logAdminAction("update_professional_profile", "professional_profile", professionalId);
   REFRESH();
-  return ok("Fiche professionnelle enregistree.");
+  return ok(i18n.t("Fiche professionnelle enregistree."));
 }

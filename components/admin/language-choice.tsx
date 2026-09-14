@@ -5,17 +5,21 @@ import { usePathname, useRouter } from "next/navigation";
 import { CheckIcon, MonitorSmartphoneIcon } from "lucide-react";
 
 import {
+  ADMIN_LOCALES,
+  DEFAULT_ADMIN_LOCALE,
   LOCALE_LABEL,
   LOCALE_SHORT,
-  LOCALES,
+  isAdminLocale,
   localePath,
   negotiateLocale,
   readLocaleCookie,
   stripLocale,
+  toAdminLocale,
   writeLocaleCookie,
-  type Locale,
+  type AdminLocale,
 } from "@/lib/i18n/config";
-import { useI18n } from "@/lib/i18n/client";
+import { fill } from "@/lib/i18n/admin-shared";
+import { useAdminI18n } from "@/lib/i18n/admin-client";
 import { cn } from "@/lib/utils";
 
 /**
@@ -41,12 +45,26 @@ function notify() {
   for (const listener of listeners) listener();
 }
 
-const getSnapshot = (): Locale | "auto" => readLocaleCookie() ?? "auto";
-const getServerSnapshot = (): Locale | "auto" | null => null;
+/**
+ * Une preference arabe — posee depuis le site public, ou le back-office
+ * n'entre pas — se lit ici comme « aucune preference pour l'administration » :
+ * cocher une langue que cet ecran ne propose pas afficherait un choix
+ * introuvable dans la liste.
+ */
+const getSnapshot = (): AdminLocale | "auto" => {
+  const stored = readLocaleCookie();
+  return stored && isAdminLocale(stored) ? stored : "auto";
+};
+const getServerSnapshot = (): AdminLocale | "auto" | null => null;
 
 /**
  * Le choix de langue de l'ecran Parametres — le pendant web de l'ecran
- * « Langue » de l'app mobile, avec la meme quatrieme option.
+ * « Langue » de l'app mobile.
+ *
+ * **Deux langues et non trois.** Le back-office ne parle que francais et
+ * anglais (`ADMIN_LOCALES`) ; l'arabe reste servi sur le site public, et le
+ * choix fait ici n'y touche pas — le cookie est commun, mais `proxy.ts`
+ * ramene toute preference arabe au francais sous `/admin` seulement.
  *
  * « Automatique » n'est pas une langue : c'est **l'absence de cookie**. Tant
  * qu'il n'y en a pas, `proxy.ts` negocie `Accept-Language` a chaque requete,
@@ -64,7 +82,7 @@ const getServerSnapshot = (): Locale | "auto" | null => null;
  *   demande un acte de foi.
  */
 export function LanguageChoice() {
-  const { dict } = useI18n();
+  const { dict } = useAdminI18n();
   const pathname = usePathname();
   const router = useRouter();
 
@@ -75,12 +93,14 @@ export function LanguageChoice() {
   const resolvedAuto =
     typeof navigator === "undefined"
       ? null
-      : negotiateLocale(navigator.languages.join(","));
+      // Ramenee aux langues du back-office : c'est ce que l'administrateur
+      // obtiendra reellement en automatique sur cet ecran.
+      : toAdminLocale(negotiateLocale(navigator.languages.join(",")));
 
-  function apply(next: Locale | "auto") {
+  function apply(next: AdminLocale | "auto") {
     writeLocaleCookie(next === "auto" ? null : next);
     notify();
-    const target = next === "auto" ? (resolvedAuto ?? "fr") : next;
+    const target = next === "auto" ? (resolvedAuto ?? DEFAULT_ADMIN_LOCALE) : next;
     router.push(localePath(target, stripLocale(pathname)));
     router.refresh();
   }
@@ -94,7 +114,7 @@ export function LanguageChoice() {
         subtitle={dict.language.autoHint}
         badge={
           resolvedAuto
-            ? dict.language.autoResolved.replace("{language}", LOCALE_LABEL[resolvedAuto])
+            ? fill(dict.language.autoResolved, { language: LOCALE_LABEL[resolvedAuto] })
             : null
         }
         icon={<MonitorSmartphoneIcon className="size-4" aria-hidden />}
@@ -106,7 +126,7 @@ export function LanguageChoice() {
       <div className="border-t border-border" />
 
       <div className="flex flex-col gap-2">
-        {LOCALES.map((locale) => (
+        {ADMIN_LOCALES.map((locale) => (
           <Option
             key={locale}
             checked={preference === locale}

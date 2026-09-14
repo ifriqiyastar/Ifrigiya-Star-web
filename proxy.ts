@@ -3,10 +3,13 @@ import { createServerClient } from "@supabase/ssr";
 
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase/config";
 import {
+  ADMIN_LOCALE_HEADER,
   DEFAULT_LOCALE,
+  isAdminPath,
   isLocale,
   LOCALE_COOKIE,
   negotiateLocale,
+  toAdminLocale,
 } from "@/lib/i18n/config";
 
 /**
@@ -65,13 +68,34 @@ export async function proxy(request: NextRequest) {
 
   const segments = pathname.split("/");
   const urlLocale = segments.length > 1 && isLocale(segments[1]) ? segments[1] : null;
+  // Le chemin sans son prefixe de langue : c'est lui qui dit si l'on entre
+  // dans le back-office, que l'adresse soit /admin, /en/admin ou /ar/admin.
+  const bare = urlLocale ? pathname.slice(urlLocale.length + 1) || "/" : pathname;
+  const adminPath = isAdminPath(bare);
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.delete(ADMIN_LOCALE_HEADER);
+
+  // Le back-office ne parle pas arabe. Plutot que de rendre une page a moitie
+  // traduite, on **retire le prefixe** et on laisse la branche ci-dessous
+  // choisir entre francais et anglais : rediriger directement vers /fr/admin
+  // figerait la langue, alors que l'administrateur a peut-etre choisi
+  // l'anglais. Retirer le prefixe ne peut pas boucler, puisque cette meme
+  // branche force ensuite une langue du back-office.
+  if (urlLocale && adminPath && toAdminLocale(urlLocale) !== urlLocale) {
+    const target = request.nextUrl.clone();
+    target.pathname = bare;
+    return NextResponse.redirect(target);
+  }
 
   if (!urlLocale) {
     const cookieValue = request.cookies.get(LOCALE_COOKIE)?.value;
-    const preferred =
+    const negotiated =
       cookieValue && isLocale(cookieValue)
         ? cookieValue
         : negotiateLocale(request.headers.get("accept-language"));
+    // Sous /admin, une preference arabe retombe sur le francais sans que le
+    // cookie soit touche : le site public la retrouve intacte en sortant.
+    const preferred = adminPath ? toAdminLocale(negotiated) : negotiated;
 
     if (preferred !== DEFAULT_LOCALE) {
       const target = request.nextUrl.clone();
@@ -82,10 +106,16 @@ export async function proxy(request: NextRequest) {
     // Francais : on reecrit sans toucher a l'adresse affichee.
     const rewritten = request.nextUrl.clone();
     rewritten.pathname = `/${DEFAULT_LOCALE}${pathname === "/" ? "" : pathname}`;
-    return withSupabaseSession(request, NextResponse.rewrite(rewritten, { request }));
+    if (adminPath) requestHeaders.set(ADMIN_LOCALE_HEADER, DEFAULT_LOCALE);
+    return withSupabaseSession(request, NextResponse.rewrite(rewritten, {
+      request: { headers: requestHeaders },
+    }));
   }
 
-  return withSupabaseSession(request, NextResponse.next({ request }));
+  if (adminPath) requestHeaders.set(ADMIN_LOCALE_HEADER, toAdminLocale(urlLocale));
+  return withSupabaseSession(request, NextResponse.next({
+    request: { headers: requestHeaders },
+  }));
 }
 
 /**

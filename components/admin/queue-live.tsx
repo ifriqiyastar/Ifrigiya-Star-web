@@ -1,5 +1,8 @@
 "use client";
 
+import { useAdminTranslations } from "@/lib/i18n/admin-client";
+
+
 import { useRouter } from "next/navigation";
 import * as React from "react";
 
@@ -84,6 +87,8 @@ export function AdminQueueProvider({
   intervalMs?: number;
   children: React.ReactNode;
 }) {
+  const i18n = useAdminTranslations();
+
   // `live` ne porte que le resultat des interrogations ; l'instantane du
   // serveur reste la valeur par defaut. Quand le layout est rejoue
   // (revalidatePath apres une action), sa lecture est plus fraiche que la
@@ -113,7 +118,7 @@ export function AdminQueueProvider({
     const poll = async () => {
       if (document.visibilityState !== "visible" || busy()) return;
       try {
-        const response = await fetch("/admin/file-attente", {
+        const response = await fetch(i18n.path("/admin/file-attente"), {
           cache: "no-store",
           headers: { accept: "application/json" },
         });

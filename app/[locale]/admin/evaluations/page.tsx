@@ -1,3 +1,4 @@
+import { getAdminI18n } from "@/lib/i18n/admin";
 import type { Metadata } from "next";
 import {
   ActivityIcon,
@@ -38,18 +39,23 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { saveEvaluation, setEvaluationVisibility } from "@/lib/actions/evaluations";
 import { requirePermission } from "@/lib/auth";
-import { formatDate } from "@/lib/format";
+
 import { fetchProfilesByIds } from "@/lib/queries/profiles";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 
-export const metadata: Metadata = { title: "Evaluations" };
+export async function generateMetadata(): Promise<Metadata> {
+  const i18n = await getAdminI18n();
+  return { title: i18n.t("Evaluations") };
+}
 
 const PAGE_SIZE = 20;
 
 export default async function EvaluationsPage({
   searchParams,
 }: PageProps<"/[locale]/admin/evaluations">) {
+  const i18n = await getAdminI18n();
+
   await requirePermission("evaluations.manage");
   const resolved = await searchParams;
   const page = Math.max(
@@ -119,43 +125,42 @@ export default async function EvaluationsPage({
   return (
     <>
       <PageHeader
-        breadcrumb={[{ label: "Scouting" }, { label: "Evaluations" }]}
-        title="Centre d'evaluation des talents"
+        breadcrumb={[{ label: i18n.t("Scouting") }, { label: i18n.t("Evaluations") }]}
+        title={i18n.t("Centre d'evaluation des talents")}
         meta={
           <HeaderMeta tone={privateTotal > 0 ? "brand" : "neutral"}>
-            {privateTotal} rapport{privateTotal > 1 ? "s" : ""} prive
-            {privateTotal > 1 ? "s" : ""}
+            {i18n.t(privateTotal === 1 ? "{0} rapport prive" : "{0} rapports prives", { "0": i18n.format.formatNumber(privateTotal) })}
           </HeaderMeta>
         }
-        description="Saisissez les observations terrain, mesurez les quatre dimensions du joueur et pilotez la publication des rapports depuis un espace unique."
+        description={i18n.t("Saisissez les observations terrain, mesurez les quatre dimensions du joueur et pilotez la publication des rapports depuis un espace unique.")}
       />
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          label="Rapports au total"
+          label={i18n.t("Rapports au total")}
           value={total}
-          hint="Historique conserve"
+          hint={i18n.t("Historique conserve")}
           icon={ClipboardCheckIcon}
         />
         <StatCard
-          label="Rapports publies"
+          label={i18n.t("Rapports publies")}
           value={published}
-          hint={total ? `${Math.round((published / total) * 100)}% du total` : "Aucun rapport"}
+          hint={total ? i18n.t("{0}% du total", { "0": Math.round((published / total) * 100) }) : i18n.t("Aucun rapport")}
           icon={EyeIcon}
           progress={total ? published / total : 0}
         />
         <StatCard
-          label="Rapports prives"
+          label={i18n.t("Rapports prives")}
           value={privateTotal}
-          hint="En attente de diffusion"
+          hint={i18n.t("En attente de diffusion")}
           icon={EyeOffIcon}
-          delta={privateTotal ? "A reviser" : "A jour"}
+          delta={privateTotal ? i18n.t("A reviser") : i18n.t("A jour")}
           deltaTone={privateTotal ? "warning" : "brand"}
         />
         <StatCard
-          label="Score moyen recent"
+          label={i18n.t("Score moyen recent")}
           value={rows.length ? `${recentAverage}/100` : "—"}
-          hint={`Sur les ${rows.length} rapports affiches`}
+          hint={i18n.t("Sur les {0} rapports affiches", { "0": rows.length })}
           icon={GaugeIcon}
         />
       </section>
@@ -164,25 +169,23 @@ export default async function EvaluationsPage({
         <Panel>
           <PanelHeader
             icon={ClipboardPenIcon}
-            title="Nouvelle fiche d'evaluation"
-            description="Associez le rapport a une inscription et au professionnel qui le signe. L'evaluation reste privee jusqu'a sa publication."
+            title={i18n.t("Nouvelle fiche d'evaluation")}
+            description={i18n.t("Associez le rapport a une inscription et au professionnel qui le signe. L'evaluation reste privee jusqu'a sa publication.")}
             action={
               <span className="micro-label rounded-md border border-brand/30 bg-brand/10 px-2.5 py-1.5 text-brand">
-                Saisie terrain
-              </span>
+                {i18n.t("Saisie terrain")}</span>
             }
           />
 
           <ServerForm
             action={saveEvaluation}
-            submitLabel="Enregistrer l'evaluation"
+            submitLabel={i18n.t("Enregistrer l'evaluation")}
             className="grid gap-5 p-4 sm:p-5 md:grid-cols-2 [&>button:last-child]:col-span-full [&>button:last-child]:justify-self-end"
           >
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-3">
                 <Label htmlFor="registration_id" className="text-foreground">
-                  Joueur et Scout Day
-                </Label>
+                  {i18n.t("Joueur et Scout Day")}</Label>
                 <StepBadge step="01" />
               </div>
               <NativeSelect
@@ -191,27 +194,25 @@ export default async function EvaluationsPage({
                 required
                 className="h-11 rounded-md border-border bg-[#101318] text-xs"
               >
-                <option value="">Selectionner une inscription</option>
+                <option value="">{i18n.t("Selectionner une inscription")}</option>
                 {(registrations ?? []).map((registration) => {
                   const profile = profiles.get(registration.player_id);
                   return (
                     <option key={registration.id} value={registration.id}>
-                      {profile?.full_name ?? profile?.email ?? "Joueur"} —{" "}
-                      {scoutDayById.get(registration.scout_day_id) ?? "Scout Day"}
+                      {profile?.full_name ?? profile?.email ?? i18n.t("Joueur")} —{" "}
+                      {scoutDayById.get(registration.scout_day_id) ?? i18n.t("Scout Day")}
                     </option>
                   );
                 })}
               </NativeSelect>
               <p className="text-[0.6875rem] leading-relaxed text-muted-foreground">
-                L’inscription relie automatiquement le joueur a la session observee.
-              </p>
+                {i18n.t("L’inscription relie automatiquement le joueur a la session observee.")}</p>
             </div>
 
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-3">
                 <Label htmlFor="evaluator_id" className="text-foreground">
-                  Professionnel signataire
-                </Label>
+                  {i18n.t("Professionnel signataire")}</Label>
                 <StepBadge step="02" />
               </div>
               <NativeSelect
@@ -220,7 +221,7 @@ export default async function EvaluationsPage({
                 required
                 className="h-11 rounded-md border-border bg-[#101318] text-xs"
               >
-                <option value="">Selectionner un evaluateur</option>
+                <option value="">{i18n.t("Selectionner un evaluateur")}</option>
                 {(evaluators ?? []).map((evaluator) => (
                   <option key={evaluator.id} value={evaluator.id}>
                     {evaluator.contact_full_name}
@@ -231,49 +232,46 @@ export default async function EvaluationsPage({
                 ))}
               </NativeSelect>
               <p className="text-[0.6875rem] leading-relaxed text-muted-foreground">
-                Seul un professionnel valide peut porter la signature du rapport.
-              </p>
+                {i18n.t("Seul un professionnel valide peut porter la signature du rapport.")}</p>
             </div>
 
             <div className="space-y-3 md:col-span-2">
               <div className="flex flex-wrap items-end justify-between gap-2 border-t border-border pt-5">
                 <div>
-                  <p className="micro-label text-brand">Grille de performance</p>
+                  <p className="micro-label text-brand">{i18n.t("Grille de performance")}</p>
                   <h2 className="mt-1 font-heading text-base font-bold">
-                    Notes par domaine
-                  </h2>
+                    {i18n.t("Notes par domaine")}</h2>
                 </div>
                 <p className="text-[0.6875rem] text-muted-foreground">
-                  Quatre notes obligatoires, de 0 a 100
-                </p>
+                  {i18n.t("Quatre notes obligatoires, de 0 a 100")}</p>
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <ScoreField
-                  label="Technique"
+                  label={i18n.t("Technique")}
                   name="technical_score"
                   icon={TargetIcon}
-                  hint="Gestuelle et maitrise"
+                  hint={i18n.t("Gestuelle et maitrise")}
                 />
                 <ScoreField
-                  label="Physique"
+                  label={i18n.t("Physique")}
                   name="physical_score"
                   icon={ActivityIcon}
-                  hint="Intensite et endurance"
+                  hint={i18n.t("Intensite et endurance")}
                   tone="info"
                 />
                 <ScoreField
-                  label="Tactique"
+                  label={i18n.t("Tactique")}
                   name="tactical_score"
                   icon={WaypointsIcon}
-                  hint="Lecture et placement"
+                  hint={i18n.t("Lecture et placement")}
                   tone="warning"
                 />
                 <ScoreField
-                  label="Mental"
+                  label={i18n.t("Mental")}
                   name="mental_score"
                   icon={BrainIcon}
-                  hint="Decision et resilience"
+                  hint={i18n.t("Decision et resilience")}
                   tone="success"
                 />
               </div>
@@ -282,8 +280,7 @@ export default async function EvaluationsPage({
             <div className="space-y-2 md:col-span-2">
               <div className="flex items-center justify-between gap-3">
                 <Label htmlFor="report" className="text-foreground">
-                  Rapport de scouting
-                </Label>
+                  {i18n.t("Rapport de scouting")}</Label>
                 <StepBadge step="03" />
               </div>
               <Textarea
@@ -291,11 +288,10 @@ export default async function EvaluationsPage({
                 name="report"
                 rows={5}
                 className="min-h-32 rounded-md border-border bg-[#101318] text-xs leading-relaxed"
-                placeholder="Decrivez les points forts, les axes de progression, le potentiel observe et votre recommandation..."
+                placeholder={i18n.t("Decrivez les points forts, les axes de progression, le potentiel observe et votre recommandation...")}
               />
               <p className="text-[0.6875rem] text-muted-foreground">
-                Privilegiez une observation factuelle, contextualisee et directement exploitable.
-              </p>
+                {i18n.t("Privilegiez une observation factuelle, contextualisee et directement exploitable.")}</p>
             </div>
           </ServerForm>
         </Panel>
@@ -304,32 +300,32 @@ export default async function EvaluationsPage({
           <Panel>
             <PanelHeader
               icon={AwardIcon}
-              title="Cadre de notation"
-              description="Un langage commun pour comparer les rapports."
+              title={i18n.t("Cadre de notation")}
+              description={i18n.t("Un langage commun pour comparer les rapports.")}
             />
             <div className="space-y-2 p-4">
               <RatingBand
                 range="85–100"
-                label="Impact immediat"
-                description="Niveau distinctif, pret a performer."
+                label={i18n.t("Impact immediat")}
+                description={i18n.t("Niveau distinctif, pret a performer.")}
                 tone="brand"
               />
               <RatingBand
                 range="70–84"
-                label="Fort potentiel"
-                description="Base solide, progression ciblee."
+                label={i18n.t("Fort potentiel")}
+                description={i18n.t("Base solide, progression ciblee.")}
                 tone="info"
               />
               <RatingBand
                 range="50–69"
-                label="A developper"
-                description="Qualites visibles, ecarts a combler."
+                label={i18n.t("A developper")}
+                description={i18n.t("Qualites visibles, ecarts a combler.")}
                 tone="warning"
               />
               <RatingBand
                 range="0–49"
-                label="En observation"
-                description="Niveau encore insuffisamment confirme."
+                label={i18n.t("En observation")}
+                description={i18n.t("Niveau encore insuffisamment confirme.")}
                 tone="danger"
               />
             </div>
@@ -340,19 +336,16 @@ export default async function EvaluationsPage({
               <span className="flex size-8 items-center justify-center rounded-md bg-brand/12 text-brand">
                 <ShieldCheckIcon className="size-4" />
               </span>
-              <p className="micro-label mt-4 text-brand">Flux de validation</p>
+              <p className="micro-label mt-4 text-brand">{i18n.t("Flux de validation")}</p>
               <h3 className="mt-1 font-heading text-sm font-bold">
-                Prive par defaut
-              </h3>
+                {i18n.t("Prive par defaut")}</h3>
               <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                Enregistrer ne notifie pas le joueur. Relisez d’abord le rapport, puis
-                utilisez l’action Publier dans l’historique.
-              </p>
+                {i18n.t("Enregistrer ne notifie pas le joueur. Relisez d’abord le rapport, puis utilisez l’action Publier dans l’historique.")}</p>
               <div className="mt-4 grid grid-cols-3 gap-1 text-center">
                 {[
-                  ["01", "Saisir"],
-                  ["02", "Relire"],
-                  ["03", "Publier"],
+                  ["01", i18n.t("Saisir")],
+                  ["02", i18n.t("Relire")],
+                  ["03", i18n.t("Publier")],
                 ].map(([step, label]) => (
                   <div key={step} className="rounded-md bg-secondary px-2 py-2">
                     <span className="micro-label text-brand">{step}</span>
@@ -368,11 +361,11 @@ export default async function EvaluationsPage({
       <Panel>
         <PanelHeader
           icon={HistoryIcon}
-          title="Registre des evaluations"
-          description="Les rapports les plus recents, leur score consolide et leur statut de diffusion."
+          title={i18n.t("Registre des evaluations")}
+          description={i18n.t("Les rapports les plus recents, leur score consolide et leur statut de diffusion.")}
           action={
             <span className="micro-label rounded-md border border-border bg-secondary px-2.5 py-1.5 text-muted-foreground">
-              {total} entree{total > 1 ? "s" : ""}
+              {i18n.t(total === 1 ? "{0} entree" : "{0} entrees", { "0": i18n.format.formatNumber(total) })}
             </span>
           }
         />
@@ -382,22 +375,22 @@ export default async function EvaluationsPage({
         ) : !rows.length ? (
           <EmptyState
             icon={ClipboardCheckIcon}
-            title="Aucune evaluation"
-            description="Les nouvelles fiches apparaitront ici apres leur enregistrement."
+            title={i18n.t("Aucune evaluation")}
+            description={i18n.t("Les nouvelles fiches apparaitront ici apres leur enregistrement.")}
           />
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Joueur</TableHead>
-                <TableHead>Scout Day</TableHead>
-                <TableHead>Observation</TableHead>
-                <TableHead>Detail des notes</TableHead>
-                <TableHead>Global</TableHead>
-                <TableHead>Signataire</TableHead>
-                <TableHead>Visibilite</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead className="text-right">Action</TableHead>
+                <TableHead>{i18n.t("Joueur")}</TableHead>
+                <TableHead>{i18n.t("Scout Day")}</TableHead>
+                <TableHead>{i18n.t("Observation")}</TableHead>
+                <TableHead>{i18n.t("Detail des notes")}</TableHead>
+                <TableHead>{i18n.t("Global")}</TableHead>
+                <TableHead>{i18n.t("Signataire")}</TableHead>
+                <TableHead>{i18n.t("Visibilite")}</TableHead>
+                <TableHead>{i18n.t("Date")}</TableHead>
+                <TableHead className="text-right">{i18n.t("Action")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -413,22 +406,22 @@ export default async function EvaluationsPage({
                   <TableRow key={row.id}>
                     <TableCell>
                       <UserCell
-                        name={profile?.full_name ?? registration?.player_id ?? "Joueur inconnu"}
+                        name={profile?.full_name ?? registration?.player_id ?? i18n.t("Joueur inconnu")}
                         secondary={profile?.email}
                         avatarUrl={profile?.avatar_url}
-                        href={registration ? `/admin/utilisateurs/${registration.player_id}` : undefined}
+                        href={registration ? i18n.path(`/admin/utilisateurs/${registration.player_id}`) : undefined}
                       />
                     </TableCell>
                     <TableCell>
                       <p className="max-w-40 truncate text-xs font-medium">
                         {registration
-                          ? scoutDayById.get(registration.scout_day_id) ?? "Scout Day"
+                          ? scoutDayById.get(registration.scout_day_id) ?? i18n.t("Scout Day")
                           : "—"}
                       </p>
                     </TableCell>
                     <TableCell className="max-w-60 whitespace-normal">
                       <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">
-                        {row.comment || "Aucune observation redigee."}
+                        {row.comment || i18n.t("Aucune observation redigee.")}
                       </p>
                     </TableCell>
                     <TableCell>
@@ -445,10 +438,10 @@ export default async function EvaluationsPage({
                     <TableCell>
                       <div className="max-w-40">
                         <p className="truncate text-xs font-medium">
-                          {evaluator?.contact_full_name ?? "Professionnel"}
+                          {evaluator?.contact_full_name ?? i18n.t("Professionnel")}
                         </p>
                         <p className="truncate text-[0.625rem] text-muted-foreground">
-                          {evaluator?.organization_name ?? evaluator?.professional_type ?? "Signataire valide"}
+                          {evaluator?.organization_name ?? evaluator?.professional_type ?? i18n.t("Signataire valide")}
                         </p>
                       </div>
                     </TableCell>
@@ -457,11 +450,11 @@ export default async function EvaluationsPage({
                         tone={row.visible_to_player ? "success" : "neutral"}
                         dot
                       >
-                        {row.visible_to_player ? "Publie" : "Prive"}
+                        {row.visible_to_player ? i18n.t("Publie") : i18n.t("Prive")}
                       </StatusPill>
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
-                      {formatDate(row.created_at)}
+                      {i18n.format.formatDate(row.created_at)}
                     </TableCell>
                     <TableCell>
                       <div className="flex justify-end">
@@ -474,7 +467,7 @@ export default async function EvaluationsPage({
                           variant={row.visible_to_player ? "outline" : "default"}
                         >
                           {row.visible_to_player ? <EyeOffIcon /> : <EyeIcon />}
-                          {row.visible_to_player ? "Masquer" : "Publier"}
+                          {row.visible_to_player ? i18n.t("Masquer") : i18n.t("Publier")}
                         </ActionButton>
                       </div>
                     </TableCell>
@@ -486,7 +479,7 @@ export default async function EvaluationsPage({
         )}
 
         <Pagination
-          basePath="/admin/evaluations"
+          basePath={i18n.path("/admin/evaluations")}
           params={{ page: String(page) }}
           page={page}
           pageSize={PAGE_SIZE}
@@ -498,18 +491,18 @@ export default async function EvaluationsPage({
         notes={[
           {
             icon: GaugeIcon,
-            title: "Calcul consolide automatique",
-            body: "La note globale est calculee cote serveur a partir des quatre domaines. Elle ne peut pas etre modifiee independamment des notes qui la composent.",
+            title: i18n.t("Calcul consolide automatique"),
+            body: i18n.t("La note globale est calculee cote serveur a partir des quatre domaines. Elle ne peut pas etre modifiee independamment des notes qui la composent."),
           },
           {
             icon: EyeIcon,
-            title: "Publication reversible",
-            body: "Une evaluation nait privee. La publication la rend visible au joueur ; la masquer la retire de sa vue sans supprimer le rapport ni son historique.",
+            title: i18n.t("Publication reversible"),
+            body: i18n.t("Une evaluation nait privee. La publication la rend visible au joueur ; la masquer la retire de sa vue sans supprimer le rapport ni son historique."),
           },
           {
             icon: ShieldCheckIcon,
-            title: "Traçabilite des decisions",
-            body: "Le signataire professionnel et l'administrateur ayant saisi la fiche restent traces afin que chaque evaluation conserve un responsable identifiable.",
+            title: i18n.t("Traçabilite des decisions"),
+            body: i18n.t("Le signataire professionnel et l'administrateur ayant saisi la fiche restent traces afin que chaque evaluation conserve un responsable identifiable."),
           },
         ]}
       />
@@ -517,10 +510,12 @@ export default async function EvaluationsPage({
   );
 }
 
-function StepBadge({ step }: { step: string }) {
+async function StepBadge({ step }: { step: string }) {
+  const i18n = await getAdminI18n();
+
   return (
     <span className="micro-label rounded border border-border bg-secondary px-1.5 py-1 text-muted-foreground">
-      Etape {step}
+      {i18n.t("Etape")} {step}
     </span>
   );
 }
@@ -616,7 +611,7 @@ function RatingBand({
   );
 }
 
-function ScoreSummary({
+async function ScoreSummary({
   technical,
   physical,
   tactical,
@@ -627,13 +622,15 @@ function ScoreSummary({
   tactical: number;
   mental: number;
 }) {
+  const i18n = await getAdminI18n();
+
   return (
-    <div className="grid w-32 grid-cols-4 gap-1" aria-label="Detail des quatre notes">
+    <div className="grid w-32 grid-cols-4 gap-1" aria-label={i18n.t("Detail des quatre notes")}>
       {[
-        ["TEC", technical],
-        ["PHY", physical],
-        ["TAC", tactical],
-        ["MEN", mental],
+        [i18n.t("TEC"), technical],
+        [i18n.t("PHY"), physical],
+        [i18n.t("TAC"), tactical],
+        [i18n.t("MEN"), mental],
       ].map(([label, value]) => (
         <span
           key={label}
@@ -647,7 +644,9 @@ function ScoreSummary({
   );
 }
 
-function OverallScore({ value }: { value: number }) {
+async function OverallScore({ value }: { value: number }) {
+  const i18n = await getAdminI18n();
+
   return (
     <span
       className={cn(
@@ -660,7 +659,7 @@ function OverallScore({ value }: { value: number }) {
               ? "border-warning/30 bg-warning/10 text-warning"
               : "border-destructive/30 bg-destructive/10 text-destructive",
       )}
-      aria-label={`Score global ${value} sur 100`}
+      aria-label={i18n.t("Score global {0} sur 100", { "0": value })}
     >
       {value}
     </span>

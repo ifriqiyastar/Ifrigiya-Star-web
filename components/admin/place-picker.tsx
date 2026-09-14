@@ -1,5 +1,8 @@
 "use client";
 
+import { useAdminTranslations } from "@/lib/i18n/admin-client";
+
+
 import * as React from "react";
 import { MapPinIcon, MinusIcon, PlusIcon, XIcon } from "lucide-react";
 
@@ -70,6 +73,8 @@ export function PlacePicker({
   longitude?: number | null;
   address?: string | null;
 }) {
+  const i18n = useAdminTranslations();
+
   const [size, setSize] = React.useState({ width: 640, height: 260 });
   const [zoom, setZoom] = React.useState(latitude != null ? 13 : 11);
   const [marker, setMarker] = React.useState<Point | null>(
@@ -169,7 +174,7 @@ export function PlacePicker({
         }}
         className="relative h-64 w-full cursor-crosshair overflow-hidden rounded-xl border border-border bg-background select-none"
         role="application"
-        aria-label="Carte : cliquer pour placer le point de rendez-vous"
+        aria-label={i18n.t("Carte : cliquer pour placer le point de rendez-vous")}
       >
         {tiles.map((tile) => (
           <React.Fragment key={tile.key}>
@@ -201,8 +206,8 @@ export function PlacePicker({
 
         <div className="absolute top-2 right-2 flex flex-col gap-1">
           {[
-            { label: "Zoom avant", icon: PlusIcon, delta: 1 },
-            { label: "Zoom arriere", icon: MinusIcon, delta: -1 },
+            { label: i18n.t("Zoom avant"), icon: PlusIcon, delta: 1 },
+            { label: i18n.t("Zoom arriere"), icon: MinusIcon, delta: -1 },
           ].map((control) => (
             <button
               key={control.label}
@@ -237,18 +242,17 @@ export function PlacePicker({
               className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-destructive hover:bg-destructive/10"
             >
               <XIcon className="size-3" />
-              Retirer le point
-            </button>
+              {i18n.t("Retirer le point")}</button>
           </>
         ) : (
-          <span>Cliquez sur la carte pour placer le point (facultatif).</span>
+          <span>{i18n.t("Cliquez sur la carte pour placer le point (facultatif).")}</span>
         )}
       </div>
 
       <Input
         name="location_address"
         defaultValue={address ?? ""}
-        placeholder="Adresse formatee, saisie a la main (le web n'a pas de geocodage sans cle)"
+        placeholder={i18n.t("Adresse formatee, saisie a la main (le web n'a pas de geocodage sans cle)")}
         className={cn("text-sm")}
       />
 

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import type { AdminDictionary } from "@/lib/i18n/admin-shared";
 import { createClient } from "@/lib/supabase/server";
 
 export type AdminSession = {
@@ -52,7 +53,15 @@ async function unseededPermissions(
   return ALL_ADMIN_PERMISSIONS.filter((code) => !known.has(code));
 }
 
-export async function getAdminAccess(adminId: string) {
+/**
+ * `dict` n'est requis que pour les deux libelles de repli : le nom du role
+ * vient sinon de `admin_roles.label`, ecrit en base et donc dans une seule
+ * langue. Les appelants qui ne lisent que `permissions` — une page qui verifie
+ * un droit avant d'afficher un bouton — s'en passent.
+ */
+export async function getAdminAccess(adminId: string, dict?: AdminDictionary) {
+  const fallbackLabel = dict?.roles.fallback ?? "Administrateur";
+  const unassignedLabel = dict?.roles.unassigned ?? "Role non attribue";
   const supabase = await createClient();
   const assignment = await supabase
     .from("admin_user_roles")
@@ -60,16 +69,16 @@ export async function getAdminAccess(adminId: string) {
     .eq("admin_id", adminId)
     .maybeSingle();
   if (assignment.error) {
-    return { roleLabel: "Administrateur", permissions: ALL_ADMIN_PERMISSIONS };
+    return { roleLabel: fallbackLabel, permissions: ALL_ADMIN_PERMISSIONS };
   }
 
   const unseeded = await unseededPermissions(supabase);
 
   if (!assignment.data) {
-    return { roleLabel: "Role non attribue", permissions: unseeded };
+    return { roleLabel: unassignedLabel, permissions: unseeded };
   }
   const [role, links] = await Promise.all([
-    supabase.from("admin_roles").select("label").eq("id", assignment.data.role_id).maybeSingle(),
+    supabase.from("admin_roles").select("code, label").eq("id", assignment.data.role_id).maybeSingle(),
     supabase.from("admin_role_permissions").select("permission_id").eq("role_id", assignment.data.role_id),
   ]);
   const permissionIds = (links.data ?? []).map((row) => row.permission_id);
@@ -78,7 +87,9 @@ export async function getAdminAccess(adminId: string) {
     : { data: [] };
   const granted = (permissions.data ?? []).map((row) => row.code as AdminPermission);
   return {
-    roleLabel: role.data?.label ?? "Administrateur",
+    roleLabel: (dict && role.data?.code
+      ? dict.roles.names[role.data.code as keyof typeof dict.roles.names]
+      : undefined) ?? role.data?.label ?? fallbackLabel,
     permissions: [...new Set([...granted, ...unseeded])],
   };
 }

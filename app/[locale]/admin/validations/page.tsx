@@ -1,3 +1,4 @@
+import { getAdminI18n } from "@/lib/i18n/admin";
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
@@ -63,20 +64,16 @@ import {
   setPlayerStatus,
   setProfessionalStatus,
 } from "@/lib/actions/users";
-import { ageFromBirthDate, formatDate, formatDateTime, formatDuration, timeAgo } from "@/lib/format";
-import {
-  DOCUMENT_STATUS,
-  IDENTITY_STATUS,
-  PLAYER_LEVEL,
-  PROFESSIONAL_TYPE,
-  entry,
-  label,
-} from "@/lib/labels";
+import { ageFromBirthDate } from "@/lib/format";
+import { DOCUMENT_STATUS, IDENTITY_STATUS, PLAYER_LEVEL, PROFESSIONAL_TYPE } from "@/lib/labels";
 import { fetchProfilesByIds, displayName } from "@/lib/queries/profiles";
 import { createClient } from "@/lib/supabase/server";
 import { requirePermission } from "@/lib/auth";
 
-export const metadata: Metadata = { title: "Validations" };
+export async function generateMetadata(): Promise<Metadata> {
+  const i18n = await getAdminI18n();
+  return { title: i18n.t("Validations") };
+}
 
 const SEGMENTS = ["joueurs", "professionnels", "justificatifs", "identite"] as const;
 type Segment = (typeof SEGMENTS)[number];
@@ -85,6 +82,8 @@ const PAGE_SIZE = 20;
 export default async function ValidationsPage({
   searchParams,
 }: PageProps<"/[locale]/admin/validations">) {
+  const i18n = await getAdminI18n();
+
   await requirePermission("verifications.review");
   const resolved = await searchParams;
   const requested = typeof resolved.vue === "string" ? resolved.vue : "joueurs";
@@ -154,7 +153,7 @@ export default async function ValidationsPage({
     .map((row) => new Date(row.reviewed_at!).getTime() - new Date(row.created_at).getTime())
     .filter((value) => Number.isFinite(value) && value >= 0);
   const reviewDelay = delays.length
-    ? formatDuration(delays.reduce((acc, value) => acc + value, 0) / delays.length)
+    ? i18n.format.formatDuration(delays.reduce((acc, value) => acc + value, 0) / delays.length)
     : null;
 
   const decisions30d = (approved30d.count ?? 0) + (refused30d.count ?? 0);
@@ -168,17 +167,16 @@ export default async function ValidationsPage({
     <>
       <PageHeader
         breadcrumb={[
-          { label: "Utilisateurs et validations", href: "/admin/utilisateurs" },
-          { label: "Validations" },
+          { label: i18n.t("Utilisateurs et validations"), href: i18n.path("/admin/utilisateurs") },
+          { label: i18n.t("Validations") },
         ]}
-        title="Files de validation des profils"
+        title={i18n.t("Files de validation des profils")}
         meta={
           pending > 0 ? (
             <HeaderMeta tone="brand" dot>
-              {pending} en attente
-            </HeaderMeta>
+              {pending}  {i18n.t("en attente")}</HeaderMeta>
           ) : (
-            <HeaderMeta>File vide</HeaderMeta>
+            <HeaderMeta>{i18n.t("File vide")}</HeaderMeta>
           )
         }
         actions={
@@ -186,75 +184,74 @@ export default async function ValidationsPage({
           // remplir pendant qu'on la lit. Pas de « Synchroniser KYC » — il n'y
           // a aucun service externe a appeler, le statut est deja en base.
           <Link
-            href={`/admin/validations?vue=${vue}${search ? `&q=${encodeURIComponent(search)}` : ""}`}
+            href={i18n.path(`/admin/validations?vue=${vue}${search ? `&q=${encodeURIComponent(search)}` : ""}`)}
             className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-accent px-3 text-xs font-semibold hover:bg-accent/70"
           >
             <RefreshCwIcon className="size-3.5 text-brand" />
-            Actualiser la file
-          </Link>
+            {i18n.t("Actualiser la file")}</Link>
         }
-        description="Les comptes en attente, dans l'ordre d'arrivee. Valider un profil joueur ou professionnel debloque l'acces a l'application : c'est le statut du profil qui l'ouvre, pas celui du document d'identite."
+        description={i18n.t("Les comptes en attente, dans l'ordre d'arrivee. Valider un profil joueur ou professionnel debloque l'acces a l'application : c'est le statut du profil qui l'ouvre, pas celui du document d'identite.")}
       />
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <MetricStrip
-          label="Delai moyen d'examen"
+          label={i18n.t("Delai moyen d'examen")}
           value={reviewDelay ?? "—"}
-          hint="Entre le depot d'une piece et sa revue"
+          hint={i18n.t("Entre le depot d'une piece et sa revue")}
           icon={TimerIcon}
         />
         <MetricStrip
-          label="Dossiers en attente"
+          label={i18n.t("Dossiers en attente")}
           value={pending}
-          hint="Les quatre files reunies"
+          hint={i18n.t("Les quatre files reunies")}
           icon={ClockIcon}
           tone="brand"
         />
         <MetricStrip
-          label="Refuses (30 j)"
+          label={i18n.t("Refuses (30 j)")}
           value={refused30d.count ?? 0}
-          hint="Profils joueurs renvoyes avec un motif"
+          hint={i18n.t("Profils joueurs renvoyes avec un motif")}
           icon={ShieldAlertIcon}
           tone="danger"
         />
         <MetricStrip
-          label="Taux d'approbation"
+          label={i18n.t("Taux d'approbation")}
           value={
             decisions30d > 0
               ? `${Math.round(((approved30d.count ?? 0) / decisions30d) * 100)} %`
               : "—"
           }
-          hint={`Sur ${decisions30d} decision(s) des 30 derniers jours`}
+          hint={i18n.t("Sur {0} decision(s) des 30 derniers jours", { "0": decisions30d })}
           icon={BadgeCheckIcon}
           tone="info"
         />
       </section>
 
       <SegmentedNav
-        basePath="/admin/validations"
+        basePath={i18n.path("/admin/validations")}
         active={vue}
         segments={[
           {
             value: "joueurs",
-            label: "Profils joueurs",
+            label: i18n.t("Profils joueurs"),
             count: playersCount.count ?? 0,
             icon: UserCheckIcon,
           },
           {
             value: "professionnels",
-            label: "Comptes professionnels",
+            label: i18n.t("Comptes professionnels"),
             count: prosCount.count ?? 0,
             icon: ShieldCheckIcon,
           },
           {
             value: "justificatifs",
-            label: "Justificatifs pro",
+            label: i18n.t("Justificatifs pro"),
             count: docsCount.count ?? 0,
             icon: FileTextIcon,
           },
           {
             value: "identite",
-            label: "Pieces d'identite",
+            label: i18n.t("Pieces d'identite"),
             count: kycCount.count ?? 0,
             icon: IdCardIcon,
           },
@@ -275,13 +272,13 @@ export default async function ValidationsPage({
           <input
             name="q"
             defaultValue={search ?? ""}
-            placeholder="Filtrer par nom, club ou nationalite…"
+            placeholder={i18n.t("Filtrer par nom, club ou nationalite…")}
             className="w-full bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground"
           />
           {search ? (
             <Link
-              href={`/admin/validations?vue=${vue}`}
-              aria-label="Effacer le filtre"
+              href={i18n.path(`/admin/validations?vue=${vue}`)}
+              aria-label={i18n.t("Effacer le filtre")}
               className="text-muted-foreground hover:text-foreground"
             >
               <XCircleIcon className="size-4" />
@@ -294,11 +291,9 @@ export default async function ValidationsPage({
             className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-accent px-3 text-xs font-semibold hover:bg-accent/70"
           >
             <FilterIcon className="size-3.5" />
-            Appliquer
-          </button>
+            {i18n.t("Appliquer")}</button>
           <span className="micro-label text-muted-foreground">
-            Trie par : plus ancien d&apos;abord
-          </span>
+            {i18n.t("Trie par : plus ancien d'abord")}</span>
         </div>
       </form>
 
@@ -315,18 +310,18 @@ export default async function ValidationsPage({
         notes={[
           {
             icon: SmartphoneIcon,
-            title: "Ce que la validation debloque",
-            body: "L'application mobile decide de laisser entrer un utilisateur sur le statut de son profil — joueur ou professionnel — et sur rien d'autre. Tant que ce profil n'est pas valide, elle le renvoie vers l'ecran d'attente, quel que soit l'etat de ses pieces.",
+            title: i18n.t("Ce que la validation debloque"),
+            body: i18n.t("L'application mobile decide de laisser entrer un utilisateur sur le statut de son profil — joueur ou professionnel — et sur rien d'autre. Tant que ce profil n'est pas valide, elle le renvoie vers l'ecran d'attente, quel que soit l'etat de ses pieces."),
           },
           {
             icon: IdCardIcon,
-            title: "Piece d'identite ≠ compte valide",
-            body: "La revue d'une piece d'identite est un controle distinct de la validation du compte. Accepter la piece ne donne pas l'acces : les deux gestes sont volontairement separes, et refuser une piece demande un motif, transmis a l'interesse.",
+            title: i18n.t("Piece d'identite ≠ compte valide"),
+            body: i18n.t("La revue d'une piece d'identite est un controle distinct de la validation du compte. Accepter la piece ne donne pas l'acces : les deux gestes sont volontairement separes, et refuser une piece demande un motif, transmis a l'interesse."),
           },
           {
             icon: BadgeCheckIcon,
-            title: "Un refus reste reversible",
-            body: "Un dossier refuse retourne a son auteur avec le motif ecrit ici. Il repasse dans cette file des qu'il est corrige : rien n'est efface, et l'historique du statut reste lisible sur la fiche du compte.",
+            title: i18n.t("Un refus reste reversible"),
+            body: i18n.t("Un dossier refuse retourne a son auteur avec le motif ecrit ici. Il repasse dans cette file des qu'il est corrige : rien n'est efface, et l'historique du statut reste lisible sur la fiche du compte."),
           },
         ]}
       />
@@ -366,6 +361,8 @@ async function PlayersQueue({
   selected?: string;
   search?: string;
 }) {
+  const i18n = await getAdminI18n();
+
   const supabase = await createClient();
   // Toutes les colonnes, et non les six de la liste : le dossier complet est
   // rendu dans la modale de chaque ligne, et il ne doit pas declencher une
@@ -449,10 +446,10 @@ async function PlayersQueue({
   const activeKyc = active ? kycByPlayer.get(active.id) : undefined;
   const activeGuardian = active ? guardianByPlayer.get(active.id) : undefined;
   const activeName = active
-    ? displayName(activeProfile, [active.first_name, active.last_name])
+    ? displayName(activeProfile, [active.first_name, active.last_name], i18n.locale)
     : "";
   const dossierHref = (id: string) =>
-    `/admin/validations?vue=joueurs&page=${page}${search ? `&q=${encodeURIComponent(search)}` : ""}&dossier=${id}`;
+    i18n.path(`/admin/validations?vue=joueurs&page=${page}${search ? `&q=${encodeURIComponent(search)}` : ""}&dossier=${id}`);
 
   /**
    * Completude du dossier : cinq elements que la validation suppose reunis.
@@ -481,11 +478,11 @@ async function PlayersQueue({
             {!rows.length && !error ? (
               <EmptyState
                 icon={UserCheckIcon}
-                title="Aucun profil joueur en attente"
+                title={i18n.t("Aucun profil joueur en attente")}
                 description={
                   search
-                    ? "Aucun dossier ne correspond a ce filtre."
-                    : "Les nouveaux dossiers apparaitront ici des qu'un joueur aura termine son etape KYC."
+                    ? i18n.t("Aucun dossier ne correspond a ce filtre.")
+                    : i18n.t("Les nouveaux dossiers apparaitront ici des qu'un joueur aura termine son etape KYC.")
                 }
               />
             ) : (
@@ -497,16 +494,15 @@ async function PlayersQueue({
                         <input
                           type="checkbox"
                           data-select-all=""
-                          aria-label="Tout selectionner"
+                          aria-label={i18n.t("Tout selectionner")}
                           className="size-3.5 accent-[var(--brand)]"
                         />
-                        Joueur / candidat
-                      </span>
+                        {i18n.t("Joueur / candidat")}</span>
                     </TableHead>
-                    <TableHead>Categorie / poste</TableHead>
-                    <TableHead>Piece &amp; dossier</TableHead>
-                    <TableHead>Horodatage</TableHead>
-                    <TableHead className="text-right">Decision rapide</TableHead>
+                    <TableHead>{i18n.t("Categorie / poste")}</TableHead>
+                    <TableHead>{i18n.t("Piece & dossier")}</TableHead>
+                    <TableHead>{i18n.t("Horodatage")}</TableHead>
+                    <TableHead className="text-right">{i18n.t("Decision rapide")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -525,11 +521,11 @@ async function PlayersQueue({
                               type="checkbox"
                               name="ids"
                               value={row.id}
-                              aria-label={`Selectionner ${displayName(profile, [row.first_name, row.last_name])}`}
+                              aria-label={i18n.t("Selectionner {0}", { "0": displayName(profile, [row.first_name, row.last_name], i18n.locale) })}
                               className="size-3.5 shrink-0 accent-[var(--brand)]"
                             />
                             <UserCell
-                              name={displayName(profile, [row.first_name, row.last_name])}
+                              name={displayName(profile, [row.first_name, row.last_name], i18n.locale)}
                               secondary={profile?.email}
                               avatarUrl={profile?.avatar_url}
                               href={dossierHref(row.id)}
@@ -539,32 +535,32 @@ async function PlayersQueue({
                         <TableCell>
                           <div className="flex flex-wrap items-center gap-1.5">
                             <span className="rounded bg-accent px-1.5 py-0.5 text-[0.625rem] font-semibold tabular-nums">
-                              {age ? `${age} ans` : "Age ?"}
+                              {age ? i18n.t("{0} ans", { "0": age }) : i18n.t("Age ?")}
                             </span>
                             {profile?.is_minor ? (
-                              <StatusPill tone="warning">Mineur</StatusPill>
+                              <StatusPill tone="warning">{i18n.t("Mineur")}</StatusPill>
                             ) : null}
-                            <span className="text-xs">{row.main_position ?? "Poste ?"}</span>
+                            <span className="text-xs">{row.main_position ? i18n.labels.position(row.main_position) : i18n.t("Poste ?")}</span>
                           </div>
                           <span className="mt-0.5 block truncate text-[0.6875rem] text-muted-foreground">
                             {row.current_club ??
-                              (row.is_free_agent ? "Agent libre" : "Club non renseigne")}
-                            {row.level ? ` · ${label(PLAYER_LEVEL, row.level)}` : ""}
+                              (row.is_free_agent ? i18n.t("Agent libre") : i18n.t("Club non renseigne"))}
+                            {row.level ? ` · ${i18n.labels.label(PLAYER_LEVEL, row.level)}` : ""}
                           </span>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1.5">
                             {kyc ? (
-                              <StatusPill tone={entry(IDENTITY_STATUS, kyc.status).tone}>
-                                {label(IDENTITY_STATUS, kyc.status)}
+                              <StatusPill tone={i18n.labels.entry(IDENTITY_STATUS, kyc.status).tone}>
+                                {i18n.labels.label(IDENTITY_STATUS, kyc.status)}
                               </StatusPill>
                             ) : (
-                              <StatusPill tone="neutral">Aucune piece</StatusPill>
+                              <StatusPill tone="neutral">{i18n.t("Aucune piece")}</StatusPill>
                             )}
                             {kyc?.storage_path ? (
                               <DocumentPreviewDialog
-                                url={`/admin/documents?bucket=identity-documents&path=${encodeURIComponent(kyc.storage_path)}`}
-                                label="Piece d'identite"
+                                url={i18n.path(`/admin/documents?bucket=identity-documents&path=${encodeURIComponent(kyc.storage_path)}`)}
+                                label={i18n.t("Piece d'identite")}
                                 compact
                               />
                             ) : null}
@@ -577,24 +573,23 @@ async function PlayersQueue({
                               />
                             </span>
                             <span className="text-[0.625rem] font-bold text-brand tabular-nums">
-                              {Math.round(ratio * 100)} % complet
-                            </span>
+                              {Math.round(ratio * 100)}  {i18n.t("% complet")}</span>
                           </div>
                         </TableCell>
                         <TableCell>
                           <span className="block text-xs tabular-nums">
-                            {formatDateTime(row.updated_at)}
+                            {i18n.format.formatDateTime(row.updated_at)}
                           </span>
                           <span className="text-[0.6875rem] text-muted-foreground">
-                            {timeAgo(row.updated_at)}
+                            {i18n.format.timeAgo(row.updated_at)}
                           </span>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center justify-end gap-1.5">
                             <Link
                               href={dossierHref(row.id)}
-                              aria-label="Inspecter le dossier"
-                              title="Inspecter le dossier"
+                              aria-label={i18n.t("Inspecter le dossier")}
+                              title={i18n.t("Inspecter le dossier")}
                               className="inline-flex size-7 items-center justify-center rounded-lg bg-accent text-foreground hover:bg-accent/70"
                             >
                               <EyeIcon className="size-4" />
@@ -603,24 +598,23 @@ async function PlayersQueue({
                               action={setPlayerStatus.bind(null, row.id, "valide", undefined)}
                             >
                               <CheckIcon />
-                              Valider
-                            </ActionButton>
+                              {i18n.t("Valider")}</ActionButton>
                             <ReasonDialog
                               action={setPlayerStatus.bind(null, row.id, "refuse")}
                               trigger={
                                 <button
                                   type="button"
-                                  aria-label="Rejeter ou demander un complement"
-                                  title="Rejeter ou demander un complement"
+                                  aria-label={i18n.t("Rejeter ou demander un complement")}
+                                  title={i18n.t("Rejeter ou demander un complement")}
                                   className="inline-flex size-7 items-center justify-center rounded-lg bg-destructive/20 text-destructive hover:bg-destructive/30"
                                 >
                                   <XIcon className="size-4" />
                                 </button>
                               }
-                              title="Refuser ce profil joueur"
-                              description="Le motif est enregistre sur le profil et sert d'explication au joueur."
-                              placeholder="Piece d'identite illisible, informations incoherentes…"
-                              submitLabel="Refuser le profil"
+                              title={i18n.t("Refuser ce profil joueur")}
+                              description={i18n.t("Le motif est enregistre sur le profil et sert d'explication au joueur.")}
+                              placeholder={i18n.t("Piece d'identite illisible, informations incoherentes…")}
+                              submitLabel={i18n.t("Refuser le profil")}
                             />
                           </div>
                         </TableCell>
@@ -632,7 +626,7 @@ async function PlayersQueue({
             )}
           </QueueBulkForm>
           <Pagination
-            basePath="/admin/validations"
+            basePath={i18n.path("/admin/validations")}
             params={{ vue: "joueurs", q: search, page: String(page) }}
             page={page}
             pageSize={PAGE_SIZE}
@@ -644,11 +638,11 @@ async function PlayersQueue({
       {active ? (
         <div className="flex flex-col gap-4 xl:col-span-4">
           <DossierRail
-            reference={`Dossier actif · ${active.id.slice(0, 8)}`}
-            title={`Inspection ${activeName}`}
+            reference={i18n.t("Dossier actif · {0}", { "0": active.id.slice(0, 8) })}
+            title={i18n.t("Inspection {0}", { "0": activeName })}
             status={
               <StatusPill tone={activeKyc?.status === "valide" ? "success" : "warning"}>
-                {activeKyc?.status === "valide" ? "Pret pour validation" : "Piece a controler"}
+                {activeKyc?.status === "valide" ? i18n.t("Pret pour validation") : i18n.t("Piece a controler")}
               </StatusPill>
             }
             actions={
@@ -656,45 +650,44 @@ async function PlayersQueue({
                 approve={setPlayerStatus.bind(null, active.id, "valide", undefined)}
                 requestChanges={setPlayerStatus.bind(null, active.id, "incomplet")}
                 reject={setPlayerStatus.bind(null, active.id, "refuse")}
-                approveLabel="Approuver et notifier le joueur"
+                approveLabel={i18n.t("Approuver et notifier le joueur")}
               />
             }
-            footnote="Des que le profil passe en « valide », l'application laisse entrer le joueur, et son profil devient visible des recruteurs si sa visibilite est activee. Accepter la piece d'identite ne suffit pas : ce sont deux gestes distincts."
+            footnote={i18n.t("Des que le profil passe en « valide », l'application laisse entrer le joueur, et son profil devient visible des recruteurs si sa visibilite est activee. Accepter la piece d'identite ne suffit pas : ce sont deux gestes distincts.")}
           >
             {/* Apercu de la piece : URL signee cinq minutes par
                 /admin/documents, jamais l'objet de stockage en clair. */}
             {activeKyc?.storage_path ? (
               <DocumentFrame
-                url={`/admin/documents?bucket=identity-documents&path=${encodeURIComponent(activeKyc.storage_path)}`}
-                label={`Piece d'identite — ${activeKyc.document_type.toUpperCase()}`}
+                url={i18n.path(`/admin/documents?bucket=identity-documents&path=${encodeURIComponent(activeKyc.storage_path)}`)}
+                label={i18n.t("Piece d'identite — {0}", { "0": activeKyc.document_type.toUpperCase() })}
                 hint={activeKyc.facial_check_provider ?? undefined}
                 className="[&>iframe]:h-44"
               />
             ) : (
               <p className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
-                Aucune piece d&apos;identite deposee pour ce compte.
-              </p>
+                {i18n.t("Aucune piece d'identite deposee pour ce compte.")}</p>
             )}
 
             {/* Attributs lus en base, et eux seuls : ni numero de CIN ni date
                 d'expiration, que le schema ne stocke pas. */}
             <div className="grid grid-cols-2 gap-3 rounded-lg bg-secondary/50 p-3">
               <Attribute
-                label="Type de piece"
+                label={i18n.t("Type de piece")}
                 value={activeKyc ? activeKyc.document_type.toUpperCase() : "—"}
               />
               <Attribute
-                label="Date de naissance"
+                label={i18n.t("Date de naissance")}
                 value={
                   active.birth_date
-                    ? `${formatDate(active.birth_date)}${ageFromBirthDate(active.birth_date) ? ` (${ageFromBirthDate(active.birth_date)} ans)` : ""}`
+                    ? `${i18n.format.formatDate(active.birth_date)}${ageFromBirthDate(active.birth_date) ? i18n.t(" ({0} ans)", { "0": ageFromBirthDate(active.birth_date) }) : ""}`
                     : "—"
                 }
               />
-              <Attribute label="Nationalite" value={active.nationality ?? "—"} />
+              <Attribute label={i18n.t("Nationalite")} value={active.nationality ?? "—"} />
               <Attribute
-                label="Club affilie"
-                value={active.current_club ?? (active.is_free_agent ? "Agent libre" : "—")}
+                label={i18n.t("Club affilie")}
+                value={active.current_club ?? (active.is_free_agent ? i18n.t("Agent libre") : "—")}
                 tone="brand"
               />
             </div>
@@ -702,8 +695,8 @@ async function PlayersQueue({
             <ComplianceList
               items={[
                 {
-                  label: "Piece d'identite deposee",
-                  verdict: activeKyc ? label(IDENTITY_STATUS, activeKyc.status) : "Aucune",
+                  label: i18n.t("Piece d'identite deposee"),
+                  verdict: activeKyc ? i18n.labels.label(IDENTITY_STATUS, activeKyc.status) : i18n.t("Aucune"),
                   tone: activeKyc
                     ? activeKyc.status === "valide"
                       ? "success"
@@ -713,12 +706,12 @@ async function PlayersQueue({
                     : "neutral",
                 },
                 {
-                  label: "Consentement du representant legal",
+                  label: i18n.t("Consentement du representant legal"),
                   verdict: !activeProfile?.is_minor
-                    ? "Non requis"
+                    ? i18n.t("Non requis")
                     : activeGuardian?.consent_given
-                      ? "Recu"
-                      : "Manquant",
+                      ? i18n.t("Recu")
+                      : i18n.t("Manquant"),
                   tone: !activeProfile?.is_minor
                     ? "neutral"
                     : activeGuardian?.consent_given
@@ -726,21 +719,21 @@ async function PlayersQueue({
                       : "danger",
                 },
                 {
-                  label: "Historique de club",
-                  verdict: `${clubsByPlayer.get(active.id)?.length ?? 0} entree(s)`,
+                  label: i18n.t("Historique de club"),
+                  verdict: i18n.t("{0} entree(s)", { "0": clubsByPlayer.get(active.id)?.length ?? 0 }),
                   tone: (clubsByPlayer.get(active.id)?.length ?? 0) > 0 ? "success" : "neutral",
                 },
                 {
-                  label: "Medias deposes",
-                  verdict: `${videosByPlayer.get(active.id) ?? 0} video(s) · ${photosByPlayer.get(active.id) ?? 0} photo(s)`,
+                  label: i18n.t("Medias deposes"),
+                  verdict: i18n.t("{0} video(s) · {1} photo(s)", { "0": videosByPlayer.get(active.id) ?? 0, "1": photosByPlayer.get(active.id) ?? 0 }),
                   tone:
                     (videosByPlayer.get(active.id) ?? 0) + (photosByPlayer.get(active.id) ?? 0) > 0
                       ? "success"
                       : "neutral",
                 },
                 {
-                  label: "Profil visible dans la recherche",
-                  verdict: active.is_visible ? "Oui" : "Non",
+                  label: i18n.t("Profil visible dans la recherche"),
+                  verdict: active.is_visible ? i18n.t("Oui") : i18n.t("Non"),
                   tone: active.is_visible ? "success" : "neutral",
                 },
               ]}
@@ -797,6 +790,8 @@ async function ProfessionalsQueue({
   selected?: string;
   search?: string;
 }) {
+  const i18n = await getAdminI18n();
+
   const supabase = await createClient();
   let query = supabase
     .from("professional_profiles")
@@ -839,32 +834,32 @@ async function ProfessionalsQueue({
   const activeProfile = active ? profiles.get(active.id) : undefined;
   const activeDocs = active ? (docsByPro.get(active.id) ?? []) : [];
   const dossierHref = (id: string) =>
-    `/admin/validations?vue=professionnels&page=${page}${search ? `&q=${encodeURIComponent(search)}` : ""}&dossier=${id}`;
+    i18n.path(`/admin/validations?vue=professionnels&page=${page}${search ? `&q=${encodeURIComponent(search)}` : ""}&dossier=${id}`);
 
   return (
     <div className="grid items-start gap-4 xl:grid-cols-12">
       <Panel className="xl:col-span-8">
         <PanelHeader
           icon={ShieldCheckIcon}
-          title="Comptes professionnels en attente"
-          description="Verifier les justificatifs avant de valider : un compte valide accede a la base joueurs. Ouvrir une ligne charge son dossier a droite."
+          title={i18n.t("Comptes professionnels en attente")}
+          description={i18n.t("Verifier les justificatifs avant de valider : un compte valide accede a la base joueurs. Ouvrir une ligne charge son dossier a droite.")}
         />
         {error ? <QueueError message={error.message} /> : null}
         {!rows.length && !error ? (
           <EmptyState
             icon={ShieldCheckIcon}
-            title="Aucun compte professionnel en attente"
-            description="Les dossiers arrivent ici apres l'upload des justificatifs professionnels."
+            title={i18n.t("Aucun compte professionnel en attente")}
+            description={i18n.t("Les dossiers arrivent ici apres l'upload des justificatifs professionnels.")}
           />
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Contact</TableHead>
-                <TableHead>Type / organisation</TableHead>
-                <TableHead>Justificatifs</TableHead>
-                <TableHead>Depose</TableHead>
-                <TableHead className="text-right">Decision rapide</TableHead>
+                <TableHead>{i18n.t("Contact")}</TableHead>
+                <TableHead>{i18n.t("Type / organisation")}</TableHead>
+                <TableHead>{i18n.t("Justificatifs")}</TableHead>
+                <TableHead>{i18n.t("Depose")}</TableHead>
+                <TableHead className="text-right">{i18n.t("Decision rapide")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -877,7 +872,7 @@ async function ProfessionalsQueue({
                   <TableRow key={row.id} className={isActive ? "row-flagged" : undefined}>
                     <TableCell>
                       <UserCell
-                        name={displayName(profile, [row.contact_full_name])}
+                        name={displayName(profile, [row.contact_full_name], i18n.locale)}
                         secondary={profile?.email}
                         avatarUrl={profile?.avatar_url}
                         href={dossierHref(row.id)}
@@ -885,10 +880,10 @@ async function ProfessionalsQueue({
                     </TableCell>
                     <TableCell>
                       <StatusPill tone="info">
-                        {label(PROFESSIONAL_TYPE, row.professional_type)}
+                        {i18n.labels.label(PROFESSIONAL_TYPE, row.professional_type)}
                       </StatusPill>
                       <span className="mt-1 block max-w-48 truncate text-xs text-muted-foreground">
-                        {row.organization_name ?? "Organisation non renseignee"}
+                        {row.organization_name ?? i18n.t("Organisation non renseignee")}
                         {[row.city, row.country].filter(Boolean).length
                           ? ` · ${[row.city, row.country].filter(Boolean).join(", ")}`
                           : ""}
@@ -900,17 +895,17 @@ async function ProfessionalsQueue({
                           {docs.map((document) => (
                             <DocumentPreviewDialog
                               key={document.id}
-                              url={`/admin/documents?bucket=professional-documents&path=${encodeURIComponent(document.storage_path)}`}
+                              url={i18n.path(`/admin/documents?bucket=professional-documents&path=${encodeURIComponent(document.storage_path)}`)}
                               label={document.document_label}
                             />
                           ))}
                         </div>
                       ) : (
-                        <StatusPill tone="warning">Aucun document</StatusPill>
+                        <StatusPill tone="warning">{i18n.t("Aucun document")}</StatusPill>
                       )}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {timeAgo(row.updated_at)}
+                      {i18n.format.timeAgo(row.updated_at)}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center justify-end gap-2">
@@ -918,19 +913,18 @@ async function ProfessionalsQueue({
                           action={setProfessionalStatus.bind(null, row.id, "valide", undefined)}
                         >
                           <CheckIcon />
-                          Valider
-                        </ActionButton>
+                          {i18n.t("Valider")}</ActionButton>
                         <ReasonDialog
                           action={setProfessionalStatus.bind(null, row.id, "refuse")}
                           trigger={
-                            <Button variant="ghost" size="icon-sm" aria-label="Refuser ce compte">
+                            <Button variant="ghost" size="icon-sm" aria-label={i18n.t("Refuser ce compte")}>
                               <XIcon className="text-destructive" />
                             </Button>
                           }
-                          title="Refuser ce compte professionnel"
-                          description="Le motif est enregistre sur le compte et transmis au professionnel."
-                          placeholder="Justificatif non conforme, structure non identifiee…"
-                          submitLabel="Refuser le compte"
+                          title={i18n.t("Refuser ce compte professionnel")}
+                          description={i18n.t("Le motif est enregistre sur le compte et transmis au professionnel.")}
+                          placeholder={i18n.t("Justificatif non conforme, structure non identifiee…")}
+                          submitLabel={i18n.t("Refuser le compte")}
                         />
                       </div>
                     </TableCell>
@@ -941,7 +935,7 @@ async function ProfessionalsQueue({
           </Table>
         )}
         <Pagination
-          basePath="/admin/validations"
+          basePath={i18n.path("/admin/validations")}
           params={{ vue: "professionnels", q: search, page: String(page) }}
           page={page}
           pageSize={PAGE_SIZE}
@@ -952,13 +946,13 @@ async function ProfessionalsQueue({
       {active ? (
         <DossierRail
           className="xl:col-span-4"
-          reference={`Dossier actif · ${active.id.slice(0, 8)}`}
-          title={active.organization_name ?? displayName(activeProfile, [active.contact_full_name])}
+          reference={i18n.t("Dossier actif · {0}", { "0": active.id.slice(0, 8) })}
+          title={active.organization_name ?? displayName(activeProfile, [active.contact_full_name], i18n.locale)}
           status={
             <StatusPill tone={activeDocs.length ? "warning" : "danger"}>
               {activeDocs.length
-                ? `${activeDocs.length} piece(s) a examiner`
-                : "Aucune piece deposee"}
+                ? i18n.t("{0} piece(s) a examiner", { "0": activeDocs.length })
+                : i18n.t("Aucune piece deposee")}
             </StatusPill>
           }
           actions={
@@ -968,21 +962,19 @@ async function ProfessionalsQueue({
                 action={setProfessionalStatus.bind(null, active.id, "valide", undefined)}
               >
                 <CheckIcon />
-                Valider et notifier le compte
-              </ActionButton>
+                {i18n.t("Valider et notifier le compte")}</ActionButton>
               <div className="grid grid-cols-2 gap-2">
                 <ReasonDialog
                   action={setProfessionalStatus.bind(null, active.id, "incomplet")}
                   trigger={
                     <Button variant="outline" size="xs" className="w-full">
                       <MessageSquareWarningIcon />
-                      Demander une piece
-                    </Button>
+                      {i18n.t("Demander une piece")}</Button>
                   }
-                  title="Demander des modifications"
-                  description="Le compte repasse au statut incomplet et le professionnel recoit le motif a corriger."
-                  placeholder="Justificatif ou information a corriger..."
-                  submitLabel="Envoyer la demande"
+                  title={i18n.t("Demander des modifications")}
+                  description={i18n.t("Le compte repasse au statut incomplet et le professionnel recoit le motif a corriger.")}
+                  placeholder={i18n.t("Justificatif ou information a corriger...")}
+                  submitLabel={i18n.t("Envoyer la demande")}
                   destructive={false}
                 />
                 <ReasonDialog
@@ -990,41 +982,40 @@ async function ProfessionalsQueue({
                   trigger={
                     <Button variant="destructive" size="xs" className="w-full">
                       <XIcon />
-                      Rejeter le compte
-                    </Button>
+                      {i18n.t("Rejeter le compte")}</Button>
                   }
-                  title="Refuser ce compte professionnel"
-                  description="Le motif est enregistre sur le compte et transmis au professionnel."
-                  placeholder="Justificatif non conforme, structure non identifiee…"
-                  submitLabel="Refuser le compte"
+                  title={i18n.t("Refuser ce compte professionnel")}
+                  description={i18n.t("Le motif est enregistre sur le compte et transmis au professionnel.")}
+                  placeholder={i18n.t("Justificatif non conforme, structure non identifiee…")}
+                  submitLabel={i18n.t("Refuser le compte")}
                 />
               </div>
             </>
           }
-          footnote="Un compte professionnel valide accede a la base joueurs et peut ouvrir un Scout Day. Valider la structure et valider ses pieces sont deux gestes distincts : le statut du compte est celui que lit l'application."
+          footnote={i18n.t("Un compte professionnel valide accede a la base joueurs et peut ouvrir un Scout Day. Valider la structure et valider ses pieces sont deux gestes distincts : le statut du compte est celui que lit l'application.")}
         >
           <ComplianceList
             items={[
               {
-                label: "Justificatifs deposes",
-                verdict: `${activeDocs.length} piece(s)`,
+                label: i18n.t("Justificatifs deposes"),
+                verdict: i18n.t("{0} piece(s)", { "0": activeDocs.length }),
                 tone: activeDocs.length ? "success" : "danger",
               },
               {
-                label: "Piece refusee au dossier",
+                label: i18n.t("Piece refusee au dossier"),
                 verdict: activeDocs.some((doc) => doc.status === "refuse")
-                  ? "Oui — a reexaminer"
-                  : "Aucune",
+                  ? i18n.t("Oui — a reexaminer")
+                  : i18n.t("Aucune"),
                 tone: activeDocs.some((doc) => doc.status === "refuse") ? "danger" : "success",
               },
               {
-                label: "Organisation renseignee",
-                verdict: active.organization_name ? "Oui" : "Manquante",
+                label: i18n.t("Organisation renseignee"),
+                verdict: active.organization_name ? i18n.t("Oui") : i18n.t("Manquante"),
                 tone: active.organization_name ? "success" : "warning",
               },
               {
-                label: "Localisation",
-                verdict: [active.city, active.country].filter(Boolean).join(", ") || "Non renseignee",
+                label: i18n.t("Localisation"),
+                verdict: [active.city, active.country].filter(Boolean).join(", ") || i18n.t("Non renseignee"),
                 tone: active.city || active.country ? "success" : "neutral",
               },
             ]}
@@ -1044,6 +1035,8 @@ async function ProfessionalsQueue({
 /* ------------------------------------------------------------ justificatifs */
 
 async function DocumentsQueue({ page }: { page: number }) {
+  const i18n = await getAdminI18n();
+
   const supabase = await createClient();
   const { data, error, count } = await supabase
     .from("professional_documents")
@@ -1078,25 +1071,25 @@ async function DocumentsQueue({ page }: { page: number }) {
   return (
     <Panel>
       <PanelHeader
-        title="Justificatifs professionnels a examiner"
-        description="Statut par piece. Un compte peut rester en attente tant qu'une piece n'est pas tranchee."
+        title={i18n.t("Justificatifs professionnels a examiner")}
+        description={i18n.t("Statut par piece. Un compte peut rester en attente tant qu'une piece n'est pas tranchee.")}
       />
       {error ? <QueueError message={error.message} /> : null}
       {!rows.length && !error ? (
         <EmptyState
           icon={FileTextIcon}
-          title="Aucun justificatif en attente"
-          description="Toutes les pieces deposees ont ete examinees."
+          title={i18n.t("Aucun justificatif en attente")}
+          description={i18n.t("Toutes les pieces deposees ont ete examinees.")}
         />
       ) : (
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Compte</TableHead>
-              <TableHead>Piece</TableHead>
-              <TableHead>Statut</TableHead>
-              <TableHead>Depose</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead>{i18n.t("Compte")}</TableHead>
+              <TableHead>{i18n.t("Piece")}</TableHead>
+              <TableHead>{i18n.t("Statut")}</TableHead>
+              <TableHead>{i18n.t("Depose")}</TableHead>
+              <TableHead className="text-right">{i18n.t("Actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -1106,30 +1099,30 @@ async function DocumentsQueue({ page }: { page: number }) {
                 <TableRow key={row.id}>
                   <TableCell>
                     <UserCell
-                      name={displayName(profile)}
+                      name={displayName(profile, undefined, i18n.locale)}
                       secondary={profile?.email}
                       avatarUrl={profile?.avatar_url}
-                      href={`/admin/utilisateurs/${row.professional_id}`}
+                      href={i18n.path(`/admin/utilisateurs/${row.professional_id}`)}
                     />
                   </TableCell>
                   <TableCell>
                     <DocumentPreviewDialog
-                      url={`/admin/documents?bucket=professional-documents&path=${encodeURIComponent(row.storage_path)}`}
+                      url={i18n.path(`/admin/documents?bucket=professional-documents&path=${encodeURIComponent(row.storage_path)}`)}
                       label={row.document_label}
                     />
                   </TableCell>
                   <TableCell>
-                    <StatusPill tone={entry(DOCUMENT_STATUS, row.status).tone}>
-                      {label(DOCUMENT_STATUS, row.status)}
+                    <StatusPill tone={i18n.labels.entry(DOCUMENT_STATUS, row.status).tone}>
+                      {i18n.labels.label(DOCUMENT_STATUS, row.status)}
                     </StatusPill>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">{timeAgo(row.created_at)}</TableCell>
+                  <TableCell className="text-muted-foreground">{i18n.format.timeAgo(row.created_at)}</TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-2">
                       <DetailDialog
-                        label="Dossier"
-                        title={`Justificatif — ${row.document_label}`}
-                        description="La piece, le compte qui l'a deposee, et les autres pieces du meme dossier."
+                        label={i18n.t("Dossier")}
+                        title={i18n.t("Justificatif — {0}", { "0": row.document_label })}
+                        description={i18n.t("La piece, le compte qui l'a deposee, et les autres pieces du meme dossier.")}
                       >
                         <DocumentDossier
                           document={row as ProDocumentRow}
@@ -1140,15 +1133,13 @@ async function DocumentsQueue({ page }: { page: number }) {
                       </DetailDialog>
                       <ActionButton action={setDocumentStatus.bind(null, row.id, "valide")}>
                         <CheckIcon />
-                        Valider
-                      </ActionButton>
+                        {i18n.t("Valider")}</ActionButton>
                       <ActionButton
                         variant="destructive"
                         action={setDocumentStatus.bind(null, row.id, "refuse")}
                       >
                         <XIcon />
-                        Refuser
-                      </ActionButton>
+                        {i18n.t("Refuser")}</ActionButton>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -1157,7 +1148,7 @@ async function DocumentsQueue({ page }: { page: number }) {
           </TableBody>
         </Table>
       )}
-      <Pagination basePath="/admin/validations" params={{ vue: "justificatifs", page: String(page) }} page={page} pageSize={PAGE_SIZE} total={count ?? 0} />
+      <Pagination basePath={i18n.path("/admin/validations")} params={{ vue: "justificatifs", page: String(page) }} page={page} pageSize={PAGE_SIZE} total={count ?? 0} />
     </Panel>
   );
 }
@@ -1165,6 +1156,8 @@ async function DocumentsQueue({ page }: { page: number }) {
 /* ----------------------------------------------------------------- identite */
 
 async function IdentityQueue({ page }: { page: number }) {
+  const i18n = await getAdminI18n();
+
   const supabase = await createClient();
   const { data, error, count } = await supabase
     .from("identity_verifications")
@@ -1209,25 +1202,25 @@ async function IdentityQueue({ page }: { page: number }) {
   return (
     <Panel>
       <PanelHeader
-        title="Pieces d'identite a examiner"
-        description="Attention : cette file porte sur la revue des pieces d'identite, distincte du statut du profil joueur. Valider ici ne valide pas le compte — il faut aussi valider le profil dans la file « Profils joueurs »."
+        title={i18n.t("Pieces d'identite a examiner")}
+        description={i18n.t("Attention : cette file porte sur la revue des pieces d'identite, distincte du statut du profil joueur. Valider ici ne valide pas le compte — il faut aussi valider le profil dans la file « Profils joueurs ».")}
       />
       {error ? <QueueError message={error.message} /> : null}
       {!rows.length && !error ? (
         <EmptyState
           icon={ShieldCheckIcon}
-          title="Aucune piece d'identite en attente"
-          description="Les dossiers KYC deposes depuis l'application arriveront ici."
+          title={i18n.t("Aucune piece d'identite en attente")}
+          description={i18n.t("Les dossiers KYC deposes depuis l'application arriveront ici.")}
         />
       ) : (
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Joueur</TableHead>
-              <TableHead>Type de piece</TableHead>
-              <TableHead>Controle facial</TableHead>
-              <TableHead>Depose</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead>{i18n.t("Joueur")}</TableHead>
+              <TableHead>{i18n.t("Type de piece")}</TableHead>
+              <TableHead>{i18n.t("Controle facial")}</TableHead>
+              <TableHead>{i18n.t("Depose")}</TableHead>
+              <TableHead className="text-right">{i18n.t("Actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -1237,36 +1230,36 @@ async function IdentityQueue({ page }: { page: number }) {
                 <TableRow key={row.id}>
                   <TableCell>
                     <UserCell
-                      name={displayName(profile)}
+                      name={displayName(profile, undefined, i18n.locale)}
                       secondary={profile?.email}
                       avatarUrl={profile?.avatar_url}
-                      href={`/admin/utilisateurs/${row.player_id}`}
+                      href={i18n.path(`/admin/utilisateurs/${row.player_id}`)}
                     />
                   </TableCell>
                   <TableCell>
                     <DocumentPreviewDialog
-                      url={`/admin/documents?bucket=identity-documents&path=${encodeURIComponent(row.storage_path)}`}
+                      url={i18n.path(`/admin/documents?bucket=identity-documents&path=${encodeURIComponent(row.storage_path)}`)}
                       label={row.document_type.toUpperCase()}
                     />
                   </TableCell>
                   <TableCell>
                     {row.facial_check_provider ? (
                       <StatusPill tone={row.facial_check_passed ? "success" : "danger"}>
-                        {row.facial_check_passed ? "Reussi" : "Echoue"}
+                        {row.facial_check_passed ? i18n.t("Reussi") : i18n.t("Echoue")}
                       </StatusPill>
                     ) : (
-                      <span className="text-xs text-muted-foreground">Non realise</span>
+                      <span className="text-xs text-muted-foreground">{i18n.t("Non realise")}</span>
                     )}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {formatDateTime(row.created_at)}
+                    {i18n.format.formatDateTime(row.created_at)}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-2">
                       <DetailDialog
-                        label="Dossier"
-                        title={`Piece d'identite — ${displayName(profile)}`}
-                        description="Le document et les informations declarees avec lesquelles il doit concorder."
+                        label={i18n.t("Dossier")}
+                        title={i18n.t("Piece d'identite — {0}", { "0": displayName(profile, undefined, i18n.locale) })}
+                        description={i18n.t("Le document et les informations declarees avec lesquelles il doit concorder.")}
                       >
                         <IdentityDossier
                           identity={row as IdentityRow}
@@ -1277,20 +1270,18 @@ async function IdentityQueue({ page }: { page: number }) {
                       </DetailDialog>
                       <ActionButton action={setIdentityStatus.bind(null, row.id, "valide", undefined)}>
                         <CheckIcon />
-                        Valider la piece
-                      </ActionButton>
+                        {i18n.t("Valider la piece")}</ActionButton>
                       <ReasonDialog
                         action={setIdentityStatus.bind(null, row.id, "refuse")}
                         trigger={
                           <Button variant="destructive" size="xs">
                             <XIcon />
-                            Refuser
-                          </Button>
+                            {i18n.t("Refuser")}</Button>
                         }
-                        title="Refuser cette piece d'identite"
-                        description="Le motif est enregistre dans identity_verifications.rejection_reason."
-                        placeholder="Document expire, photo floue…"
-                        submitLabel="Refuser la piece"
+                        title={i18n.t("Refuser cette piece d'identite")}
+                        description={i18n.t("Le motif est enregistre dans identity_verifications.rejection_reason.")}
+                        placeholder={i18n.t("Document expire, photo floue…")}
+                        submitLabel={i18n.t("Refuser la piece")}
                       />
                     </div>
                   </TableCell>
@@ -1300,15 +1291,17 @@ async function IdentityQueue({ page }: { page: number }) {
           </TableBody>
         </Table>
       )}
-      <Pagination basePath="/admin/validations" params={{ vue: "identite", page: String(page) }} page={page} pageSize={PAGE_SIZE} total={count ?? 0} />
+      <Pagination basePath={i18n.path("/admin/validations")} params={{ vue: "identite", page: String(page) }} page={page} pageSize={PAGE_SIZE} total={count ?? 0} />
     </Panel>
   );
 }
 
-function QueueError({ message }: { message: string }) {
+async function QueueError({ message }: { message: string }) {
+  const i18n = await getAdminI18n();
+
   return (
     <p className="border-b border-destructive/30 bg-destructive/10 px-4 py-3 text-xs text-destructive sm:px-5">
-      Lecture impossible : {message}
+      {i18n.t("Lecture impossible :")} {message}
     </p>
   );
 }

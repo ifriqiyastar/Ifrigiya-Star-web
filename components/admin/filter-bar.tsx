@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useAdminI18n, useAdminTranslations } from "@/lib/i18n/admin-client";
 import { cn } from "@/lib/utils";
 
 export type FilterDef = {
@@ -33,7 +34,7 @@ export function FilterBar({
   params,
   filters = [],
   searchName = "q",
-  searchPlaceholder = "Rechercher un nom, un email…",
+  searchPlaceholder,
   className,
 }: {
   basePath: string;
@@ -44,6 +45,8 @@ export function FilterBar({
   className?: string;
 }) {
   const router = useRouter();
+  const { dict } = useAdminI18n();
+  const i18n = useAdminTranslations();
   const [search, setSearch] = React.useState(params[searchName] ?? "");
 
   const buildUrl = React.useCallback(
@@ -85,13 +88,13 @@ export function FilterBar({
           <Input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder={searchPlaceholder}
+            placeholder={searchPlaceholder ?? dict.common.searchPlaceholder}
             className="pl-6"
-            aria-label="Rechercher"
+            aria-label={dict.common.search}
           />
         </div>
         <Button type="submit" size="sm" variant="secondary">
-          Filtrer
+          {dict.common.filter}
         </Button>
       </form>
 
@@ -102,7 +105,7 @@ export function FilterBar({
               {filter.label}
             </span>
             <Select
-              items={[{ value: "__all", label: "Tous" }, ...filter.options]}
+              items={[{ value: "__all", label: i18n.t("Tous") }, ...filter.options]}
               value={params[filter.name] ?? "__all"}
               onValueChange={(value) =>
                 router.push(buildUrl({ [filter.name]: value === "__all" ? null : String(value) }))
@@ -118,7 +121,7 @@ export function FilterBar({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__all">Tous</SelectItem>
+                <SelectItem value="__all">{dict.common.all}</SelectItem>
                 {filter.options.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
@@ -139,7 +142,7 @@ export function FilterBar({
             }}
           >
             <XIcon />
-            Reinitialiser
+            {dict.common.reset}
           </Button>
         ) : null}
       </div>

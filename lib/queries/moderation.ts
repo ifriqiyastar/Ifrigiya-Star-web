@@ -1,3 +1,4 @@
+import type { AdminTranslations } from "@/lib/i18n/admin-shared";
 import { ACCOUNT_TARGETS } from "@/lib/moderation-targets";
 import { createClient } from "@/lib/supabase/server";
 import { publicStorageUrl } from "@/lib/supabase/config";
@@ -104,6 +105,7 @@ const excerptOf = (value: string | null | undefined) => {
  */
 export async function fetchReportTargets(
   rows: { target_type: string; target_id: string }[],
+  i18n: AdminTranslations,
 ): Promise<Map<string, ReportTarget>> {
   const targets = new Map<string, ReportTarget>();
   if (!rows.length) return targets;
@@ -155,7 +157,10 @@ export async function fetchReportTargets(
   ]);
 
   const flags = (row: { is_hidden?: boolean; is_deleted?: boolean }): string[] =>
-    [row.is_hidden ? "Masque" : null, row.is_deleted ? "Supprime" : null].filter(
+    [
+      row.is_hidden ? i18n.t("Masque") : null,
+      row.is_deleted ? i18n.t("Supprime") : null,
+    ].filter(
       (value): value is string => Boolean(value),
     );
 
@@ -169,7 +174,7 @@ export async function fetchReportTargets(
 
     targets.set(`publication:${row.id}`, {
       excerpt: excerptOf(row.content),
-      placeholder: "Publication sans texte ni media.",
+      placeholder: i18n.t("Publication sans texte ni media."),
       mediaUrl: row.media_type === "aucun" ? null : mediaUrl,
       mediaType: row.media_type === "photo" ? "photo" : row.media_type === "video" ? "video" : null,
       authorId: row.author_id,
@@ -182,7 +187,7 @@ export async function fetchReportTargets(
   for (const row of comments.data ?? []) {
     targets.set(`commentaire:${row.id}`, {
       excerpt: excerptOf(row.content),
-      placeholder: "Commentaire vide.",
+      placeholder: i18n.t("Commentaire vide."),
       mediaUrl: null,
       mediaType: null,
       authorId: row.author_id,
@@ -195,7 +200,7 @@ export async function fetchReportTargets(
   for (const row of videos.data ?? []) {
     targets.set(`video:${row.id}`, {
       excerpt: excerptOf(row.title),
-      placeholder: "Video sans titre.",
+      placeholder: i18n.t("Video sans titre."),
       // Une video YouTube ne se lit pas dans une balise `<video>` : on la
       // presente en lien plutot que d'afficher un lecteur muet.
       mediaUrl: row.youtube_url ?? publicStorageUrl("player-videos", row.storage_path),
@@ -203,34 +208,35 @@ export async function fetchReportTargets(
       authorId: row.player_id,
       createdAt: row.created_at,
       state: [],
-      href: `/admin/utilisateurs/${row.player_id}`,
+      href: i18n.path(`/admin/utilisateurs/${row.player_id}`),
     });
   }
 
   for (const row of scoutDays.data ?? []) {
     targets.set(`scout_day:${row.id}`, {
       excerpt: excerptOf(row.title),
-      placeholder: "Evenement sans titre.",
+      placeholder: i18n.t("Evenement sans titre."),
       mediaUrl: null,
       mediaType: null,
       authorId: row.organizer_id,
       createdAt: row.event_date,
-      state: row.status === "annule" ? ["Annule"] : [],
-      href: `/admin/scout-days/${row.id}`,
+      state: row.status === "annule" ? [i18n.t("Annule")] : [],
+      href: i18n.path(`/admin/scout-days/${row.id}`),
     });
   }
 
   for (const row of messages.data ?? []) {
     targets.set(`message:${row.id}`, {
       excerpt: null,
-      placeholder:
+      placeholder: i18n.t(
         "Le contenu des messages prives n'est pas consultable depuis le back-office. Le motif du signalement est la seule piece du dossier ; la mesure disponible porte sur le compte de l'expediteur.",
+      ),
       mediaUrl: null,
       mediaType: null,
       authorId: row.sender_id,
       createdAt: row.created_at,
-      state: row.is_deleted ? ["Supprime par son auteur"] : [],
-      href: `/admin/utilisateurs/${row.sender_id}`,
+      state: row.is_deleted ? [i18n.t("Supprime par son auteur")] : [],
+      href: i18n.path(`/admin/utilisateurs/${row.sender_id}`),
     });
   }
 
@@ -239,13 +245,13 @@ export async function fetchReportTargets(
     for (const id of ids(type)) {
       targets.set(`${type}:${id}`, {
         excerpt: null,
-        placeholder: "Le signalement vise le compte lui-meme, pas un contenu.",
+        placeholder: i18n.t("Le signalement vise le compte lui-meme, pas un contenu."),
         mediaUrl: null,
         mediaType: null,
         authorId: id,
         createdAt: null,
         state: [],
-        href: `/admin/utilisateurs/${id}`,
+        href: i18n.path(`/admin/utilisateurs/${id}`),
       });
     }
   }

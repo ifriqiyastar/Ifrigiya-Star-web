@@ -1,3 +1,4 @@
+import { getAdminI18n } from "@/lib/i18n/admin";
 import { ExternalLinkIcon, FileSearchIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -14,7 +15,7 @@ import { cn } from "@/lib/utils";
  * ouverte — Base UI ne monte le contenu d'un dialogue qu'a l'ouverture — donc
  * une file de cent lignes ne signe pas cent URLs pour rien.
  */
-export function DocumentFrame({
+export async function DocumentFrame({
   url,
   label,
   hint,
@@ -25,6 +26,8 @@ export function DocumentFrame({
   hint?: string;
   className?: string;
 }) {
+  const i18n = await getAdminI18n();
+
   return (
     <figure className={cn("overflow-hidden rounded-xl border border-border", className)}>
       <figcaption className="flex flex-wrap items-center gap-2 border-b border-border bg-secondary/40 px-3 py-2">
@@ -38,8 +41,7 @@ export function DocumentFrame({
           rel="noreferrer"
           className="inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline"
         >
-          Ouvrir dans un onglet
-          <ExternalLinkIcon className="size-3" />
+          {i18n.t("Ouvrir dans un onglet")}<ExternalLinkIcon className="size-3" />
         </a>
       </figcaption>
       <iframe src={url} title={label} className="h-96 w-full bg-white" />
@@ -51,7 +53,7 @@ export function DocumentFrame({
  * Le meme bandeau, sans l'apercu : pour une piece absente ou pour une liste
  * ou dix `<iframe>` seraient illisibles.
  */
-export function DocumentLink({
+export async function DocumentLink({
   url,
   label,
   hint,
@@ -60,6 +62,8 @@ export function DocumentLink({
   label: string;
   hint?: React.ReactNode;
 }) {
+  const i18n = await getAdminI18n();
+
   return (
     <span className="flex flex-wrap items-center gap-2 rounded-lg border border-border px-3 py-2">
       <FileSearchIcon className="size-3.5 text-muted-foreground" />
@@ -73,11 +77,10 @@ export function DocumentLink({
           rel="noreferrer"
           className="inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline"
         >
-          Ouvrir
-          <ExternalLinkIcon className="size-3" />
+          {i18n.t("Ouvrir")}<ExternalLinkIcon className="size-3" />
         </a>
       ) : (
-        <span className="text-xs text-muted-foreground">Aucun fichier</span>
+        <span className="text-xs text-muted-foreground">{i18n.t("Aucun fichier")}</span>
       )}
     </span>
   );

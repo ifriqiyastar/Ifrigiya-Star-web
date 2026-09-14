@@ -19,6 +19,7 @@ export const DEFAULT_LOCALE: Locale = "fr";
  * reglage « Automatique » de l'ecran Langue mobile.
  */
 export const LOCALE_COOKIE = "ifriqiya-langue";
+export const ADMIN_LOCALE_HEADER = "x-ifriqiya-admin-locale";
 
 /** Un an : le choix de langue n'a aucune raison d'expirer plus tot. */
 export const LOCALE_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
@@ -68,6 +69,58 @@ export const LOCALE_TAG: Record<Locale, string> = {
   en: "en-GB",
   ar: "ar-TN",
 };
+
+/**
+ * Les langues du **back-office**, qui ne sont pas celles du site public.
+ *
+ * Le tableau de bord ne parle que francais et anglais. L'arabe reste servi sur
+ * le site public — c'est la langue d'une partie du public vise — mais il a ete
+ * retire de l'administration a la demande du client, et le retirer a moitie
+ * aurait ete pire que de le garder : un ecran d'administration en arabe
+ * signifie miroiter en RTL des tableaux a sept colonnes, des rails de dossier
+ * et des graphiques, puis maintenir cette traduction a chaque geste metier
+ * ajoute. Une seule liste ici, et le reste du code s'y conforme.
+ */
+export const ADMIN_LOCALES = ["fr", "en"] as const;
+
+export type AdminLocale = (typeof ADMIN_LOCALES)[number];
+
+export const DEFAULT_ADMIN_LOCALE: AdminLocale = "fr";
+
+export function isAdminLocale(value: string): value is AdminLocale {
+  return (ADMIN_LOCALES as readonly string[]).includes(value);
+}
+
+/**
+ * Ramene n'importe quelle langue du site a une langue du back-office.
+ *
+ * Concretement : l'arabe retombe sur le francais, la langue de reference du
+ * cahier des charges. Le repli est volontairement **silencieux** — quelqu'un
+ * qui lit le site en arabe et ouvre l'administration doit y entrer, pas se
+ * heurter a un message d'erreur.
+ */
+export function toAdminLocale(locale: Locale): AdminLocale {
+  return isAdminLocale(locale) ? locale : DEFAULT_ADMIN_LOCALE;
+}
+
+/**
+ * Vrai pour les chemins servis en francais/anglais uniquement : le
+ * back-office et l'ecran de connexion qui y mene. Le prefixe de langue est
+ * deja retire quand cette fonction est appelee depuis le proxy.
+ */
+export function isAdminPath(pathname: string): boolean {
+  return (
+    pathname === "/admin" ||
+    pathname.startsWith("/admin/") ||
+    // L'ecran de connexion est la porte du back-office et rien d'autre : le
+    // site public n'y renvoie nulle part, seules la deconnexion et la garde
+    // `requireAdmin()` y menent. Le laisser hors de la regle affichait une
+    // page arabe a qui venait de se faire deconnecter d'une administration
+    // qui, elle, ne parle que francais et anglais.
+    pathname === "/connexion" ||
+    pathname.startsWith("/connexion/")
+  );
+}
 
 export function isLocale(value: string): value is Locale {
   return (LOCALES as readonly string[]).includes(value);

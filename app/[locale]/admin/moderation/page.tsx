@@ -1,3 +1,4 @@
+import { getAdminI18n } from "@/lib/i18n/admin";
 import Link from "next/link";
 import type { Metadata } from "next";
 import {
@@ -54,21 +55,14 @@ import {
   setPostDeleted,
   setPostHidden,
 } from "@/lib/actions/moderation";
-import { formatDate, formatDateTime, timeAgo } from "@/lib/format";
+
 import {
   ACCOUNT_TARGETS,
   QUARANTINABLE,
   removalConfirmation,
   removalOptions,
 } from "@/lib/moderation-targets";
-import {
-  MODERATION_ACTION,
-  REPORTABLE_TYPE,
-  REPORT_STATUS,
-  entry,
-  label,
-  options,
-} from "@/lib/labels";
+import { MODERATION_ACTION, REPORTABLE_TYPE, REPORT_STATUS } from "@/lib/labels";
 import { fetchBlockSignals, fetchReportTargets } from "@/lib/queries/moderation";
 import { displayName, fetchProfilesByIds } from "@/lib/queries/profiles";
 import { createClient } from "@/lib/supabase/server";
@@ -76,13 +70,18 @@ import { getAdminAccess, requirePermission } from "@/lib/auth";
 import { privateStorageUrl, publicStorageUrl } from "@/lib/supabase/config";
 import { cn } from "@/lib/utils";
 
-export const metadata: Metadata = { title: "Moderation" };
+export async function generateMetadata(): Promise<Metadata> {
+  const i18n = await getAdminI18n();
+  return { title: i18n.t("Moderation") };
+}
 
 const VUES = ["signalements", "publications", "commentaires", "medias"] as const;
 type Vue = (typeof VUES)[number];
 const PAGE_SIZE = 20;
 
 export default async function ModerationPage({ searchParams }: PageProps<"/[locale]/admin/moderation">) {
+  const i18n = await getAdminI18n();
+
   const admin = await requirePermission("moderation.manage");
   // Valider un retrait est reserve au super administrateur (migration 0041) :
   // on cache le geste plutot que de laisser un moderateur decouvrir la regle
@@ -122,18 +121,17 @@ export default async function ModerationPage({ searchParams }: PageProps<"/[loca
   return (
     <>
       <PageHeader
-        breadcrumb={[{ label: "Moderation" }, { label: "Signalements et audit" }]}
-        title="Moderation & securite des contenus"
+        breadcrumb={[{ label: i18n.t("Moderation") }, { label: i18n.t("Signalements et audit") }]}
+        title={i18n.t("Moderation & securite des contenus")}
         meta={
           openReports > 0 ? (
             <HeaderMeta tone="danger" dot>
-              {openReports} signalement{openReports > 1 ? "s" : ""} a instruire
-            </HeaderMeta>
+              {openReports}  {i18n.t("signalement")}{openReports > 1 ? "s" : ""}  {i18n.t("a instruire")}</HeaderMeta>
           ) : (
-            <HeaderMeta>File vide</HeaderMeta>
+            <HeaderMeta>{i18n.t("File vide")}</HeaderMeta>
           )
         }
-        description="Signalements, publications contestees, commentaires et medias joueurs. Masquer retire le contenu du flux public sans l'effacer : l'administration continue de le voir, ce qui est necessaire pour instruire."
+        description={i18n.t("Signalements, publications contestees, commentaires et medias joueurs. Masquer retire le contenu du flux public sans l'effacer : l'administration continue de le voir, ce qui est necessaire pour instruire.")}
       />
 
       {/* Centre de filtrage : onglets et filtres dans un meme bloc, comme la
@@ -142,37 +140,37 @@ export default async function ModerationPage({ searchParams }: PageProps<"/[loca
       <section className="flex flex-col gap-3 rounded-xl border border-border bg-card p-2.5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <SegmentedNav
-            basePath="/admin/moderation"
+            basePath={i18n.path("/admin/moderation")}
             active={vue}
             params={params}
             className="rounded-lg bg-background p-1"
             segments={[
               {
                 value: "signalements",
-                label: "Signalements",
+                label: i18n.t("Signalements"),
                 count: openReports,
                 icon: FlagIcon,
               },
               {
                 value: "publications",
-                label: "Publications",
+                label: i18n.t("Publications"),
                 count: hiddenPosts.count ?? 0,
                 icon: FileTextIcon,
               },
               {
                 value: "commentaires",
-                label: "Commentaires",
+                label: i18n.t("Commentaires"),
                 count: hiddenComments.count ?? 0,
                 icon: MessageSquareIcon,
               },
-              { value: "medias", label: "Medias joueurs", icon: VideoIcon },
+              { value: "medias", label: i18n.t("Medias joueurs"), icon: VideoIcon },
             ]}
           />
           {/* Un seul utilitaire : l'export du registre. Pas de « parametres
               d'alerte automatique » — rien ne surveille les signalements en
               dehors de cet ecran. */}
           <Link
-            href={`/admin/moderation/export${
+            href={i18n.path(`/admin/moderation/export${
               params.statut || params.cible
                 ? `?${new URLSearchParams(
                     Object.entries({ statut: params.statut, cible: params.cible }).filter(
@@ -180,9 +178,9 @@ export default async function ModerationPage({ searchParams }: PageProps<"/[loca
                     ),
                   )}`
                 : ""
-            }`}
-            title="Exporter le registre des signalements"
-            aria-label="Exporter le registre des signalements"
+            }`)}
+            title={i18n.t("Exporter le registre des signalements")}
+            aria-label={i18n.t("Exporter le registre des signalements")}
             className="inline-flex size-8 items-center justify-center rounded-lg bg-accent text-muted-foreground hover:text-foreground"
           >
             <DownloadIcon className="size-4" />
@@ -197,26 +195,25 @@ export default async function ModerationPage({ searchParams }: PageProps<"/[loca
               <input
                 name="q"
                 defaultValue={params.q ?? ""}
-                placeholder="Rechercher par motif…"
+                placeholder={i18n.t("Rechercher par motif…")}
                 className="w-full bg-transparent text-xs outline-none placeholder:text-muted-foreground"
               />
               <kbd className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[0.625rem] text-muted-foreground">
-                Entree
-              </kbd>
+                {i18n.t("Entree")}</kbd>
             </div>
             <ModerationFilter
               name="statut"
-              label="Statut"
+              label={i18n.t("Statut")}
               value={params.statut}
-              all="Tous les statuts"
-              options={options(REPORT_STATUS)}
+              all={i18n.t("Tous les statuts")}
+              options={i18n.labels.options(REPORT_STATUS)}
             />
             <ModerationFilter
               name="cible"
-              label="Cible"
+              label={i18n.t("Cible")}
               value={params.cible}
-              all="Toutes cibles"
-              options={options(REPORTABLE_TYPE)}
+              all={i18n.t("Toutes cibles")}
+              options={i18n.labels.options(REPORTABLE_TYPE)}
             />
           </form>
         ) : null}
@@ -233,23 +230,23 @@ export default async function ModerationPage({ searchParams }: PageProps<"/[loca
         notes={[
           {
             icon: GavelIcon,
-            title: "Procedure de retrait immediat",
-            body: "Quand un moderateur propose un retrait motive, la cible est mise en quarantaine dans la foulee la ou un indicateur reversible existe — elle quitte le flux public sans etre effacee. Seul un super administrateur confirme le retrait definitif ou rehabilite l'element. La regle est appliquee par la base de donnees, pas par cet ecran.",
+            title: i18n.t("Procedure de retrait immediat"),
+            body: i18n.t("Quand un moderateur propose un retrait motive, la cible est mise en quarantaine dans la foulee la ou un indicateur reversible existe — elle quitte le flux public sans etre effacee. Seul un super administrateur confirme le retrait definitif ou rehabilite l'element. La regle est appliquee par la base de donnees, pas par cet ecran."),
           },
           {
             icon: ShieldCheckIcon,
-            title: "Ou vit la trace des decisions",
-            body: "Le journal d'administration a ete retire a la demande du client : la trace n'est donc pas ailleurs, elle est sur le signalement lui-meme — qui a propose le retrait, quand, avec quel motif, qui a tranche et quand. C'est ce que reprend l'export du registre. Aucun gel automatique n'est declenche par un nombre de signalements : rien ne surveille la file en dehors de cet ecran.",
+            title: i18n.t("Ou vit la trace des decisions"),
+            body: i18n.t("Le journal d'administration a ete retire a la demande du client : la trace n'est donc pas ailleurs, elle est sur le signalement lui-meme — qui a propose le retrait, quand, avec quel motif, qui a tranche et quand. C'est ce que reprend l'export du registre. Aucun gel automatique n'est declenche par un nombre de signalements : rien ne surveille la file en dehors de cet ecran."),
           },
           {
             icon: MessagesSquareIcon,
-            title: "Le fil de conversation reste ferme",
-            body: "Un signalement depose depuis une messagerie indique sa provenance et le motif ecrit par le signaleur, jamais les messages echanges. La base l'autoriserait ; la regle du client est qu'on instruit sur le motif. Pour la meme raison, l'export du registre ne contient aucun contenu signale.",
+            title: i18n.t("Le fil de conversation reste ferme"),
+            body: i18n.t("Un signalement depose depuis une messagerie indique sa provenance et le motif ecrit par le signaleur, jamais les messages echanges. La base l'autoriserait ; la regle du client est qu'on instruit sur le motif. Pour la meme raison, l'export du registre ne contient aucun contenu signale."),
           },
           {
             icon: BanIcon,
-            title: "Ce que suspendre un compte fait vraiment",
-            body: "La suspension passe le profil metier a « suspendu » : au prochain demarrage, l'application lit ce statut et deconnecte l'utilisateur. La session deja ouverte, elle, continue — rien ne revoque les sessions actives, et ni la fiche de scouting ni les inscriptions Scout Day ne sont retirees automatiquement.",
+            title: i18n.t("Ce que suspendre un compte fait vraiment"),
+            body: i18n.t("La suspension passe le profil metier a « suspendu » : au prochain demarrage, l'application lit ce statut et deconnecte l'utilisateur. La session deja ouverte, elle, continue — rien ne revoque les sessions actives, et ni la fiche de scouting ni les inscriptions Scout Day ne sont retirees automatiquement."),
           },
         ]}
       />
@@ -266,6 +263,8 @@ async function ReportsView({
   params: Record<string, string | undefined>;
   canValidate: boolean;
 }) {
+  const i18n = await getAdminI18n();
+
   const supabase = await createClient();
   const page = Math.max(1, Number(params.page ?? 1) || 1);
 
@@ -294,7 +293,7 @@ async function ReportsView({
   // Le contenu vise, pas seulement son identifiant : un moderateur ne peut
   // pas instruire « Contenu 79540083-… ». On resout chaque cible dans sa
   // table, en une requete par type present dans la page.
-  const targets = await fetchReportTargets(rows);
+  const targets = await fetchReportTargets(rows, i18n);
 
   // Combien de personnes ont bloque le compte vise : le seul indicateur de
   // recidive quand le signalement ne porte sur aucun contenu.
@@ -323,47 +322,43 @@ async function ReportsView({
           pas d'une colonne « severite » que le schema n'a pas. */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-accent/50 px-4 py-2.5">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="micro-label">File de traitement operationnelle</span>
+          <span className="micro-label">{i18n.t("File de traitement operationnelle")}</span>
           <span className="rounded bg-muted px-2 py-0.5 text-[0.6875rem] font-bold text-brand tabular-nums">
-            {visible.length} element(s) affiche(s)
-          </span>
+            {visible.length}  {i18n.t("element(s) affiche(s)")}</span>
         </div>
         <div className="flex flex-wrap items-center gap-3 text-[0.6875rem] text-muted-foreground">
           <span className="flex items-center gap-1.5">
             <span className="size-2 rounded-full bg-destructive" />
-            Critique — retrait a valider
-          </span>
+            {i18n.t("Critique — retrait a valider")}</span>
           <span className="flex items-center gap-1.5">
             <span className="size-2 rounded-full bg-warning" />
-            Niveau 2 — signalements multiples
-          </span>
+            {i18n.t("Niveau 2 — signalements multiples")}</span>
           <span className="flex items-center gap-1.5">
             <span className="size-2 rounded-full bg-muted-foreground" />
-            Niveau 1 — signalement isole
-          </span>
+            {i18n.t("Niveau 1 — signalement isole")}</span>
         </div>
       </div>
       {error ? (
         <p className="border-b border-destructive/30 bg-destructive/10 px-4 py-3 text-xs text-destructive sm:px-5">
-          Lecture impossible : {error.message}
+          {i18n.t("Lecture impossible :")} {error.message}
         </p>
       ) : null}
       {!rows.length ? (
         <EmptyState
           icon={FlagIcon}
-          title="Aucun signalement"
-          description="Rien a instruire avec ces criteres."
+          title={i18n.t("Aucun signalement")}
+          description={i18n.t("Rien a instruire avec ces criteres.")}
         />
       ) : (
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Contenu signale</TableHead>
-              <TableHead>Auteur &amp; identifiant</TableHead>
-              <TableHead>Motif du signalement</TableHead>
-              <TableHead>Priorite</TableHead>
-              <TableHead>Statut / horodatage</TableHead>
-              <TableHead className="text-right">Instruction &amp; decision</TableHead>
+              <TableHead>{i18n.t("Contenu signale")}</TableHead>
+              <TableHead>{i18n.t("Auteur & identifiant")}</TableHead>
+              <TableHead>{i18n.t("Motif du signalement")}</TableHead>
+              <TableHead>{i18n.t("Priorite")}</TableHead>
+              <TableHead>{i18n.t("Statut / horodatage")}</TableHead>
+              <TableHead className="text-right">{i18n.t("Instruction & decision")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -381,12 +376,12 @@ async function ReportsView({
                 // affichait « Contenu indisponible » pour chacun d'eux, ce qui
                 // se lisait comme une erreur. Elle nomme le compte vise.
                 const summary = isAccount
-                  ? displayName(accountTarget)
+                  ? displayName(accountTarget, undefined, i18n.locale)
                   : (content?.excerpt ??
-                    (content?.mediaUrl ? "Publication en media" : "Contenu indisponible"));
+                    (content?.mediaUrl ? i18n.t("Publication en media") : i18n.t("Contenu indisponible")));
                 // Pure et bon marche : calculee une fois, elle sert au libelle
                 // du bouton et a sa confirmation.
-                const removal = removalConfirmation(row.proposed_action, row.target_type);
+                const removal = removalConfirmation(row.proposed_action, row.target_type, i18n);
 
                 return (
                   <TableRow
@@ -426,7 +421,7 @@ async function ReportsView({
                           <p className="max-w-64 truncate text-sm">{summary}</p>
                           <div className="flex flex-wrap items-center gap-1.5">
                             <span className="text-xs text-muted-foreground">
-                              {label(REPORTABLE_TYPE, row.target_type)}
+                              {i18n.labels.label(REPORTABLE_TYPE, row.target_type)}
                             </span>
                             {/* Deux indices qu'on ne peut pas lire dans le
                                 motif : d'ou vient le signalement, et si
@@ -434,13 +429,12 @@ async function ReportsView({
                             {row.context_conversation_id ? (
                               <StatusPill tone="info">
                                 <MessagesSquareIcon />
-                                Messagerie
-                              </StatusPill>
+                                {i18n.t("Messagerie")}</StatusPill>
                             ) : null}
                             {block?.received ? (
                               <StatusPill tone="warning">
                                 <BanIcon />
-                                {block.received} blocage{block.received > 1 ? "s" : ""}
+                                {block.received}  {i18n.t("blocage")}{block.received > 1 ? "s" : ""}
                               </StatusPill>
                             ) : null}
                           </div>
@@ -451,33 +445,33 @@ async function ReportsView({
                     <TableCell>
                       {contentAuthor ? (
                         <UserCell
-                          name={displayName(contentAuthor)}
+                          name={displayName(contentAuthor, undefined, i18n.locale)}
                           secondary={contentAuthor.email}
                           avatarUrl={contentAuthor.avatar_url}
-                          href={`/admin/utilisateurs/${content?.authorId ?? row.target_id}`}
+                          href={i18n.path(`/admin/utilisateurs/${content?.authorId ?? row.target_id}`)}
                         />
                       ) : (
-                        <span className="text-xs text-muted-foreground">Inconnu</span>
+                        <span className="text-xs text-muted-foreground">{i18n.t("Inconnu")}</span>
                       )}
                     </TableCell>
 
                     <TableCell>
                       <p className="max-w-56 truncate text-sm">{row.reason}</p>
                       <span className="text-xs text-muted-foreground">
-                        par {displayName(reporter)}
+                        {i18n.t("par")} {displayName(reporter, undefined, i18n.locale)}
                       </span>
                     </TableCell>
 
                     <TableCell>
                       <div className="flex flex-col items-start gap-1">
-                        <StatusPill tone={entry(REPORT_STATUS, row.status).tone}>
-                          {label(REPORT_STATUS, row.status)}
+                        <StatusPill tone={i18n.labels.entry(REPORT_STATUS, row.status).tone}>
+                          {i18n.labels.label(REPORT_STATUS, row.status)}
                         </StatusPill>
                         <span className="text-xs text-muted-foreground">
-                          {timeAgo(row.created_at)}
+                          {i18n.format.timeAgo(row.created_at)}
                         </span>
                         {reportCount > 1 ? (
-                          <StatusPill tone="warning">{reportCount} signalements</StatusPill>
+                          <StatusPill tone="warning">{reportCount}  {i18n.t("signalements")}</StatusPill>
                         ) : null}
                       </div>
                     </TableCell>
@@ -490,12 +484,11 @@ async function ReportsView({
                             enfants cote serveur — chaque fil aurait ete
                             charge pour les 200 lignes de la file. */}
                         <Link
-                          href={`/admin/moderation/signalements/${row.id}`}
+                          href={i18n.path(`/admin/moderation/signalements/${row.id}`)}
                           className={cn(buttonVariants({ variant: "outline", size: "xs" }))}
                         >
                           <EyeIcon />
-                          Ouvrir le dossier
-                        </Link>
+                          {i18n.t("Ouvrir le dossier")}</Link>
 
                         {row.status === "en_attente" ? (
                           <>
@@ -503,14 +496,13 @@ async function ReportsView({
                               action={proposeRemoval.bind(null, row.id)}
                               options={removalOptions(row.target_type).map((value) => ({
                                 value,
-                                label: label(MODERATION_ACTION, value),
+                                label: i18n.labels.label(MODERATION_ACTION, value),
                               }))}
                               quarantines={QUARANTINABLE.includes(row.target_type)}
                               trigger={
                                 <Button variant="destructive" size="xs">
                                   <Trash2Icon />
-                                  Proposer le retrait
-                                </Button>
+                                  {i18n.t("Proposer le retrait")}</Button>
                               }
                             />
                             <ActionButton
@@ -518,8 +510,7 @@ async function ReportsView({
                               variant="ghost"
                             >
                               <XIcon />
-                              Classer
-                            </ActionButton>
+                              {i18n.t("Classer")}</ActionButton>
                           </>
                         ) : null}
 
@@ -543,20 +534,19 @@ async function ReportsView({
                               trigger={
                                 <Button variant="outline" size="xs">
                                   <EyeOffIcon />
-                                  Refuser
-                                </Button>
+                                  {i18n.t("Refuser")}</Button>
                               }
-                              title="Refuser le retrait"
-                              description="Le contenu masque revient en ligne et le signalement est clos sans mesure. Le motif reste au journal des decisions."
-                              label="Motif du refus"
-                              placeholder="Contenu conforme aux CGU, signalement abusif…"
-                              submitLabel="Refuser le retrait"
+                              title={i18n.t("Refuser le retrait")}
+                              description={i18n.t("Le contenu masque revient en ligne et le signalement est clos sans mesure. Le motif reste au journal des decisions.")}
+                              label={i18n.t("Motif du refus")}
+                              placeholder={i18n.t("Contenu conforme aux CGU, signalement abusif…")}
+                              submitLabel={i18n.t("Refuser le retrait")}
                             />
                           </>
                         ) : null}
 
                         {row.status === "a_valider" && !canValidate ? (
-                          <StatusPill tone="warning">Super administrateur requis</StatusPill>
+                          <StatusPill tone="warning">{i18n.t("Super administrateur requis")}</StatusPill>
                         ) : null}
                       </div>
                     </TableCell>
@@ -568,17 +558,15 @@ async function ReportsView({
       )}
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border bg-background/60 px-4 py-2 text-[0.6875rem] text-muted-foreground">
         <span>
-          {visible.length} incident(s) affiche(s) sur {count ?? 0} repertorie(s)
-        </span>
+          {visible.length}  {i18n.t("incident(s) affiche(s) sur")} {count ?? 0}  {i18n.t("repertorie(s)")}</span>
         {/* Vrai : `AutoRefresh`, monte par le layout, rejoue le Server
             Component toutes les trente secondes, sauf quand une decision est en
             cours de saisie. */}
         <span className="flex items-center gap-1.5">
           <span className="size-1.5 rounded-full bg-brand" />
-          Actualisation automatique
-        </span>
+          {i18n.t("Actualisation automatique")}</span>
       </div>
-      <Pagination basePath="/admin/moderation" params={params} page={page} pageSize={PAGE_SIZE} total={count ?? 0} />
+      <Pagination basePath={i18n.path("/admin/moderation")} params={params} page={page} pageSize={PAGE_SIZE} total={count ?? 0} />
     </Panel>
   );
 }
@@ -587,6 +575,8 @@ async function ReportsView({
 /* --------------------------------------------------------------- publications */
 
 async function PostsView({ params }: { params: Record<string, string | undefined> }) {
+  const i18n = await getAdminI18n();
+
   const supabase = await createClient();
   const page = Math.max(1, Number(params.page ?? 1) || 1);
 
@@ -609,27 +599,27 @@ async function PostsView({ params }: { params: Record<string, string | undefined
   return (
     <Panel>
       <PanelHeader
-        title="Publications du fil d'actualite"
-        description="Le fil est un module secondaire du CDC : la moderation y est reactive plutot que systematique."
+        title={i18n.t("Publications du fil d'actualite")}
+        description={i18n.t("Le fil est un module secondaire du CDC : la moderation y est reactive plutot que systematique.")}
       />
       <FilterBar
-        basePath="/admin/moderation"
+        basePath={i18n.path("/admin/moderation")}
         params={params}
-        searchPlaceholder="Rechercher dans le texte…"
+        searchPlaceholder={i18n.t("Rechercher dans le texte…")}
         filters={[
           {
             name: "etat",
-            label: "Etat",
+            label: i18n.t("Etat"),
             options: [
-              { value: "en_ligne", label: "En ligne" },
-              { value: "masque", label: "Masquee" },
-              { value: "supprime", label: "Supprimee" },
+              { value: "en_ligne", label: i18n.t("En ligne") },
+              { value: "masque", label: i18n.t("Masquee") },
+              { value: "supprime", label: i18n.t("Supprimee") },
             ],
           },
         ]}
       />
       {!rows.length ? (
-        <EmptyState icon={MessageSquareIcon} title="Aucune publication" />
+        <EmptyState icon={MessageSquareIcon} title={i18n.t("Aucune publication")} />
       ) : (
         <ul className="divide-y divide-border">
           {rows.map((row) => {
@@ -643,22 +633,22 @@ async function PostsView({ params }: { params: Record<string, string | undefined
               <li key={row.id} className="space-y-3 px-4 py-4 sm:px-5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <UserCell
-                    name={displayName(author)}
-                    secondary={formatDateTime(row.created_at)}
+                    name={displayName(author, undefined, i18n.locale)}
+                    secondary={i18n.format.formatDateTime(row.created_at)}
                     avatarUrl={author?.avatar_url}
-                    href={`/admin/utilisateurs/${row.author_id}`}
+                    href={i18n.path(`/admin/utilisateurs/${row.author_id}`)}
                   />
                   <div className="flex flex-wrap items-center gap-2">
-                    {row.is_hidden ? <StatusPill tone="warning">Masquee</StatusPill> : null}
-                    {row.is_deleted ? <StatusPill tone="danger">Supprimee</StatusPill> : null}
+                    {row.is_hidden ? <StatusPill tone="warning">{i18n.t("Masquee")}</StatusPill> : null}
+                    {row.is_deleted ? <StatusPill tone="danger">{i18n.t("Supprimee")}</StatusPill> : null}
                     {!row.is_hidden && !row.is_deleted ? (
-                      <StatusPill tone="success">En ligne</StatusPill>
+                      <StatusPill tone="success">{i18n.t("En ligne")}</StatusPill>
                     ) : null}
                   </div>
                 </div>
 
                 <p className="text-sm leading-relaxed whitespace-pre-line">
-                  {row.content ?? "(sans texte)"}
+                  {row.content ?? i18n.t("(sans texte)")}
                 </p>
 
                 {mediaUrl && row.media_type !== "aucun" ? (
@@ -668,21 +658,20 @@ async function PostsView({ params }: { params: Record<string, string | undefined
                     className={cn(buttonVariants({ variant: "outline", size: "xs" }))}
                   >
                     {row.media_type === "video" ? <VideoIcon /> : <ImageIcon />}
-                    Ouvrir le media
-                  </Link>
+                    {i18n.t("Ouvrir le media")}</Link>
                 ) : null}
 
                 <div className="flex flex-wrap gap-2">
                   <ActionButton action={setPostHidden.bind(null, row.id, !row.is_hidden)}>
                     {row.is_hidden ? <EyeIcon /> : <EyeOffIcon />}
-                    {row.is_hidden ? "Reafficher" : "Masquer"}
+                    {row.is_hidden ? i18n.t("Reafficher") : i18n.t("Masquer")}
                   </ActionButton>
                   <ActionButton
                     variant={row.is_deleted ? "outline" : "destructive"}
                     action={setPostDeleted.bind(null, row.id, !row.is_deleted)}
                   >
                     {row.is_deleted ? <Undo2Icon /> : <Trash2Icon />}
-                    {row.is_deleted ? "Restaurer" : "Supprimer"}
+                    {row.is_deleted ? i18n.t("Restaurer") : i18n.t("Supprimer")}
                   </ActionButton>
                 </div>
               </li>
@@ -690,7 +679,7 @@ async function PostsView({ params }: { params: Record<string, string | undefined
           })}
         </ul>
       )}
-      <Pagination basePath="/admin/moderation" params={params} page={page} pageSize={PAGE_SIZE} total={count ?? 0} />
+      <Pagination basePath={i18n.path("/admin/moderation")} params={params} page={page} pageSize={PAGE_SIZE} total={count ?? 0} />
     </Panel>
   );
 }
@@ -698,6 +687,8 @@ async function PostsView({ params }: { params: Record<string, string | undefined
 /* --------------------------------------------------------------- commentaires */
 
 async function CommentsView({ params }: { params: Record<string, string | undefined> }) {
+  const i18n = await getAdminI18n();
+
   const supabase = await createClient();
   const page = Math.max(1, Number(params.page ?? 1) || 1);
 
@@ -719,34 +710,34 @@ async function CommentsView({ params }: { params: Record<string, string | undefi
 
   return (
     <Panel>
-      <PanelHeader title="Commentaires" />
+      <PanelHeader title={i18n.t("Commentaires")} />
       <FilterBar
-        basePath="/admin/moderation"
+        basePath={i18n.path("/admin/moderation")}
         params={params}
-        searchPlaceholder="Rechercher dans les commentaires…"
+        searchPlaceholder={i18n.t("Rechercher dans les commentaires…")}
         filters={[
           {
             name: "etat",
-            label: "Etat",
+            label: i18n.t("Etat"),
             options: [
-              { value: "en_ligne", label: "En ligne" },
-              { value: "masque", label: "Masque" },
-              { value: "supprime", label: "Supprime" },
+              { value: "en_ligne", label: i18n.t("En ligne") },
+              { value: "masque", label: i18n.t("Masque") },
+              { value: "supprime", label: i18n.t("Supprime") },
             ],
           },
         ]}
       />
       {!rows.length ? (
-        <EmptyState icon={MessageSquareIcon} title="Aucun commentaire" />
+        <EmptyState icon={MessageSquareIcon} title={i18n.t("Aucun commentaire")} />
       ) : (
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Auteur</TableHead>
-              <TableHead>Commentaire</TableHead>
-              <TableHead>Etat</TableHead>
-              <TableHead>Publie le</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead>{i18n.t("Auteur")}</TableHead>
+              <TableHead>{i18n.t("Commentaire")}</TableHead>
+              <TableHead>{i18n.t("Etat")}</TableHead>
+              <TableHead>{i18n.t("Publie le")}</TableHead>
+              <TableHead className="text-right">{i18n.t("Actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -756,35 +747,35 @@ async function CommentsView({ params }: { params: Record<string, string | undefi
                 <TableRow key={row.id}>
                   <TableCell>
                     <UserCell
-                      name={displayName(author)}
+                      name={displayName(author, undefined, i18n.locale)}
                       secondary={author?.email}
                       avatarUrl={author?.avatar_url}
-                      href={`/admin/utilisateurs/${row.author_id}`}
+                      href={i18n.path(`/admin/utilisateurs/${row.author_id}`)}
                     />
                   </TableCell>
                   <TableCell className="max-w-md whitespace-normal">{row.content}</TableCell>
                   <TableCell>
                     {row.is_deleted ? (
-                      <StatusPill tone="danger">Supprime</StatusPill>
+                      <StatusPill tone="danger">{i18n.t("Supprime")}</StatusPill>
                     ) : row.is_hidden ? (
-                      <StatusPill tone="warning">Masque</StatusPill>
+                      <StatusPill tone="warning">{i18n.t("Masque")}</StatusPill>
                     ) : (
-                      <StatusPill tone="success">En ligne</StatusPill>
+                      <StatusPill tone="success">{i18n.t("En ligne")}</StatusPill>
                     )}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {formatDate(row.created_at)}
+                    {i18n.format.formatDate(row.created_at)}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-2">
                       <ActionButton action={setCommentHidden.bind(null, row.id, !row.is_hidden)}>
-                        {row.is_hidden ? "Reafficher" : "Masquer"}
+                        {row.is_hidden ? i18n.t("Reafficher") : i18n.t("Masquer")}
                       </ActionButton>
                       <ActionButton
                         variant={row.is_deleted ? "outline" : "destructive"}
                         action={setCommentDeleted.bind(null, row.id, !row.is_deleted)}
                       >
-                        {row.is_deleted ? "Restaurer" : "Supprimer"}
+                        {row.is_deleted ? i18n.t("Restaurer") : i18n.t("Supprimer")}
                       </ActionButton>
                     </div>
                   </TableCell>
@@ -794,7 +785,7 @@ async function CommentsView({ params }: { params: Record<string, string | undefi
           </TableBody>
         </Table>
       )}
-      <Pagination basePath="/admin/moderation" params={params} page={page} pageSize={PAGE_SIZE} total={count ?? 0} />
+      <Pagination basePath={i18n.path("/admin/moderation")} params={params} page={page} pageSize={PAGE_SIZE} total={count ?? 0} />
     </Panel>
   );
 }
@@ -802,6 +793,8 @@ async function CommentsView({ params }: { params: Record<string, string | undefi
 /* --------------------------------------------------------------------- medias */
 
 async function MediaView({ params }: { params: Record<string, string | undefined> }) {
+  const i18n = await getAdminI18n();
+
   const supabase = await createClient();
   const videoPage = Math.max(1, Number(params.page_videos ?? 1) || 1);
   const photoPage = Math.max(1, Number(params.page_photos ?? 1) || 1);
@@ -830,20 +823,20 @@ async function MediaView({ params }: { params: Record<string, string | undefined
     <>
       <Panel>
         <PanelHeader
-          title="Dernieres videos publiees"
-          description="Suppression definitive : la ligne et le fichier du bucket sont retires ensemble."
+          title={i18n.t("Dernieres videos publiees")}
+          description={i18n.t("Suppression definitive : la ligne et le fichier du bucket sont retires ensemble.")}
         />
         {!videoRows.length ? (
-          <EmptyState icon={VideoIcon} title="Aucune video" />
+          <EmptyState icon={VideoIcon} title={i18n.t("Aucune video")} />
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Joueur</TableHead>
-                <TableHead>Titre</TableHead>
-                <TableHead>Source</TableHead>
-                <TableHead>Ajoutee le</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{i18n.t("Joueur")}</TableHead>
+                <TableHead>{i18n.t("Titre")}</TableHead>
+                <TableHead>{i18n.t("Source")}</TableHead>
+                <TableHead>{i18n.t("Ajoutee le")}</TableHead>
+                <TableHead className="text-right">{i18n.t("Actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -855,42 +848,41 @@ async function MediaView({ params }: { params: Record<string, string | undefined
                   <TableRow key={row.id}>
                     <TableCell>
                       <UserCell
-                        name={displayName(player)}
+                        name={displayName(player, undefined, i18n.locale)}
                         secondary={player?.email}
                         avatarUrl={player?.avatar_url}
-                        href={`/admin/utilisateurs/${row.player_id}`}
+                        href={i18n.path(`/admin/utilisateurs/${row.player_id}`)}
                       />
                     </TableCell>
                     <TableCell className="max-w-56 truncate">
                       {url ? (
                         <Link href={url} target="_blank" className="hover:text-brand">
-                          {row.title ?? "Sans titre"}
+                          {row.title ?? i18n.t("Sans titre")}
                         </Link>
                       ) : (
-                        (row.title ?? "Sans titre")
+                        (row.title ?? i18n.t("Sans titre"))
                       )}
                     </TableCell>
                     <TableCell>
                       <StatusPill tone={row.youtube_url ? "info" : "neutral"}>
-                        {row.youtube_url ? "YouTube" : "Importee"}
+                        {row.youtube_url ? "YouTube" : i18n.t("Importee")}
                       </StatusPill>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {formatDate(row.created_at)}
+                      {i18n.format.formatDate(row.created_at)}
                     </TableCell>
                     <TableCell className="text-right">
                       <ActionButton
                         variant="destructive"
                         action={deletePlayerVideo.bind(null, row.id)}
                         confirm={{
-                          title: "Supprimer cette video",
+                          title: i18n.t("Supprimer cette video"),
                           description:
-                            "La video et son fichier de stockage seront definitivement supprimes.",
-                          actionLabel: "Supprimer",
+                            i18n.t("La video et son fichier de stockage seront definitivement supprimes."),
+                          actionLabel: i18n.t("Supprimer"),
                         }}
                       >
-                        Supprimer
-                      </ActionButton>
+                        {i18n.t("Supprimer")}</ActionButton>
                     </TableCell>
                   </TableRow>
                 );
@@ -898,13 +890,13 @@ async function MediaView({ params }: { params: Record<string, string | undefined
             </TableBody>
           </Table>
         )}
-        <Pagination basePath="/admin/moderation" params={params} page={videoPage} pageParam="page_videos" pageSize={PAGE_SIZE} total={videos.count ?? 0} />
+        <Pagination basePath={i18n.path("/admin/moderation")} params={params} page={videoPage} pageParam="page_videos" pageSize={PAGE_SIZE} total={videos.count ?? 0} />
       </Panel>
 
       <Panel>
-        <PanelHeader title="Dernieres photos publiees" />
+        <PanelHeader title={i18n.t("Dernieres photos publiees")} />
         {!photoRows.length ? (
-          <EmptyState icon={ImageIcon} title="Aucune photo" />
+          <EmptyState icon={ImageIcon} title={i18n.t("Aucune photo")} />
         ) : (
           <ul className="grid gap-3 px-4 py-5 sm:grid-cols-3 sm:px-5 lg:grid-cols-4 xl:grid-cols-6">
             {photoRows.map((row) => {
@@ -919,34 +911,33 @@ async function MediaView({ params }: { params: Record<string, string | undefined
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={url}
-                      alt={row.caption ?? "Photo de joueur"}
+                      alt={row.caption ?? i18n.t("Photo de joueur")}
                       className="aspect-square w-full rounded-lg object-cover"
                     />
                   ) : null}
                   <Link
-                    href={`/admin/utilisateurs/${row.player_id}`}
+                    href={i18n.path(`/admin/utilisateurs/${row.player_id}`)}
                     className="block truncate text-[0.6875rem] text-muted-foreground hover:text-foreground"
                   >
-                    {displayName(player)}
+                    {displayName(player, undefined, i18n.locale)}
                   </Link>
                   <ActionButton
                     variant="destructive"
                     className="w-full"
                     action={deletePlayerPhoto.bind(null, row.id)}
                     confirm={{
-                      title: "Supprimer cette photo",
-                      description: "La photo et son fichier de stockage seront supprimes.",
-                      actionLabel: "Supprimer",
+                      title: i18n.t("Supprimer cette photo"),
+                      description: i18n.t("La photo et son fichier de stockage seront supprimes."),
+                      actionLabel: i18n.t("Supprimer"),
                     }}
                   >
-                    Supprimer
-                  </ActionButton>
+                    {i18n.t("Supprimer")}</ActionButton>
                 </li>
               );
             })}
           </ul>
         )}
-        <Pagination basePath="/admin/moderation" params={params} page={photoPage} pageParam="page_photos" pageSize={PAGE_SIZE} total={photos.count ?? 0} />
+        <Pagination basePath={i18n.path("/admin/moderation")} params={params} page={photoPage} pageParam="page_photos" pageSize={PAGE_SIZE} total={photos.count ?? 0} />
       </Panel>
     </>
   );

@@ -1,3 +1,4 @@
+import { DEFAULT_ADMIN_LOCALE, type AdminLocale } from "@/lib/i18n/config";
 import { createClient } from "@/lib/supabase/server";
 
 export type ProfileSummary = {
@@ -72,7 +73,8 @@ export async function fetchProfilesByIds(ids: string[]) {
 export function displayName(
   profile: ProfileSummary | undefined,
   fallbackParts?: (string | null | undefined)[],
+  locale: AdminLocale = DEFAULT_ADMIN_LOCALE,
 ) {
   const composed = fallbackParts?.filter(Boolean).join(" ").trim();
-  return profile?.full_name?.trim() || composed || profile?.email || "Compte sans nom";
+  return profile?.full_name?.trim() || composed || profile?.email || (locale === "en" ? "Unnamed account" : "Compte sans nom");
 }

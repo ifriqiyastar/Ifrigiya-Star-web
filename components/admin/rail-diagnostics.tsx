@@ -1,6 +1,7 @@
 import { TriangleAlertIcon } from "lucide-react";
 
 import type { Diagnostic } from "@/lib/queries/diagnostics";
+import { useAdminI18n } from "@/lib/i18n/admin-client";
 import { cn } from "@/lib/utils";
 
 /**
@@ -11,11 +12,12 @@ import { cn } from "@/lib/utils";
  * et le seul etat que la plupart des administrateurs verront.
  */
 export function RailDiagnostics({ issues }: { issues: Diagnostic[] }) {
+  const { dict } = useAdminI18n();
   if (!issues.length) return null;
 
   return (
-    <section className="mx-1 space-y-1.5" aria-label="Etat de la configuration">
-      <p className="micro-label px-2 text-muted-foreground/80">A verifier</p>
+    <section className="mx-1 space-y-1.5" aria-label={dict.railDiagnostics.label}>
+      <p className="micro-label px-2 text-muted-foreground/80">{dict.railDiagnostics.title}</p>
       {issues.map((issue) => (
         <article
           key={issue.id}

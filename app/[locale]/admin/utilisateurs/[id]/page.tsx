@@ -1,3 +1,4 @@
+import { getAdminI18n } from "@/lib/i18n/admin";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
@@ -56,31 +57,8 @@ import {
 } from "@/lib/actions/users";
 import { activatePaymentManually, setSubscriptionStatus } from "@/lib/actions/finances";
 import { requirePermission } from "@/lib/auth";
-import {
-  ageFromBirthDate,
-  formatAmount,
-  formatDate,
-  formatDateTime,
-  formatNumber,
-  initials,
-  timeAgo,
-} from "@/lib/format";
-import {
-  ACCOUNT_STATUS,
-  DOCUMENT_STATUS,
-  FOOT_PREFERENCE,
-  IDENTITY_STATUS,
-  PAYMENT_METHOD,
-  PAYMENT_STATUS,
-  PAYMENT_TYPE,
-  PLAN_CODE,
-  PLAYER_LEVEL,
-  REGISTRATION_STATUS,
-  ROLE,
-  SUBSCRIPTION_STATUS,
-  entry,
-  label,
-} from "@/lib/labels";
+import { ageFromBirthDate, initials } from "@/lib/format";
+import { ACCOUNT_STATUS, DOCUMENT_STATUS, FOOT_PREFERENCE, IDENTITY_STATUS, PAYMENT_METHOD, PAYMENT_STATUS, PAYMENT_TYPE, PLAN_CODE, PLAYER_LEVEL, REGISTRATION_STATUS, ROLE, SUBSCRIPTION_STATUS } from "@/lib/labels";
 import {
   getUserContent,
   getUserDetail,
@@ -90,7 +68,10 @@ import {
 import { privateStorageUrl, publicStorageUrl } from "@/lib/supabase/config";
 import { cn } from "@/lib/utils";
 
-export const metadata: Metadata = { title: "Fiche compte" };
+export async function generateMetadata(): Promise<Metadata> {
+  const i18n = await getAdminI18n();
+  return { title: i18n.t("Fiche compte") };
+}
 
 const VUES = ["fiche", "dossier", "contenus", "finances"] as const;
 type Vue = (typeof VUES)[number];
@@ -99,6 +80,8 @@ export default async function UserDetailPage({
   params,
   searchParams,
 }: PageProps<"/[locale]/admin/utilisateurs/[id]">) {
+  const i18n = await getAdminI18n();
+
   const [{ id }, resolvedSearch, admin] = await Promise.all([
     params,
     searchParams,
@@ -195,7 +178,7 @@ export default async function UserDetailPage({
   const contextLine =
     (player?.current_club as string | null) ??
     (professional?.organization_name as string | null) ??
-    (player?.main_position as string | null) ??
+    (player?.main_position ? i18n.labels.position(String(player.main_position)) : null) ??
     null;
 
   const displayName =
@@ -203,7 +186,7 @@ export default async function UserDetailPage({
     [player?.first_name, player?.last_name].filter(Boolean).join(" ") ||
     (professional?.contact_full_name as string | undefined) ||
     profile.email ||
-    "Compte sans nom";
+    i18n.t("Compte sans nom");
 
   const roleTone =
     profile.role === "player" ? "brand" : profile.role === "professional" ? "info" : "warning";
@@ -215,21 +198,20 @@ export default async function UserDetailPage({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <nav className="flex flex-wrap items-center gap-2">
           <Link
-            href="/admin/utilisateurs"
+            href={i18n.path("/admin/utilisateurs")}
             className="micro-label inline-flex items-center gap-1.5 text-muted-foreground transition-colors hover:text-brand"
           >
             <ArrowLeftIcon className="size-3.5" />
-            Tous les comptes
-          </Link>
+            {i18n.t("Tous les comptes")}</Link>
           <span className="text-muted-foreground/50">/</span>
           <span className="micro-label rounded bg-muted px-2 py-0.5 text-brand">
-            {label(ROLE, profile.role)}
+            {i18n.labels.label(ROLE, profile.role)}
           </span>
           <span className="text-muted-foreground/50">/</span>
           <span className="max-w-64 truncate text-xs font-semibold">{displayName}</span>
         </nav>
         <span className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5">
-          <span className="micro-label text-muted-foreground">Completion du profil</span>
+          <span className="micro-label text-muted-foreground">{i18n.t("Completion du profil")}</span>
           <span className="font-heading text-sm font-bold text-brand tabular-nums">
             {completion} %
           </span>
@@ -251,27 +233,25 @@ export default async function UserDetailPage({
                 <h1 className="font-heading truncate text-2xl leading-tight font-extrabold tracking-tight">
                   {displayName}
                 </h1>
-                <StatusPill tone={roleTone}>{label(ROLE, profile.role)}</StatusPill>
+                <StatusPill tone={roleTone}>{i18n.labels.label(ROLE, profile.role)}</StatusPill>
                 {businessStatus ? (
-                  <StatusPill tone={entry(ACCOUNT_STATUS, businessStatus).tone}>
-                    {label(ACCOUNT_STATUS, businessStatus)}
+                  <StatusPill tone={i18n.labels.entry(ACCOUNT_STATUS, businessStatus).tone}>
+                    {i18n.labels.label(ACCOUNT_STATUS, businessStatus)}
                   </StatusPill>
                 ) : null}
                 {profile.is_active ? (
                   <StatusPill tone="success" dot>
-                    Actif
-                  </StatusPill>
+                    {i18n.t("Actif")}</StatusPill>
                 ) : (
                   <StatusPill tone="neutral" dot>
-                    Desactive
-                  </StatusPill>
+                    {i18n.t("Desactive")}</StatusPill>
                 )}
-                {profile.is_minor ? <StatusPill tone="warning">Mineur</StatusPill> : null}
+                {profile.is_minor ? <StatusPill tone="warning">{i18n.t("Mineur")}</StatusPill> : null}
                 {profile.deletion_requested_at ? (
-                  <StatusPill tone="danger">Suppression demandee</StatusPill>
+                  <StatusPill tone="danger">{i18n.t("Suppression demandee")}</StatusPill>
                 ) : null}
                 {player?.is_visible === false ? (
-                  <StatusPill tone="neutral">Hors recherche</StatusPill>
+                  <StatusPill tone="neutral">{i18n.t("Hors recherche")}</StatusPill>
                 ) : null}
               </div>
 
@@ -283,9 +263,8 @@ export default async function UserDetailPage({
                 {profile.phone ? <span className="tabular-nums">{profile.phone}</span> : null}
                 {player?.birth_date ? (
                   <span>
-                    {formatDate(player.birth_date as string)} (
-                    {ageFromBirthDate(player.birth_date as string) ?? "—"} ans)
-                  </span>
+                    {i18n.format.formatDate(player.birth_date as string)} (
+                    {ageFromBirthDate(player.birth_date as string) ?? "—"}  {i18n.t("ans)")}</span>
                 ) : null}
                 {contextLine ? <span className="text-foreground">{contextLine}</span> : null}
               </p>
@@ -294,18 +273,18 @@ export default async function UserDetailPage({
 
           <div className="flex shrink-0 items-start gap-6">
             <HeaderFigure
-              label="Completion"
+              label={i18n.t("Completion")}
               value={`${completion} %`}
-              hint="Champs renseignes"
+              hint={i18n.t("Champs renseignes")}
             />
             {profile.role === "player" ? (
               <HeaderFigure
-                label="Note moyenne"
+                label={i18n.t("Note moyenne")}
                 value={averageScore === null ? "—" : String(averageScore)}
                 hint={
                   scores.length
-                    ? `${scores.length} evaluation(s)`
-                    : "Aucune evaluation"
+                    ? i18n.t("{0} evaluation(s)", { "0": scores.length })
+                    : i18n.t("Aucune evaluation")
                 }
                 tone="info"
               />
@@ -324,7 +303,7 @@ export default async function UserDetailPage({
           />
           {statusReason ? (
             <p className="mt-3 rounded-lg bg-muted px-3 py-2 text-xs leading-relaxed text-muted-foreground">
-              <span className="font-semibold text-foreground">Motif enregistre :</span>{" "}
+              <span className="font-semibold text-foreground">{i18n.t("Motif enregistre :")}</span>{" "}
               {statusReason}
             </p>
           ) : null}
@@ -332,23 +311,23 @@ export default async function UserDetailPage({
       </Panel>
 
       <SegmentedNav
-        basePath={`/admin/utilisateurs/${profile.id}`}
+        basePath={i18n.path(`/admin/utilisateurs/${profile.id}`)}
         active={vue}
         segments={[
-          { value: "fiche", label: "Fiche & modification", icon: UserRoundIcon },
+          { value: "fiche", label: i18n.t("Fiche & modification"), icon: UserRoundIcon },
           {
             value: "dossier",
-            label: "Dossier de validation",
+            label: i18n.t("Dossier de validation"),
             icon: ShieldCheckIcon,
             count: dossierCount,
           },
           {
             value: "contenus",
-            label: "Medias du compte",
+            label: i18n.t("Medias du compte"),
             icon: VideoIcon,
             count: mediaCount,
           },
-          { value: "finances", label: "Abonnements & paiements", icon: CreditCardIcon },
+          { value: "finances", label: i18n.t("Abonnements & paiements"), icon: CreditCardIcon },
         ]}
       />
 
@@ -360,40 +339,37 @@ export default async function UserDetailPage({
               <div className="flex items-center justify-between gap-2 pb-3">
                 <h2 className="flex items-center gap-2 text-sm font-semibold">
                   <HistoryIcon className="size-4 text-brand" />
-                  Activite du compte
-                </h2>
-                <span className="micro-label text-muted-foreground">Lecture seule</span>
+                  {i18n.t("Activite du compte")}</h2>
+                <span className="micro-label text-muted-foreground">{i18n.t("Lecture seule")}</span>
               </div>
 
               <p className="flex items-start gap-2 rounded-lg bg-background p-3 text-xs leading-relaxed text-muted-foreground">
                 <InfoIcon className="mt-0.5 size-4 shrink-0 text-warning" />
-                Ces horodatages sont ecrits a l&apos;inscription ou par l&apos;application
-                mobile : ils ne se modifient pas depuis le back-office.
-              </p>
+                {i18n.t("Ces horodatages sont ecrits a l'inscription ou par l'application mobile : ils ne se modifient pas depuis le back-office.")}</p>
 
               <dl className="mt-3 flex flex-col gap-1.5">
-                <ActivityRow label="Inscription" value={formatDateTime(profile.created_at)} />
+                <ActivityRow label={i18n.t("Inscription")} value={i18n.format.formatDateTime(profile.created_at)} />
                 <ActivityRow
-                  label="Derniere mise a jour"
-                  value={formatDateTime(profile.updated_at)}
+                  label={i18n.t("Derniere mise a jour")}
+                  value={i18n.format.formatDateTime(profile.updated_at)}
                 />
                 <ActivityRow
-                  label="Derniere connexion"
-                  value={formatDateTime(profile.last_login_at)}
-                  pill={profile.last_login_at ? timeAgo(profile.last_login_at) : undefined}
+                  label={i18n.t("Derniere connexion")}
+                  value={i18n.format.formatDateTime(profile.last_login_at)}
+                  pill={profile.last_login_at ? i18n.format.timeAgo(profile.last_login_at) : undefined}
                 />
                 <ActivityRow
-                  label="CGU acceptees"
-                  value={formatDateTime(profile.cgu_accepted_at)}
+                  label={i18n.t("CGU acceptees")}
+                  value={i18n.format.formatDateTime(profile.cgu_accepted_at)}
                 />
                 <ActivityRow
-                  label="Confidentialite acceptee"
-                  value={formatDateTime(profile.privacy_accepted_at)}
+                  label={i18n.t("Confidentialite acceptee")}
+                  value={i18n.format.formatDateTime(profile.privacy_accepted_at)}
                 />
-                <ActivityRow label="Desactive le" value={formatDateTime(profile.deactivated_at)} />
+                <ActivityRow label={i18n.t("Desactive le")} value={i18n.format.formatDateTime(profile.deactivated_at)} />
                 <ActivityRow
-                  label="Suppression demandee le"
-                  value={formatDateTime(profile.deletion_requested_at)}
+                  label={i18n.t("Suppression demandee le")}
+                  value={i18n.format.formatDateTime(profile.deletion_requested_at)}
                 />
               </dl>
             </Panel>
@@ -406,8 +382,8 @@ export default async function UserDetailPage({
             <Panel>
               <PanelHeader
                 icon={UserRoundIcon}
-                title="Fiche compte & droits d'acces"
-                description="Nom, contact, langue et role. Le role commande les droits dans toute l'application et sur l'application mobile."
+                title={i18n.t("Fiche compte & droits d'acces")}
+                description={i18n.t("Nom, contact, langue et role. Le role commande les droits dans toute l'application et sur l'application mobile.")}
               />
               <ProfileCoreForm
                 values={{
@@ -426,8 +402,8 @@ export default async function UserDetailPage({
               <Panel>
                 <PanelHeader
                   icon={ActivityIcon}
-                  title="Profil sportif & caracteristiques"
-                  description={`Age calcule : ${ageFromBirthDate(player.birth_date as string) ?? "—"} ans · Score de classement enregistre : ${player.ranking_score ?? 0}`}
+                  title={i18n.t("Profil sportif & caracteristiques")}
+                  description={i18n.t("Age calcule : {0} ans · Score de classement enregistre : {1}", { "0": ageFromBirthDate(player.birth_date as string) ?? "—", "1": player.ranking_score ?? 0 })}
                 />
                 <PlayerProfileForm
                   values={{
@@ -456,8 +432,8 @@ export default async function UserDetailPage({
               <Panel>
                 <PanelHeader
                   icon={BriefcaseIcon}
-                  title="Fiche professionnelle"
-                  description="Type de compte, organisation et contact declares a l'inscription."
+                  title={i18n.t("Fiche professionnelle")}
+                  description={i18n.t("Type de compte, organisation et contact declares a l'inscription.")}
                 />
                 <ProfessionalProfileForm
                   values={{
@@ -485,24 +461,26 @@ export default async function UserDetailPage({
 
 /* --------------------------------------------------------------- profil joueur */
 
-function PlayerFacts({ player }: { player: Record<string, unknown> }) {
+async function PlayerFacts({ player }: { player: Record<string, unknown> }) {
+  const i18n = await getAdminI18n();
+
   return (
     <Panel>
-      <PanelHeader title="Donnees sportives en un coup d'oeil" />
+      <PanelHeader title={i18n.t("Donnees sportives en un coup d'oeil")} />
       <div className="px-4 py-5 sm:px-5">
         <DefinitionList
           items={[
-            { label: "Niveau", value: label(PLAYER_LEVEL, player.level as string) },
-            { label: "Pied fort", value: label(FOOT_PREFERENCE, player.foot_preference as string) },
-            { label: "Taille", value: player.height_cm ? `${player.height_cm} cm` : "—" },
-            { label: "Poids", value: player.weight_kg ? `${player.weight_kg} kg` : "—" },
-            { label: "Club actuel", value: (player.current_club as string) ?? "—" },
-            { label: "Joueur libre", value: player.is_free_agent ? "Oui" : "Non" },
+            { label: i18n.t("Niveau"), value: i18n.labels.label(PLAYER_LEVEL, player.level as string) },
+            { label: i18n.t("Pied fort"), value: i18n.labels.label(FOOT_PREFERENCE, player.foot_preference as string) },
+            { label: i18n.t("Taille"), value: player.height_cm ? i18n.t("{0} cm", { "0": player.height_cm }) : "—" },
+            { label: i18n.t("Poids"), value: player.weight_kg ? i18n.t("{0} kg", { "0": player.weight_kg }) : "—" },
+            { label: i18n.t("Club actuel"), value: (player.current_club as string) ?? "—" },
+            { label: i18n.t("Joueur libre"), value: player.is_free_agent ? i18n.t("Oui") : i18n.t("Non") },
             {
-              label: "Visible dans la recherche",
-              value: player.is_visible ? "Oui" : "Non",
+              label: i18n.t("Visible dans la recherche"),
+              value: player.is_visible ? i18n.t("Oui") : i18n.t("Non"),
             },
-            { label: "Score de classement", value: String(player.ranking_score ?? 0) },
+            { label: i18n.t("Score de classement"), value: String(player.ranking_score ?? 0) },
           ]}
         />
       </div>
@@ -513,6 +491,8 @@ function PlayerFacts({ player }: { player: Record<string, unknown> }) {
 /* ------------------------------------------------------------------- dossier */
 
 async function DossierView({ profileId, role }: { profileId: string; role: string }) {
+  const i18n = await getAdminI18n();
+
   const { identity, guardians, documents } = await getUserDossier(profileId, role);
 
   return (
@@ -524,21 +504,16 @@ async function DossierView({ profileId, role }: { profileId: string; role: strin
           <InfoIcon className="size-4" />
         </span>
         <div className="min-w-0">
-          <p className="text-sm font-semibold">Piece d&apos;identite et compte sont decouples</p>
+          <p className="text-sm font-semibold">{i18n.t("Piece d'identite et compte sont decouples")}</p>
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-            La revue d&apos;une piece d&apos;identite est un controle distinct de la validation
-            du compte. Accepter la piece atteste de l&apos;identite ; elle n&apos;ouvre ni
-            l&apos;acces a l&apos;application ni la visibilite du joueur — c&apos;est la
-            validation du profil qui le fait, depuis la file de validation ou l&apos;entete de
-            cette fiche.
-          </p>
+            {i18n.t("La revue d'une piece d'identite est un controle distinct de la validation du compte. Accepter la piece atteste de l'identite ; elle n'ouvre ni l'acces a l'application ni la visibilite du joueur — c'est la validation du profil qui le fait, depuis la file de validation ou l'entete de cette fiche.")}</p>
         </div>
       </div>
 
       {role === "player" ? (
         <SectionTitle
-          title="Verifications d'identite (KYC)"
-          hint={`${identity.length} piece(s) au dossier`}
+          title={i18n.t("Verifications d'identite (KYC)")}
+          hint={i18n.t("{0} piece(s) au dossier", { "0": identity.length })}
         />
       ) : null}
 
@@ -546,14 +521,14 @@ async function DossierView({ profileId, role }: { profileId: string; role: strin
         <Panel>
           <PanelHeader
             icon={ShieldCheckIcon}
-            title="Pieces deposees"
-            description="Chaque piece est affichee en place : la decision se prend en face du document, pas derriere un bouton."
+            title={i18n.t("Pieces deposees")}
+            description={i18n.t("Chaque piece est affichee en place : la decision se prend en face du document, pas derriere un bouton.")}
           />
           {!identity.length ? (
             <EmptyState
               icon={FileTextIcon}
-              title="Aucun dossier d'identite"
-              description="Le joueur n'a pas encore soumis de piece d'identite."
+              title={i18n.t("Aucun dossier d'identite")}
+              description={i18n.t("Le joueur n'a pas encore soumis de piece d'identite.")}
             />
           ) : (
             /* Une carte par piece, avec le document **affiche en place**.
@@ -572,20 +547,20 @@ async function DossierView({ profileId, role }: { profileId: string; role: strin
                   <li key={String(row.id)} className="space-y-3 p-4 sm:p-5">
                     <div className="flex flex-wrap items-center gap-2">
                       <StatusPill tone="neutral">
-                        {String(row.document_type ?? "Document").toUpperCase()}
+                        {String(row.document_type ?? i18n.t("Document")).toUpperCase()}
                       </StatusPill>
-                      <StatusPill tone={entry(IDENTITY_STATUS, row.status as string).tone}>
-                        {label(IDENTITY_STATUS, row.status as string)}
+                      <StatusPill tone={i18n.labels.entry(IDENTITY_STATUS, row.status as string).tone}>
+                        {i18n.labels.label(IDENTITY_STATUS, row.status as string)}
                       </StatusPill>
                       {row.facial_check_provider ? (
                         <StatusPill tone={row.facial_check_passed ? "success" : "danger"}>
-                          Controle facial {row.facial_check_passed ? "reussi" : "echoue"}
+                          {i18n.t("Controle facial")} {row.facial_check_passed ? "reussi" : "echoue"}
                         </StatusPill>
                       ) : (
-                        <StatusPill tone="neutral">Controle facial non realise</StatusPill>
+                        <StatusPill tone="neutral">{i18n.t("Controle facial non realise")}</StatusPill>
                       )}
                       <span className="text-xs text-muted-foreground">
-                        Depose le {formatDate(row.created_at as string)}
+                        {i18n.t("Depose le")} {i18n.format.formatDate(row.created_at as string)}
                       </span>
 
                       <span className="flex-1" />
@@ -597,7 +572,7 @@ async function DossierView({ profileId, role }: { profileId: string; role: strin
                       <div className="flex flex-wrap items-center gap-2">
                         {row.reviewed_at ? (
                           <span className="text-xs text-muted-foreground">
-                            Examine le {formatDate(row.reviewed_at as string)}
+                            {i18n.t("Examine le")} {i18n.format.formatDate(row.reviewed_at as string)}
                           </span>
                         ) : null}
 
@@ -611,7 +586,7 @@ async function DossierView({ profileId, role }: { profileId: string; role: strin
                             )}
                           >
                             <CheckIcon />
-                            {row.status === "refuse" ? "Valider finalement" : "Valider"}
+                            {row.status === "refuse" ? i18n.t("Valider finalement") : i18n.t("Valider")}
                           </ActionButton>
                         ) : null}
 
@@ -621,22 +596,22 @@ async function DossierView({ profileId, role }: { profileId: string; role: strin
                             trigger={
                               <Button variant="destructive" size="xs">
                                 <XIcon />
-                                {row.status === "valide" ? "Revoquer" : "Refuser"}
+                                {row.status === "valide" ? i18n.t("Revoquer") : i18n.t("Refuser")}
                               </Button>
                             }
                             title={
                               row.status === "valide"
-                                ? "Revoquer cette piece d'identite"
-                                : "Refuser cette piece d'identite"
+                                ? i18n.t("Revoquer cette piece d'identite")
+                                : i18n.t("Refuser cette piece d'identite")
                             }
                             description={
                               row.status === "valide"
-                                ? "La piece repasse en « refuse » et le motif est enregistre dans rejection_reason. Le statut du profil joueur n'est pas touche : s'il doit perdre l'acces, suspendez le compte."
-                                : "Le motif est enregistre sur la piece et transmis au joueur."
+                                ? i18n.t("La piece repasse en « refuse » et le motif est enregistre dans rejection_reason. Le statut du profil joueur n'est pas touche : s'il doit perdre l'acces, suspendez le compte.")
+                                : i18n.t("Le motif est enregistre sur la piece et transmis au joueur.")
                             }
-                            placeholder="Document expire, photo floue, nom non concordant…"
+                            placeholder={i18n.t("Document expire, photo floue, nom non concordant…")}
                             submitLabel={
-                              row.status === "valide" ? "Revoquer la piece" : "Refuser la piece"
+                              row.status === "valide" ? i18n.t("Revoquer la piece") : i18n.t("Refuser la piece")
                             }
                           />
                         ) : null}
@@ -645,7 +620,7 @@ async function DossierView({ profileId, role }: { profileId: string; role: strin
 
                     {row.rejection_reason ? (
                       <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-                        Motif du refus : {row.rejection_reason as string}
+                        {i18n.t("Motif du refus :")} {row.rejection_reason as string}
                       </p>
                     ) : null}
 
@@ -658,16 +633,14 @@ async function DossierView({ profileId, role }: { profileId: string; role: strin
                       <div className="flex flex-wrap items-center gap-2">
                         <DocumentPreviewDialog
                           url={url}
-                          label={`Piece d'identite — ${String(row.document_type ?? "document").toUpperCase()}`}
+                          label={i18n.t("Piece d'identite — {0}", { "0": String(row.document_type ?? "document").toUpperCase() })}
                         />
                         <span className="text-xs text-muted-foreground">
-                          Doit concorder avec le nom et la date de naissance declares.
-                        </span>
+                          {i18n.t("Doit concorder avec le nom et la date de naissance declares.")}</span>
                       </div>
                     ) : (
                       <p className="rounded-lg border border-border bg-background px-3 py-2 text-xs text-muted-foreground">
-                        Aucun fichier joint a cette verification : rien a examiner.
-                      </p>
+                        {i18n.t("Aucun fichier joint a cette verification : rien a examiner.")}</p>
                     )}
                   </li>
                 );
@@ -681,14 +654,14 @@ async function DossierView({ profileId, role }: { profileId: string; role: strin
         <Panel>
           <PanelHeader
             icon={ShieldCheckIcon}
-            title="Representant legal"
-            description="Le CDC laisse le circuit de consentement des mineurs indefini : ces donnees sont affichees telles qu'elles ont ete saisies, sans workflow automatique."
+            title={i18n.t("Representant legal")}
+            description={i18n.t("Le CDC laisse le circuit de consentement des mineurs indefini : ces donnees sont affichees telles qu'elles ont ete saisies, sans workflow automatique.")}
           />
           {!guardians.length ? (
             <EmptyState
               icon={FileTextIcon}
-              title="Aucun representant declare"
-              description="Requis en base des lors que le joueur est mineur."
+              title={i18n.t("Aucun representant declare")}
+              description={i18n.t("Requis en base des lors que le joueur est mineur.")}
             />
           ) : (
             <div className="space-y-5 px-4 py-5 sm:px-5">
@@ -696,21 +669,21 @@ async function DossierView({ profileId, role }: { profileId: string; role: strin
                 <div key={String(guardian.id)} className="space-y-3">
                   <DefinitionList
                     items={[
-                      { label: "Nom", value: (guardian.full_name as string) ?? "—" },
-                      { label: "Lien de parente", value: (guardian.relationship as string) ?? "—" },
-                      { label: "Email", value: (guardian.email as string) ?? "—" },
-                      { label: "Telephone", value: (guardian.phone as string) ?? "—" },
+                      { label: i18n.t("Nom"), value: (guardian.full_name as string) ?? "—" },
+                      { label: i18n.t("Lien de parente"), value: (guardian.relationship as string) ?? "—" },
+                      { label: i18n.t("Email"), value: (guardian.email as string) ?? "—" },
+                      { label: i18n.t("Telephone"), value: (guardian.phone as string) ?? "—" },
                       {
-                        label: "Consentement",
+                        label: i18n.t("Consentement"),
                         value: guardian.consent_given
-                          ? `Donne le ${formatDate(guardian.consent_given_at as string)}`
-                          : "Non donne",
+                          ? i18n.t("Donne le {0}", { "0": i18n.format.formatDate(guardian.consent_given_at as string) })
+                          : i18n.t("Non donne"),
                       },
                       {
-                        label: "Statut du dossier",
+                        label: i18n.t("Statut du dossier"),
                         value: (
-                          <StatusPill tone={entry(DOCUMENT_STATUS, guardian.status as string).tone}>
-                            {label(DOCUMENT_STATUS, guardian.status as string)}
+                          <StatusPill tone={i18n.labels.entry(DOCUMENT_STATUS, guardian.status as string).tone}>
+                            {i18n.labels.label(DOCUMENT_STATUS, guardian.status as string)}
                           </StatusPill>
                         ),
                       },
@@ -721,14 +694,14 @@ async function DossierView({ profileId, role }: { profileId: string; role: strin
                       <DocumentPreview
                         bucket="guardian-documents"
                         path={guardian.id_document_storage_path as string}
-                        title="Piece d'identite du representant"
+                        title={i18n.t("Piece d'identite du representant")}
                       />
                     ) : null}
                     {guardian.consent_document_storage_path ? (
                       <DocumentPreview
                         bucket="guardian-documents"
                         path={guardian.consent_document_storage_path as string}
-                        title="Attestation de consentement"
+                        title={i18n.t("Attestation de consentement")}
                       />
                     ) : null}
                   </div>
@@ -742,24 +715,24 @@ async function DossierView({ profileId, role }: { profileId: string; role: strin
       {role === "professional" ? (
         <Panel>
           <PanelHeader
-            title="Justificatifs professionnels"
-            description="Chaque piece porte son propre statut de verification."
+            title={i18n.t("Justificatifs professionnels")}
+            description={i18n.t("Chaque piece porte son propre statut de verification.")}
           />
           {!documents.length ? (
             <EmptyState
               icon={FileTextIcon}
-              title="Aucun justificatif"
-              description="Le compte n'a pas encore depose de piece."
+              title={i18n.t("Aucun justificatif")}
+              description={i18n.t("Le compte n'a pas encore depose de piece.")}
             />
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Piece</TableHead>
-                  <TableHead>Statut</TableHead>
-                  <TableHead>Examine le</TableHead>
-                  <TableHead>Depose le</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>{i18n.t("Piece")}</TableHead>
+                  <TableHead>{i18n.t("Statut")}</TableHead>
+                  <TableHead>{i18n.t("Examine le")}</TableHead>
+                  <TableHead>{i18n.t("Depose le")}</TableHead>
+                  <TableHead className="text-right">{i18n.t("Actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -769,19 +742,19 @@ async function DossierView({ profileId, role }: { profileId: string; role: strin
                       <DocumentPreview
                         bucket="professional-documents"
                         path={row.storage_path as string}
-                        title={(row.document_label as string) ?? "Document"}
+                        title={(row.document_label as string) ?? i18n.t("Document")}
                       />
                     </TableCell>
                     <TableCell>
-                      <StatusPill tone={entry(DOCUMENT_STATUS, row.status as string).tone}>
-                        {label(DOCUMENT_STATUS, row.status as string)}
+                      <StatusPill tone={i18n.labels.entry(DOCUMENT_STATUS, row.status as string).tone}>
+                        {i18n.labels.label(DOCUMENT_STATUS, row.status as string)}
                       </StatusPill>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {formatDate(row.reviewed_at)}
+                      {i18n.format.formatDate(row.reviewed_at)}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {formatDate(row.created_at)}
+                      {i18n.format.formatDate(row.created_at)}
                     </TableCell>
                     <TableCell>
                       {/* Meme regle que pour le KYC : on n'offre pas de
@@ -794,7 +767,7 @@ async function DossierView({ profileId, role }: { profileId: string; role: strin
                             action={setDocumentStatus.bind(null, String(row.id), "valide")}
                           >
                             <CheckIcon />
-                            {row.status === "refuse" ? "Valider finalement" : "Valider"}
+                            {row.status === "refuse" ? i18n.t("Valider finalement") : i18n.t("Valider")}
                           </ActionButton>
                         ) : null}
                         {row.status !== "refuse" ? (
@@ -804,16 +777,16 @@ async function DossierView({ profileId, role }: { profileId: string; role: strin
                             confirm={
                               row.status === "valide"
                                 ? {
-                                    title: "Revoquer ce justificatif",
+                                    title: i18n.t("Revoquer ce justificatif"),
                                     description:
-                                      "La piece repasse en « refuse ». Le statut du compte professionnel n'est pas touche : s'il doit perdre l'acces, refusez le compte ou suspendez-le.",
-                                    actionLabel: "Revoquer",
+                                      i18n.t("La piece repasse en « refuse ». Le statut du compte professionnel n'est pas touche : s'il doit perdre l'acces, refusez le compte ou suspendez-le."),
+                                    actionLabel: i18n.t("Revoquer"),
                                   }
                                 : undefined
                             }
                           >
                             <XIcon />
-                            {row.status === "valide" ? "Revoquer" : "Refuser"}
+                            {row.status === "valide" ? i18n.t("Revoquer") : i18n.t("Refuser")}
                           </ActionButton>
                         ) : null}
                       </div>
@@ -843,27 +816,29 @@ async function DossierView({ profileId, role }: { profileId: string; role: strin
  * qui existe, sans charger cinquante lignes pour en prendre la longueur.
  */
 async function ContentView({ profileId, role }: { profileId: string; role: string }) {
+  const i18n = await getAdminI18n();
+
   const content = await getUserContent(profileId, role);
 
   return (
     <>
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        <StatCard label="Videos" value={formatNumber(content.videos.length)} icon={VideoIcon} />
-        <StatCard label="Photos" value={formatNumber(content.photos.length)} icon={ImageIcon} />
+        <StatCard label={i18n.t("Videos")} value={i18n.format.formatNumber(content.videos.length)} icon={VideoIcon} />
+        <StatCard label={i18n.t("Photos")} value={i18n.format.formatNumber(content.photos.length)} icon={ImageIcon} />
         <StatCard
-          label="Publications"
-          value={formatNumber(content.postsCount)}
+          label={i18n.t("Publications")}
+          value={i18n.format.formatNumber(content.postsCount)}
           icon={MessageSquareIcon}
         />
         <StatCard
-          label="Signalements recus"
-          value={formatNumber(content.reportsAboutCount)}
+          label={i18n.t("Signalements recus")}
+          value={i18n.format.formatNumber(content.reportsAboutCount)}
           accent={content.reportsAboutCount ? "error" : "neutral"}
           icon={FileTextIcon}
         />
         <StatCard
-          label="Blocages recus"
-          value={formatNumber(content.blocksReceivedCount)}
+          label={i18n.t("Blocages recus")}
+          value={i18n.format.formatNumber(content.blocksReceivedCount)}
           accent={content.blocksReceivedCount ? "error" : "neutral"}
           icon={BanIcon}
         />
@@ -873,20 +848,20 @@ async function ContentView({ profileId, role }: { profileId: string; role: strin
         <>
           <Panel>
             <PanelHeader
-              title="Videos du joueur"
-              description="La suppression est definitive : la ligne et le fichier de stockage sont retires."
+              title={i18n.t("Videos du joueur")}
+              description={i18n.t("La suppression est definitive : la ligne et le fichier de stockage sont retires.")}
             />
             {!content.videos.length ? (
-              <EmptyState icon={VideoIcon} title="Aucune video" />
+              <EmptyState icon={VideoIcon} title={i18n.t("Aucune video")} />
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Titre</TableHead>
-                    <TableHead>Source</TableHead>
-                    <TableHead>Duree</TableHead>
-                    <TableHead>Ajoutee le</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead>{i18n.t("Titre")}</TableHead>
+                    <TableHead>{i18n.t("Source")}</TableHead>
+                    <TableHead>{i18n.t("Duree")}</TableHead>
+                    <TableHead>{i18n.t("Ajoutee le")}</TableHead>
+                    <TableHead className="text-right">{i18n.t("Actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -897,7 +872,7 @@ async function ContentView({ profileId, role }: { profileId: string; role: strin
                     // `<video>` la lit.
                     const url =
                       youtube ?? publicStorageUrl("player-videos", video.storage_path as string);
-                    const titre = (video.title as string) ?? "Sans titre";
+                    const titre = (video.title as string) ?? i18n.t("Sans titre");
                     const thumbnail = video.thumbnail_url as string | null;
                     return (
                       <TableRow key={String(video.id)}>
@@ -907,7 +882,7 @@ async function ContentView({ profileId, role }: { profileId: string; role: strin
                               kind={youtube ? "youtube" : "video"}
                               url={url}
                               label={titre}
-                              description="Video deposee par le joueur. Sa suppression est definitive."
+                              description={i18n.t("Video deposee par le joueur. Sa suppression est definitive.")}
                               trigger={
                                 <span className="flex items-center gap-3">
                                   {/* La vignette n'existe que pour YouTube ;
@@ -928,8 +903,7 @@ async function ContentView({ profileId, role }: { profileId: string; role: strin
                                   <span className="min-w-0">
                                     <span className="block truncate text-sm">{titre}</span>
                                     <span className="text-xs text-muted-foreground">
-                                      Voir la video
-                                    </span>
+                                      {i18n.t("Voir la video")}</span>
                                   </span>
                                 </span>
                               }
@@ -940,28 +914,27 @@ async function ContentView({ profileId, role }: { profileId: string; role: strin
                         </TableCell>
                         <TableCell>
                           <StatusPill tone={video.youtube_url ? "info" : "neutral"}>
-                            {video.youtube_url ? "YouTube" : "Importee"}
+                            {video.youtube_url ? "YouTube" : i18n.t("Importee")}
                           </StatusPill>
                         </TableCell>
                         <TableCell className="tabular-nums text-muted-foreground">
-                          {video.duration_sec ? `${video.duration_sec} s` : "—"}
+                          {video.duration_sec ? i18n.t("{0} s", { "0": video.duration_sec }) : "—"}
                         </TableCell>
                         <TableCell className="text-muted-foreground">
-                          {formatDate(video.created_at as string)}
+                          {i18n.format.formatDate(video.created_at as string)}
                         </TableCell>
                         <TableCell className="text-right">
                           <ActionButton
                             variant="destructive"
                             action={deletePlayerVideo.bind(null, String(video.id))}
                             confirm={{
-                              title: "Supprimer cette video",
+                              title: i18n.t("Supprimer cette video"),
                               description:
-                                "La video et son fichier de stockage seront definitivement supprimes.",
-                              actionLabel: "Supprimer",
+                                i18n.t("La video et son fichier de stockage seront definitivement supprimes."),
+                              actionLabel: i18n.t("Supprimer"),
                             }}
                           >
-                            Supprimer
-                          </ActionButton>
+                            {i18n.t("Supprimer")}</ActionButton>
                         </TableCell>
                       </TableRow>
                     );
@@ -972,9 +945,9 @@ async function ContentView({ profileId, role }: { profileId: string; role: strin
           </Panel>
 
           <Panel>
-            <PanelHeader title="Photos du joueur" />
+            <PanelHeader title={i18n.t("Photos du joueur")} />
             {!content.photos.length ? (
-              <EmptyState icon={ImageIcon} title="Aucune photo" />
+              <EmptyState icon={ImageIcon} title={i18n.t("Aucune photo")} />
             ) : (
               <ul className="grid gap-3 px-4 py-5 sm:grid-cols-3 sm:px-5 lg:grid-cols-4">
                 {content.photos.map((photo) => {
@@ -992,33 +965,32 @@ async function ContentView({ profileId, role }: { profileId: string; role: strin
                         <MediaPreviewDialog
                           kind="image"
                           url={url}
-                          label={(photo.caption as string) ?? "Photo du joueur"}
-                          description="Photo deposee par le joueur. Sa suppression est definitive."
+                          label={(photo.caption as string) ?? i18n.t("Photo du joueur")}
+                          description={i18n.t("Photo deposee par le joueur. Sa suppression est definitive.")}
                           trigger={
                             // eslint-disable-next-line @next/next/no-img-element
                             <img
                               src={url}
-                              alt={(photo.caption as string) ?? "Photo du joueur"}
+                              alt={(photo.caption as string) ?? i18n.t("Photo du joueur")}
                               className="aspect-square w-full rounded-lg object-cover"
                             />
                           }
                         />
                       ) : null}
                       <p className="truncate text-[0.6875rem] text-muted-foreground">
-                        {(photo.caption as string) ?? formatDate(photo.created_at)}
+                        {(photo.caption as string) ?? i18n.format.formatDate(photo.created_at)}
                       </p>
                       <ActionButton
                         variant="destructive"
                         className="w-full"
                         action={deletePlayerPhoto.bind(null, String(photo.id))}
                         confirm={{
-                          title: "Supprimer cette photo",
-                          description: "La photo et son fichier de stockage seront supprimes.",
-                          actionLabel: "Supprimer",
+                          title: i18n.t("Supprimer cette photo"),
+                          description: i18n.t("La photo et son fichier de stockage seront supprimes."),
+                          actionLabel: i18n.t("Supprimer"),
                         }}
                       >
-                        Supprimer
-                      </ActionButton>
+                        {i18n.t("Supprimer")}</ActionButton>
                     </li>
                   );
                 })}
@@ -1028,7 +1000,7 @@ async function ContentView({ profileId, role }: { profileId: string; role: strin
 
           {content.cvs.length ? (
             <Panel>
-              <PanelHeader title="CV generes" />
+              <PanelHeader title={i18n.t("CV generes")} />
               <ul className="divide-y divide-border">
                 {content.cvs.map((cv) => {
                   const url = privateStorageUrl("player-cv", cv.storage_path as string);
@@ -1039,8 +1011,8 @@ async function ContentView({ profileId, role }: { profileId: string; role: strin
                     >
                       <span className="flex items-center gap-2">
                         <FileTextIcon className="size-3.5 text-muted-foreground" />
-                        {formatDateTime(cv.generated_at as string)}
-                        {cv.is_current ? <StatusPill tone="brand">Courant</StatusPill> : null}
+                        {i18n.format.formatDateTime(cv.generated_at as string)}
+                        {cv.is_current ? <StatusPill tone="brand">{i18n.t("Courant")}</StatusPill> : null}
                       </span>
                       {url ? (
                         // Le CV est un PDF dans un bucket prive : le meme
@@ -1048,7 +1020,7 @@ async function ContentView({ profileId, role }: { profileId: string; role: strin
                         // faisait quitter la fiche.
                         <DocumentPreviewDialog
                           url={url}
-                          label={`CV du ${formatDate(cv.generated_at as string)}`}
+                          label={i18n.t("CV du {0}", { "0": i18n.format.formatDate(cv.generated_at as string) })}
                         />
                       ) : null}
                     </li>
@@ -1067,6 +1039,8 @@ async function ContentView({ profileId, role }: { profileId: string; role: strin
 /* ------------------------------------------------------------------ finances */
 
 async function FinancesView({ profileId, role }: { profileId: string; role: string }) {
+  const i18n = await getAdminI18n();
+
   const data = await getUserFinances(profileId, role);
 
   const totalPaid = data.payments
@@ -1076,35 +1050,35 @@ async function FinancesView({ profileId, role }: { profileId: string; role: stri
   return (
     <>
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Total encaisse" value={formatAmount(totalPaid)} />
-        <StatCard label="Paiements" value={formatNumber(data.payments.length)} />
+        <StatCard label={i18n.t("Total encaisse")} value={i18n.format.formatAmount(totalPaid)} />
+        <StatCard label={i18n.t("Paiements")} value={i18n.format.formatNumber(data.payments.length)} />
         {role === "player" ? (
           <>
-            <StatCard label="Vues du profil" value={formatNumber(data.viewsCount)} />
-            <StatCard label="Mises en favori" value={formatNumber(data.favoritesCount)} />
+            <StatCard label={i18n.t("Vues du profil")} value={i18n.format.formatNumber(data.viewsCount)} />
+            <StatCard label={i18n.t("Mises en favori")} value={i18n.format.formatNumber(data.favoritesCount)} />
           </>
         ) : (
           <>
-            <StatCard label="Abonnements" value={formatNumber(data.subscriptions.length)} />
-            <StatCard label="Paiements" value={formatNumber(data.payments.length)} />
+            <StatCard label={i18n.t("Abonnements")} value={i18n.format.formatNumber(data.subscriptions.length)} />
+            <StatCard label={i18n.t("Paiements")} value={i18n.format.formatNumber(data.payments.length)} />
           </>
         )}
       </section>
 
       <Panel>
-        <PanelHeader title="Abonnements" description="Historique des souscriptions du compte." />
+        <PanelHeader title={i18n.t("Abonnements")} description={i18n.t("Historique des souscriptions du compte.")} />
         {!data.subscriptions.length ? (
-          <EmptyState title="Aucun abonnement" />
+          <EmptyState title={i18n.t("Aucun abonnement")} />
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Offre</TableHead>
-                <TableHead>Statut</TableHead>
-                <TableHead>Debut</TableHead>
-                <TableHead>Fin</TableHead>
-                <TableHead>Renouvellement</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{i18n.t("Offre")}</TableHead>
+                <TableHead>{i18n.t("Statut")}</TableHead>
+                <TableHead>{i18n.t("Debut")}</TableHead>
+                <TableHead>{i18n.t("Fin")}</TableHead>
+                <TableHead>{i18n.t("Renouvellement")}</TableHead>
+                <TableHead className="text-right">{i18n.t("Actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -1115,23 +1089,23 @@ async function FinancesView({ profileId, role }: { profileId: string; role: stri
                 return (
                   <TableRow key={String(subscription.id)}>
                     <TableCell>
-                      {plan ? label(PLAN_CODE, plan.code as string) : "Offre inconnue"}
+                      {plan ? i18n.labels.label(PLAN_CODE, plan.code as string) : i18n.t("Offre inconnue")}
                     </TableCell>
                     <TableCell>
                       <StatusPill
-                        tone={entry(SUBSCRIPTION_STATUS, subscription.status as string).tone}
+                        tone={i18n.labels.entry(SUBSCRIPTION_STATUS, subscription.status as string).tone}
                       >
-                        {label(SUBSCRIPTION_STATUS, subscription.status as string)}
+                        {i18n.labels.label(SUBSCRIPTION_STATUS, subscription.status as string)}
                       </StatusPill>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {formatDate(subscription.starts_at as string)}
+                      {i18n.format.formatDate(subscription.starts_at as string)}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {formatDate(subscription.ends_at as string)}
+                      {i18n.format.formatDate(subscription.ends_at as string)}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {subscription.auto_renew ? "Automatique" : "Desactive"}
+                      {subscription.auto_renew ? i18n.t("Automatique") : i18n.t("Desactive")}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center justify-end gap-2">
@@ -1143,8 +1117,7 @@ async function FinancesView({ profileId, role }: { profileId: string; role: stri
                               "active",
                             )}
                           >
-                            Activer
-                          </ActionButton>
+                            {i18n.t("Activer")}</ActionButton>
                         ) : null}
                         {subscription.status !== "annulee" ? (
                           <ActionButton
@@ -1155,8 +1128,7 @@ async function FinancesView({ profileId, role }: { profileId: string; role: stri
                               "annulee",
                             )}
                           >
-                            Annuler
-                          </ActionButton>
+                            {i18n.t("Annuler")}</ActionButton>
                         ) : null}
                       </div>
                     </TableCell>
@@ -1170,56 +1142,55 @@ async function FinancesView({ profileId, role }: { profileId: string; role: stri
 
       <Panel>
         <PanelHeader
-          title="Paiements"
-          description="Un encaissement hors ligne se valide par « Activer manuellement »."
+          title={i18n.t("Paiements")}
+          description={i18n.t("Un encaissement hors ligne se valide par « Activer manuellement ».")}
         />
         {!data.payments.length ? (
-          <EmptyState title="Aucun paiement" />
+          <EmptyState title={i18n.t("Aucun paiement")} />
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Objet</TableHead>
-                <TableHead>Montant</TableHead>
-                <TableHead>Moyen</TableHead>
-                <TableHead>Statut</TableHead>
-                <TableHead>Reference</TableHead>
-                <TableHead>Encaisse le</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{i18n.t("Objet")}</TableHead>
+                <TableHead>{i18n.t("Montant")}</TableHead>
+                <TableHead>{i18n.t("Moyen")}</TableHead>
+                <TableHead>{i18n.t("Statut")}</TableHead>
+                <TableHead>{i18n.t("Reference")}</TableHead>
+                <TableHead>{i18n.t("Encaisse le")}</TableHead>
+                <TableHead className="text-right">{i18n.t("Actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {data.payments.map((payment) => (
                 <TableRow key={String(payment.id)}>
                   <TableCell>
-                    <StatusPill tone={entry(PAYMENT_TYPE, payment.payment_type as string).tone}>
-                      {label(PAYMENT_TYPE, payment.payment_type as string)}
+                    <StatusPill tone={i18n.labels.entry(PAYMENT_TYPE, payment.payment_type as string).tone}>
+                      {i18n.labels.label(PAYMENT_TYPE, payment.payment_type as string)}
                     </StatusPill>
                   </TableCell>
                   <TableCell className="font-medium tabular-nums">
-                    {formatAmount(payment.amount as number, (payment.currency as string) ?? "TND")}
+                    {i18n.format.formatAmount(payment.amount as number, (payment.currency as string) ?? "TND")}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {label(PAYMENT_METHOD, payment.method as string)}
+                    {i18n.labels.label(PAYMENT_METHOD, payment.method as string)}
                   </TableCell>
                   <TableCell>
-                    <StatusPill tone={entry(PAYMENT_STATUS, payment.status as string).tone}>
-                      {label(PAYMENT_STATUS, payment.status as string)}
+                    <StatusPill tone={i18n.labels.entry(PAYMENT_STATUS, payment.status as string).tone}>
+                      {i18n.labels.label(PAYMENT_STATUS, payment.status as string)}
                     </StatusPill>
                   </TableCell>
                   <TableCell className="max-w-40 truncate text-xs text-muted-foreground">
                     {(payment.provider_reference as string) ?? "—"}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {formatDate(payment.paid_at as string)}
+                    {i18n.format.formatDate(payment.paid_at as string)}
                   </TableCell>
                   <TableCell className="text-right">
                     {payment.status === "en_attente" ? (
                       <ActionButton
                         action={activatePaymentManually.bind(null, String(payment.id))}
                       >
-                        Activer manuellement
-                      </ActionButton>
+                        {i18n.t("Activer manuellement")}</ActionButton>
                     ) : null}
                   </TableCell>
                 </TableRow>
@@ -1231,18 +1202,18 @@ async function FinancesView({ profileId, role }: { profileId: string; role: stri
 
       {role === "player" ? (
         <Panel>
-          <PanelHeader title="Inscriptions Scout Day" />
+          <PanelHeader title={i18n.t("Inscriptions Scout Day")} />
           {!data.registrations.length ? (
-            <EmptyState title="Aucune inscription" />
+            <EmptyState title={i18n.t("Aucune inscription")} />
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Evenement</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Statut</TableHead>
-                  <TableHead>Eligibilite</TableHead>
-                  <TableHead>Inscrit le</TableHead>
+                  <TableHead>{i18n.t("Evenement")}</TableHead>
+                  <TableHead>{i18n.t("Date")}</TableHead>
+                  <TableHead>{i18n.t("Statut")}</TableHead>
+                  <TableHead>{i18n.t("Eligibilite")}</TableHead>
+                  <TableHead>{i18n.t("Inscrit le")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -1255,34 +1226,34 @@ async function FinancesView({ profileId, role }: { profileId: string; role: stri
                       <TableCell>
                         {scoutDay ? (
                           <Link
-                            href={`/admin/scout-days/${registration.scout_day_id}`}
+                            href={i18n.path(`/admin/scout-days/${registration.scout_day_id}`)}
                             className="hover:text-brand"
                           >
                             {scoutDay.title as string}
                           </Link>
                         ) : (
-                          "Evenement supprime"
+                          i18n.t("Evenement supprime")
                         )}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {formatDate(scoutDay?.event_date as string)}
+                        {i18n.format.formatDate(scoutDay?.event_date as string)}
                       </TableCell>
                       <TableCell>
                         <StatusPill
-                          tone={entry(REGISTRATION_STATUS, registration.status as string).tone}
+                          tone={i18n.labels.entry(REGISTRATION_STATUS, registration.status as string).tone}
                         >
-                          {label(REGISTRATION_STATUS, registration.status as string)}
+                          {i18n.labels.label(REGISTRATION_STATUS, registration.status as string)}
                         </StatusPill>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {registration.is_eligible === null
-                          ? "Non verifiee"
+                          ? i18n.t("Non verifiee")
                           : registration.is_eligible
-                            ? "Eligible"
-                            : "Non eligible"}
+                            ? i18n.t("Eligible")
+                            : i18n.t("Non eligible")}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {formatDate(registration.registered_at as string)}
+                        {i18n.format.formatDate(registration.registered_at as string)}
                       </TableCell>
                     </TableRow>
                   );
@@ -1313,7 +1284,7 @@ async function FinancesView({ profileId, role }: { profileId: string; role: stri
  * `/admin/documents`, qui la signe pour cinq minutes avec la session
  * administrateur.
  */
-function DocumentPreview({
+async function DocumentPreview({
   bucket,
   path,
   title,
@@ -1322,8 +1293,10 @@ function DocumentPreview({
   path: string | null;
   title: string;
 }) {
+  const i18n = await getAdminI18n();
+
   const url = privateStorageUrl(bucket, path);
-  if (!url) return <span className="text-xs text-muted-foreground">{title} (aucun fichier)</span>;
+  if (!url) return <span className="text-xs text-muted-foreground">{title}  {i18n.t("(aucun fichier)")}</span>;
   return <DocumentPreviewDialog url={url} label={title} />;
 }
 

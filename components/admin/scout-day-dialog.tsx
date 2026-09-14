@@ -1,5 +1,8 @@
 "use client";
 
+import { useAdminTranslations } from "@/lib/i18n/admin-client";
+
+
 import * as React from "react";
 import { PencilIcon, PlusIcon } from "lucide-react";
 
@@ -28,6 +31,8 @@ export function ScoutDayDialog({
   organizers?: ScoutDayOrganizer[];
   countries?: Country[];
 }) {
+  const i18n = useAdminTranslations();
+
   const [open, setOpen] = React.useState(false);
   const close = React.useCallback(() => setOpen(false), []);
   const editing = Boolean(value?.id);
@@ -41,24 +46,24 @@ export function ScoutDayDialog({
           // client — c'est ce qui casse l'hydratation de la page entiere.
           <Button data-slot="dialog-trigger" variant={editing ? "outline" : "default"} size="sm">
             {editing ? <PencilIcon /> : <PlusIcon />}
-            {editing ? "Modifier" : "Nouveau Scout Day"}
+            {editing ? i18n.t("Modifier") : i18n.t("Nouveau Scout Day")}
           </Button>
         }
       />
       <DialogContent className="max-h-[90dvh] gap-4 overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle>{editing ? "Modifier le Scout Day" : "Creer un Scout Day"}</DialogTitle>
+          <DialogTitle>{editing ? i18n.t("Modifier le Scout Day") : i18n.t("Creer un Scout Day")}</DialogTitle>
           <DialogDescription>
             {editing
-              ? "Mettez a jour les informations. Les inscrits seront notifies si la date, l'heure ou le lieu change."
-              : "L'evenement sera cree en brouillon et pourra etre publie apres verification."}
+              ? i18n.t("Mettez a jour les informations. Les inscrits seront notifies si la date, l'heure ou le lieu change.")
+              : i18n.t("L'evenement sera cree en brouillon et pourra etre publie apres verification.")}
           </DialogDescription>
         </DialogHeader>
         <ScoutDayForm
           value={value}
           organizers={organizers}
           countries={countries}
-          submitLabel={editing ? "Enregistrer les modifications" : "Creer en brouillon"}
+          submitLabel={editing ? i18n.t("Enregistrer les modifications") : i18n.t("Creer en brouillon")}
           onSuccess={close}
         />
       </DialogContent>

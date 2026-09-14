@@ -3,7 +3,7 @@
 import Link from "next/link"
 import * as React from "react"
 
-import { NAV_ITEMS } from "@/components/admin/nav-items"
+import { NAV_ITEMS, navLabel } from "@/components/admin/nav-items"
 import { useAdminQueue } from "@/components/admin/queue-live"
 import { RailDiagnostics } from "@/components/admin/rail-diagnostics"
 import { TodayCard } from "@/components/admin/today-card"
@@ -23,6 +23,7 @@ import {
 import type { AdminPermission } from "@/lib/auth"
 import type { NextAdminEvent } from "@/lib/queries/admin-queue"
 import type { Diagnostic } from "@/lib/queries/diagnostics"
+import { useAdminI18n } from "@/lib/i18n/admin-client"
 
 export function AppSidebar({
   user,
@@ -40,11 +41,9 @@ export function AppSidebar({
   // Memes chiffres que la cloche, et vivants comme elle : les deux lisent le
   // meme instantane.
   const { tasks, badges } = useAdminQueue()
-  const items = NAV_ITEMS.filter(
-    // `permission: null` = accessible a tout administrateur (cf. nav-items.ts).
-    (item) => item.permission === null || permissions.includes(item.permission),
-  ).map((item) => ({
-    title: item.label,
+  const { dict } = useAdminI18n()
+  const items = NAV_ITEMS.filter((item) => permissions.includes(item.permission)).map((item) => ({
+    title: navLabel(dict, item.key),
     url: item.href,
     icon: <item.icon />,
     badge: item.badge ? badges[item.badge] : 0,
@@ -77,14 +76,14 @@ export function AppSidebar({
                   <span className="font-heading truncate text-[0.8125rem] leading-tight font-extrabold tracking-wide">
                     IFRIQIYA STAR
                   </span>
-                  <span className="micro-label text-brand">Scouting pro</span>
+                  <span className="micro-label text-brand">{dict.nav.tagline}</span>
                 </span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
           <SidebarTrigger
-            aria-label="Reduire ou deployer le menu"
-            title="Reduire ou deployer le menu (Ctrl + B)"
+            aria-label={dict.nav.toggle}
+            title={dict.nav.toggleTitle}
             className="size-7 shrink-0 rounded-lg border border-sidebar-border bg-secondary/60 text-sidebar-foreground/70 hover:bg-secondary hover:text-sidebar-foreground"
           />
         </div>

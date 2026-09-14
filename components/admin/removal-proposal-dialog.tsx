@@ -1,5 +1,8 @@
 "use client";
 
+import { useAdminTranslations } from "@/lib/i18n/admin-client";
+
+
 import * as React from "react";
 import { Loader2Icon } from "lucide-react";
 import { toast } from "sonner";
@@ -57,6 +60,8 @@ export function RemovalProposalDialog({
   /** Vrai si la cible sera masquee des la proposition — a dire avant de cliquer. */
   quarantines: boolean;
 }) {
+  const i18n = useAdminTranslations();
+
   const [open, setOpen] = React.useState(false);
   const [removal, setRemoval] = React.useState(options[0]?.value ?? "");
   const [reason, setReason] = React.useState("");
@@ -78,7 +83,7 @@ export function RemovalProposalDialog({
         toast.error(result.message);
       }
     } catch {
-      toast.error("L'action n'a pas pu aboutir.");
+      toast.error(i18n.t("L'action n'a pas pu aboutir."));
     } finally {
       setPending(false);
     }
@@ -90,17 +95,17 @@ export function RemovalProposalDialog({
       <DialogContent>
         <form onSubmit={submit} className="contents">
           <DialogHeader>
-            <DialogTitle>Proposer le retrait</DialogTitle>
+            <DialogTitle>{i18n.t("Proposer le retrait")}</DialogTitle>
             <DialogDescription>
               {quarantines
-                ? "Le contenu est masque des maintenant, puis un super administrateur confirme ou le remet en ligne."
-                : "Cette cible ne peut pas etre masquee : elle reste en ligne jusqu'a la decision du super administrateur."}
+                ? i18n.t("Le contenu est masque des maintenant, puis un super administrateur confirme ou le remet en ligne.")
+                : i18n.t("Cette cible ne peut pas etre masquee : elle reste en ligne jusqu'a la decision du super administrateur.")}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label htmlFor="removal">Retrait propose</Label>
+              <Label htmlFor="removal">{i18n.t("Retrait propose")}</Label>
               <NativeSelect
                 id="removal"
                 value={removal}
@@ -115,23 +120,22 @@ export function RemovalProposalDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="proposal-reason">Motif</Label>
+              <Label htmlFor="proposal-reason">{i18n.t("Motif")}</Label>
               <Textarea
                 id="proposal-reason"
                 value={reason}
                 onChange={(event) => setReason(event.target.value)}
-                placeholder="Ce que le contenu enfreint, et ce qui a ete verifie."
+                placeholder={i18n.t("Ce que le contenu enfreint, et ce qui a ete verifie.")}
                 rows={4}
               />
             </div>
           </div>
 
           <DialogFooter>
-            <DialogClose render={<Button type="button" variant="outline" />}>Annuler</DialogClose>
+            <DialogClose render={<Button type="button" variant="outline" />}>{i18n.t("Annuler")}</DialogClose>
             <Button type="submit" variant="destructive" disabled={pending || !trimmed}>
               {pending ? <Loader2Icon className="animate-spin" /> : null}
-              Proposer le retrait
-            </Button>
+              {i18n.t("Proposer le retrait")}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

@@ -1,3 +1,5 @@
+import { useAdminTranslations } from "@/lib/i18n/admin-client"
+
 import * as React from "react"
 import { mergeProps } from "@base-ui/react/merge-props"
 import { useRender } from "@base-ui/react/use-render"
@@ -96,6 +98,8 @@ function BreadcrumbEllipsis({
   className,
   ...props
 }: React.ComponentProps<"span">) {
+  const i18n = useAdminTranslations()
+
   return (
     <span
       data-slot="breadcrumb-ellipsis"
@@ -109,7 +113,7 @@ function BreadcrumbEllipsis({
     >
       <MoreHorizontalIcon
       />
-      <span className="sr-only">More</span>
+      <span className="sr-only">{i18n.t("Plus")}</span>
     </span>
   )
 }

@@ -1,3 +1,4 @@
+import type { AdminTranslations } from "@/lib/i18n/admin-shared";
 import type { ModerationAction } from "@/lib/labels";
 
 /**
@@ -69,22 +70,23 @@ export function removalOptions(targetType: string): ModerationAction[] {
 export function removalConfirmation(
   action: string | null,
   targetType: string,
+  i18n: AdminTranslations,
 ): { title: string; description: string; actionLabel: string } {
   if (action === "utilisateur_suspendu") {
     return {
-      actionLabel: "Suspendre le compte",
-      title: "Suspendre le compte de l'auteur",
+      actionLabel: i18n.t("Suspendre le compte"),
+      title: i18n.t("Suspendre le compte de l'auteur"),
       description:
-        "Le compte sera desactive et son profil metier passera au statut « suspendu » : l'application le deconnectera a la prochaine ouverture. La mesure est reversible depuis la fiche du compte.",
+        i18n.t("Le compte sera desactive et son profil metier passera au statut « suspendu » : l'application le deconnectera a la prochaine ouverture. La mesure est reversible depuis la fiche du compte."),
     };
   }
 
   if (action === "masque") {
     return {
-      actionLabel: "Masquer le contenu",
-      title: "Masquer definitivement ce contenu",
+      actionLabel: i18n.t("Masquer le contenu"),
+      title: i18n.t("Masquer definitivement ce contenu"),
       description:
-        "Le contenu reste retire du fil et le signalement est clos. L'administration continue de le voir, et le masquage se leve depuis l'onglet correspondant.",
+        i18n.t("Le contenu reste retire du fil et le signalement est clos. L'administration continue de le voir, et le masquage se leve depuis l'onglet correspondant."),
     };
   }
 
@@ -92,27 +94,27 @@ export function removalConfirmation(
   // est sans retour possible.
   if (targetType === "video") {
     return {
-      actionLabel: "Supprimer la video",
-      title: "Supprimer definitivement cette video",
+      actionLabel: i18n.t("Supprimer la video"),
+      title: i18n.t("Supprimer definitivement cette video"),
       description:
-        "La ligne et le fichier de stockage seront supprimes ensemble. Contrairement a une publication, cette suppression est IRREVERSIBLE : rien ne permettra de la restaurer.",
+        i18n.t("La ligne et le fichier de stockage seront supprimes ensemble. Contrairement a une publication, cette suppression est IRREVERSIBLE : rien ne permettra de la restaurer."),
     };
   }
 
   if (targetType === "scout_day") {
     return {
-      actionLabel: "Annuler l'evenement",
-      title: "Annuler ce Scout Day",
+      actionLabel: i18n.t("Annuler l'evenement"),
+      title: i18n.t("Annuler ce Scout Day"),
       description:
-        "L'evenement passera en « annule » et tous les joueurs inscrits recevront une notification. Cette notification ne peut pas etre reprise.",
+        i18n.t("L'evenement passera en « annule » et tous les joueurs inscrits recevront une notification. Cette notification ne peut pas etre reprise."),
     };
   }
 
   return {
-    actionLabel: "Supprimer le contenu",
-    title: "Supprimer ce contenu",
+    actionLabel: i18n.t("Supprimer le contenu"),
+    title: i18n.t("Supprimer ce contenu"),
     description:
-      "Le contenu disparaitra du fil. Il reste visible de l'administration pour la trace du signalement, et la suppression se leve depuis l'onglet correspondant.",
+      i18n.t("Le contenu disparaitra du fil. Il reste visible de l'administration pour la trace du signalement, et la suppression se leve depuis l'onglet correspondant."),
   };
 }
 

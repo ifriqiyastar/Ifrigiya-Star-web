@@ -1,3 +1,4 @@
+import { getAdminI18n } from "@/lib/i18n/admin";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
@@ -48,15 +49,8 @@ import {
   setScoutDayStatus,
   validateScoutDay,
 } from "@/lib/actions/scout-days";
-import { formatAmount, formatDate, formatDateTime, formatNumber } from "@/lib/format";
-import {
-  PAYMENT_METHOD,
-  PAYMENT_STATUS,
-  REGISTRATION_STATUS,
-  SCOUT_DAY_STATUS,
-  entry,
-  label,
-} from "@/lib/labels";
+
+import { PAYMENT_METHOD, PAYMENT_STATUS, REGISTRATION_STATUS, SCOUT_DAY_STATUS } from "@/lib/labels";
 import { displayName, fetchProfilesByIds } from "@/lib/queries/profiles";
 // Alias : `EligibilityCriteria` est deja le composant d'affichage importe plus haut.
 import type { EligibilityCriteria as CriteriaShape } from "@/lib/football";
@@ -65,13 +59,18 @@ import { createClient } from "@/lib/supabase/server";
 import { getAdminAccess, requirePermission } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
-export const metadata: Metadata = { title: "Scout Day" };
+export async function generateMetadata(): Promise<Metadata> {
+  const i18n = await getAdminI18n();
+  return { title: i18n.t("Scout Day") };
+}
 
 const EMPTY_UUID = "00000000-0000-0000-0000-000000000000";
 
 export default async function ScoutDayDetailPage({
   params,
 }: PageProps<"/[locale]/admin/scout-days/[id]">) {
+  const i18n = await getAdminI18n();
+
   const admin = await requirePermission("events.manage");
   const { permissions } = await getAdminAccess(admin.userId);
   const canValidate = permissions.includes("events.validate");
@@ -142,27 +141,26 @@ export default async function ScoutDayDetailPage({
     <>
       <div>
         <Link
-          href="/admin/scout-days"
+          href={i18n.path("/admin/scout-days")}
           className={cn(buttonVariants({ variant: "ghost", size: "xs" }), "mb-3 -ml-3")}
         >
           <ArrowLeftIcon />
-          Tous les Scout Days
-        </Link>
+          {i18n.t("Tous les Scout Days")}</Link>
         <PageHeader
-          kicker="Scout Days"
+          kicker={i18n.t("Scout Days")}
           title={scoutDay.title}
           description={
             <span className="flex flex-wrap items-center gap-2">
-              <StatusPill tone={entry(SCOUT_DAY_STATUS, scoutDay.status).tone}>
-                {label(SCOUT_DAY_STATUS, scoutDay.status)}
+              <StatusPill tone={i18n.labels.entry(SCOUT_DAY_STATUS, scoutDay.status).tone}>
+                {i18n.labels.label(SCOUT_DAY_STATUS, scoutDay.status)}
               </StatusPill>
               <StatusPill tone={scoutDay.is_paid ? "brand" : "neutral"}>
                 {scoutDay.is_paid
-                  ? formatAmount(scoutDay.price_amount, scoutDay.price_currency ?? "TND")
-                  : "Gratuit"}
+                  ? i18n.format.formatAmount(scoutDay.price_amount, scoutDay.price_currency ?? "TND")
+                  : i18n.t("Gratuit")}
               </StatusPill>
               <span className="text-muted-foreground">
-                {formatDate(scoutDay.event_date)}
+                {i18n.format.formatDate(scoutDay.event_date)}
                 {scoutDay.location ? ` · ${scoutDay.location}` : ""}
               </span>
             </span>
@@ -195,8 +193,7 @@ export default async function ScoutDayDetailPage({
                   action={setScoutDayStatus.bind(null, scoutDay.id, "brouillon")}
                   size="sm"
                 >
-                  Depublier
-                </ActionButton>
+                  {i18n.t("Depublier")}</ActionButton>
               ) : canValidate ? (
                 <ActionButton
                   action={
@@ -208,7 +205,7 @@ export default async function ScoutDayDetailPage({
                   size="sm"
                 >
                   <CheckIcon />
-                  {awaitingValidation ? "Valider" : "Publier"}
+                  {awaitingValidation ? i18n.t("Valider") : i18n.t("Publier")}
                 </ActionButton>
               ) : null}
               {awaitingValidation && canValidate ? (
@@ -219,14 +216,13 @@ export default async function ScoutDayDetailPage({
                       type="button"
                       className="inline-flex h-9 items-center gap-1.5 rounded-full border border-destructive/40 px-4 text-sm font-medium text-destructive hover:bg-destructive/10"
                     >
-                      Refuser
-                    </button>
+                      {i18n.t("Refuser")}</button>
                   }
-                  title="Refuser cet evenement"
-                  description="L'evenement retourne en brouillon chez son organisateur, qui recoit le motif en notification."
-                  label="Motif du refus"
-                  placeholder="Lieu imprecis, tarif incoherent, date a confirmer…"
-                  submitLabel="Refuser l'evenement"
+                  title={i18n.t("Refuser cet evenement")}
+                  description={i18n.t("L'evenement retourne en brouillon chez son organisateur, qui recoit le motif en notification.")}
+                  label={i18n.t("Motif du refus")}
+                  placeholder={i18n.t("Lieu imprecis, tarif incoherent, date a confirmer…")}
+                  submitLabel={i18n.t("Refuser l'evenement")}
                 />
               ) : null}
               {/* Cloturer ne s'offre que sur un evenement EN LIGNE : on cloture
@@ -240,14 +236,13 @@ export default async function ScoutDayDetailPage({
                   action={setScoutDayStatus.bind(null, scoutDay.id, "cloture")}
                   size="sm"
                   confirm={{
-                    title: "Cloturer cet evenement",
+                    title: i18n.t("Cloturer cet evenement"),
                     description:
-                      "A reserver a une journee qui a eu lieu : un evenement cloture n'apparait plus dans les opportunites ouvertes des joueurs. Pour un evenement qui n'aura pas lieu, utilisez « Annuler », qui previent les inscrits.",
-                    actionLabel: "Cloturer",
+                      i18n.t("A reserver a une journee qui a eu lieu : un evenement cloture n'apparait plus dans les opportunites ouvertes des joueurs. Pour un evenement qui n'aura pas lieu, utilisez « Annuler », qui previent les inscrits."),
+                    actionLabel: i18n.t("Cloturer"),
                   }}
                 >
-                  Cloturer
-                </ActionButton>
+                  {i18n.t("Cloturer")}</ActionButton>
               ) : null}
               {["brouillon", "en_attente_validation", "publie"].includes(scoutDay.status) ? (
                 <ActionButton
@@ -256,22 +251,20 @@ export default async function ScoutDayDetailPage({
                   size="sm"
                 >
                   <XIcon />
-                  Annuler
-                </ActionButton>
+                  {i18n.t("Annuler")}</ActionButton>
               ) : null}
               <ActionButton
                 action={deleteScoutDay.bind(null, scoutDay.id)}
                 variant="ghost"
                 size="sm"
                 confirm={{
-                  title: "Supprimer cet evenement",
+                  title: i18n.t("Supprimer cet evenement"),
                   description:
-                    "L'evenement et ses inscriptions seront definitivement supprimes. Preferez « Annuler » pour un evenement qui n'aura pas lieu.",
-                  actionLabel: "Supprimer definitivement",
+                    i18n.t("L'evenement et ses inscriptions seront definitivement supprimes. Preferez « Annuler » pour un evenement qui n'aura pas lieu."),
+                  actionLabel: i18n.t("Supprimer definitivement"),
                 }}
               >
-                Supprimer
-              </ActionButton>
+                {i18n.t("Supprimer")}</ActionButton>
             </>
           }
         />
@@ -279,51 +272,51 @@ export default async function ScoutDayDetailPage({
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          label="Inscriptions"
-          value={`${formatNumber(rows.length)}${scoutDay.capacity ? ` / ${scoutDay.capacity}` : ""}`}
-          hint={`${formatNumber(confirmed)} confirmees ou presentes`}
+          label={i18n.t("Inscriptions")}
+          value={`${i18n.format.formatNumber(rows.length)}${scoutDay.capacity ? ` / ${scoutDay.capacity}` : ""}`}
+          hint={i18n.t("{0} confirmees ou presentes", { "0": i18n.format.formatNumber(confirmed) })}
           icon={CalendarDaysIcon}
         />
         <StatCard
-          label="Encaisse"
-          value={formatAmount(collected, scoutDay.price_currency ?? "TND")}
-          hint={`${formatNumber(pendingPayments)} paiement(s) en attente`}
+          label={i18n.t("Encaisse")}
+          value={i18n.format.formatAmount(collected, scoutDay.price_currency ?? "TND")}
+          hint={i18n.t("{0} paiement(s) en attente", { "0": i18n.format.formatNumber(pendingPayments) })}
         />
         <StatCard
-          label="Evaluations"
-          value={formatNumber(evaluations.data?.length ?? 0)}
-          hint="Rapports de scouting saisis"
+          label={i18n.t("Evaluations")}
+          value={i18n.format.formatNumber(evaluations.data?.length ?? 0)}
+          hint={i18n.t("Rapports de scouting saisis")}
         />
         <StatCard
-          label="Places restantes"
+          label={i18n.t("Places restantes")}
           value={
-            scoutDay.capacity ? formatNumber(Math.max(0, scoutDay.capacity - rows.length)) : "—"
+            scoutDay.capacity ? i18n.format.formatNumber(Math.max(0, scoutDay.capacity - rows.length)) : "—"
           }
-          hint={scoutDay.capacity ? "Capacite declaree" : "Aucune capacite definie"}
+          hint={scoutDay.capacity ? i18n.t("Capacite declaree") : i18n.t("Aucune capacite definie")}
         />
       </section>
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Panel className="lg:col-span-2">
-          <PanelHeader title="Fiche de l'evenement" />
+          <PanelHeader title={i18n.t("Fiche de l'evenement")} />
           <div className="space-y-5 px-4 py-5 sm:px-5">
             <DefinitionList
               items={[
                 {
-                  label: "Organisateur",
+                  label: i18n.t("Organisateur"),
                   icon: UserIcon,
                   value: (
                     <Link
-                      href={`/admin/utilisateurs/${scoutDay.organizer_id}`}
+                      href={i18n.path(`/admin/utilisateurs/${scoutDay.organizer_id}`)}
                       className="hover:text-brand"
                     >
-                      {displayName(organizer)}
+                      {displayName(organizer, undefined, i18n.locale)}
                     </Link>
                   ),
                 },
-                { label: "Date", icon: CalendarIcon, value: formatDate(scoutDay.event_date) },
+                { label: i18n.t("Date"), icon: CalendarIcon, value: i18n.format.formatDate(scoutDay.event_date) },
                 {
-                  label: "Horaires",
+                  label: i18n.t("Horaires"),
                   icon: ClockIcon,
                   value:
                     [scoutDay.start_time, scoutDay.end_time]
@@ -331,48 +324,48 @@ export default async function ScoutDayDetailPage({
                       .map((value) => String(value).slice(0, 5))
                       .join(" – ") || "—",
                 },
-                { label: "Lieu", icon: MapPinIcon, value: scoutDay.location ?? "—" },
+                { label: i18n.t("Lieu"), icon: MapPinIcon, value: scoutDay.location ?? "—" },
                 {
-                  label: "Capacite",
+                  label: i18n.t("Capacite"),
                   icon: UsersIcon,
-                  value: scoutDay.capacity ? `${scoutDay.capacity} places` : "Non limitee",
+                  value: scoutDay.capacity ? i18n.t("{0} places", { "0": scoutDay.capacity }) : i18n.t("Non limitee"),
                 },
                 {
-                  label: "Tarif",
+                  label: i18n.t("Tarif"),
                   icon: TicketIcon,
                   value: scoutDay.is_paid
-                    ? formatAmount(scoutDay.price_amount, scoutDay.price_currency ?? "TND")
-                    : "Gratuit",
+                    ? i18n.format.formatAmount(scoutDay.price_amount, scoutDay.price_currency ?? "TND")
+                    : i18n.t("Gratuit"),
                 },
                 {
-                  label: "Cree le",
+                  label: i18n.t("Cree le"),
                   icon: FilePlus2Icon,
-                  value: formatDateTime(scoutDay.created_at),
+                  value: i18n.format.formatDateTime(scoutDay.created_at),
                 },
                 {
-                  label: "Mis a jour le",
+                  label: i18n.t("Mis a jour le"),
                   icon: PenLineIcon,
-                  value: formatDateTime(scoutDay.updated_at),
+                  value: i18n.format.formatDateTime(scoutDay.updated_at),
                 },
                 // Trace de validation (migration 0040) : ces trois lignes sont
                 // ecrites par le trigger, pas par le back-office.
                 ...(scoutDay.submitted_at
                   ? [
                       {
-                        label: "Soumis le",
+                        label: i18n.t("Soumis le"),
                         icon: SendIcon,
-                        value: formatDateTime(scoutDay.submitted_at),
+                        value: i18n.format.formatDateTime(scoutDay.submitted_at),
                       },
                     ]
                   : []),
                 ...(scoutDay.validated_at
                   ? [
                       {
-                        label: scoutDay.status === "publie" ? "Valide le" : "Decision du",
+                        label: scoutDay.status === "publie" ? i18n.t("Valide le") : i18n.t("Decision du"),
                         icon: BadgeCheckIcon,
-                        value: formatDateTime(scoutDay.validated_at),
+                        value: i18n.format.formatDateTime(scoutDay.validated_at),
                       },
-                      { label: "Par", icon: ShieldCheckIcon, value: displayName(validator) },
+                      { label: i18n.t("Par"), icon: ShieldCheckIcon, value: displayName(validator, undefined, i18n.locale) },
                     ]
                   : []),
               ]}
@@ -380,8 +373,7 @@ export default async function ScoutDayDetailPage({
             {scoutDay.validation_reason ? (
               <div className="space-y-1.5 rounded-xl bg-destructive/10 px-4 py-3">
                 <p className="text-[0.625rem] font-semibold tracking-[0.18em] text-destructive uppercase">
-                  Motif du refus communique a l&apos;organisateur
-                </p>
+                  {i18n.t("Motif du refus communique a l'organisateur")}</p>
                 <p className="text-sm leading-relaxed whitespace-pre-line">
                   {scoutDay.validation_reason}
                 </p>
@@ -394,8 +386,7 @@ export default async function ScoutDayDetailPage({
                 </span>
                 <div className="min-w-0 space-y-1.5">
                   <p className="text-[0.625rem] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-                    Description
-                  </p>
+                    {i18n.t("Description")}</p>
                   <p className="text-sm leading-relaxed whitespace-pre-line">
                     {scoutDay.description}
                   </p>
@@ -407,8 +398,8 @@ export default async function ScoutDayDetailPage({
 
         <Panel>
           <PanelHeader
-            title="Criteres d'eligibilite"
-            description="Filtres declares par l'organisateur. Un critere absent n'est pas filtrant."
+            title={i18n.t("Criteres d'eligibilite")}
+            description={i18n.t("Filtres declares par l'organisateur. Un critere absent n'est pas filtrant.")}
           />
           <div className="px-4 py-5 sm:px-5">
             <EligibilityCriteria criteria={criteria} />
@@ -418,26 +409,26 @@ export default async function ScoutDayDetailPage({
 
       <Panel>
         <PanelHeader
-          title="Inscriptions et paiements"
-          description="Un paiement encaisse hors ligne se debloque via « Activer manuellement »."
+          title={i18n.t("Inscriptions et paiements")}
+          description={i18n.t("Un paiement encaisse hors ligne se debloque via « Activer manuellement ».")}
         />
         {!rows.length ? (
           <EmptyState
             icon={CalendarDaysIcon}
-            title="Aucune inscription"
-            description="Aucun joueur ne s'est encore inscrit a cet evenement."
+            title={i18n.t("Aucune inscription")}
+            description={i18n.t("Aucun joueur ne s'est encore inscrit a cet evenement.")}
           />
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Joueur</TableHead>
-                <TableHead>Statut</TableHead>
-                <TableHead>Eligibilite</TableHead>
-                <TableHead>Paiement</TableHead>
-                <TableHead>Evaluation</TableHead>
-                <TableHead>Inscrit le</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{i18n.t("Joueur")}</TableHead>
+                <TableHead>{i18n.t("Statut")}</TableHead>
+                <TableHead>{i18n.t("Eligibilite")}</TableHead>
+                <TableHead>{i18n.t("Paiement")}</TableHead>
+                <TableHead>{i18n.t("Evaluation")}</TableHead>
+                <TableHead>{i18n.t("Inscrit le")}</TableHead>
+                <TableHead className="text-right">{i18n.t("Actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -457,41 +448,41 @@ export default async function ScoutDayDetailPage({
                   <TableRow key={row.id}>
                     <TableCell>
                       <UserCell
-                        name={displayName(player)}
+                        name={displayName(player, undefined, i18n.locale)}
                         secondary={player?.email}
                         avatarUrl={player?.avatar_url}
-                        href={`/admin/utilisateurs/${row.player_id}`}
+                        href={i18n.path(`/admin/utilisateurs/${row.player_id}`)}
                       />
                     </TableCell>
                     <TableCell>
-                      <StatusPill tone={entry(REGISTRATION_STATUS, row.status).tone}>
-                        {label(REGISTRATION_STATUS, row.status)}
+                      <StatusPill tone={i18n.labels.entry(REGISTRATION_STATUS, row.status).tone}>
+                        {i18n.labels.label(REGISTRATION_STATUS, row.status)}
                       </StatusPill>
                     </TableCell>
                     <TableCell>
                       {row.is_eligible === null ? (
-                        <span className="text-xs text-muted-foreground">Non verifiee</span>
+                        <span className="text-xs text-muted-foreground">{i18n.t("Non verifiee")}</span>
                       ) : (
                         <StatusPill tone={row.is_eligible ? "success" : "danger"}>
-                          {row.is_eligible ? "Eligible" : "Non eligible"}
+                          {row.is_eligible ? i18n.t("Eligible") : i18n.t("Non eligible")}
                         </StatusPill>
                       )}
                     </TableCell>
                     <TableCell>
                       {payment ? (
                         <div className="flex flex-col gap-1">
-                          <StatusPill tone={entry(PAYMENT_STATUS, payment.status).tone}>
-                            {label(PAYMENT_STATUS, payment.status)}
+                          <StatusPill tone={i18n.labels.entry(PAYMENT_STATUS, payment.status).tone}>
+                            {i18n.labels.label(PAYMENT_STATUS, payment.status)}
                           </StatusPill>
                           <span className="text-xs text-muted-foreground">
-                            {formatAmount(payment.amount, payment.currency ?? "TND")} ·{" "}
-                            {label(PAYMENT_METHOD, payment.method)}
+                            {i18n.format.formatAmount(payment.amount, payment.currency ?? "TND")} ·{" "}
+                            {i18n.labels.label(PAYMENT_METHOD, payment.method)}
                           </span>
                         </div>
                       ) : scoutDay.is_paid ? (
-                        <StatusPill tone="warning">Aucun paiement</StatusPill>
+                        <StatusPill tone="warning">{i18n.t("Aucun paiement")}</StatusPill>
                       ) : (
-                        <span className="text-xs text-muted-foreground">Gratuit</span>
+                        <span className="text-xs text-muted-foreground">{i18n.t("Gratuit")}</span>
                       )}
                     </TableCell>
                     <TableCell>
@@ -507,7 +498,7 @@ export default async function ScoutDayDetailPage({
                       )}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {formatDate(row.registered_at)}
+                      {i18n.format.formatDate(row.registered_at)}
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap items-center justify-end gap-2">
@@ -515,40 +506,35 @@ export default async function ScoutDayDetailPage({
                           <ActionButton
                             action={setRegistrationStatus.bind(null, row.id, "confirme")}
                           >
-                            Confirmer
-                          </ActionButton>
+                            {i18n.t("Confirmer")}</ActionButton>
                         ) : null}
                         {row.status !== "present" ? (
                           <ActionButton
                             action={setRegistrationStatus.bind(null, row.id, "present")}
                             variant="secondary"
                           >
-                            Present
-                          </ActionButton>
+                            {i18n.t("Present")}</ActionButton>
                         ) : null}
                         {row.status !== "absent" ? (
                           <ActionButton
                             action={setRegistrationStatus.bind(null, row.id, "absent")}
                             variant="ghost"
                           >
-                            Absent
-                          </ActionButton>
+                            {i18n.t("Absent")}</ActionButton>
                         ) : null}
                         {row.status !== "refuse" ? (
                           <ActionButton
                             action={setRegistrationStatus.bind(null, row.id, "refuse")}
                             variant="destructive"
                           >
-                            Refuser
-                          </ActionButton>
+                            {i18n.t("Refuser")}</ActionButton>
                         ) : null}
                         {payment?.status === "en_attente" ? (
                           <ActionButton
                             action={activatePaymentManually.bind(null, payment.id)}
                             variant="default"
                           >
-                            Activer le paiement
-                          </ActionButton>
+                            {i18n.t("Activer le paiement")}</ActionButton>
                         ) : null}
                       </div>
                     </TableCell>
@@ -563,19 +549,19 @@ export default async function ScoutDayDetailPage({
       {evaluations.data?.length ? (
         <Panel>
           <PanelHeader
-            title="Rapports de scouting"
-            description="Le bareme du score /100 n'est pas fixe par le cahier des charges : les scores affiches sont ceux saisis par les evaluateurs, et la note globale est calculee cote serveur."
+            title={i18n.t("Rapports de scouting")}
+            description={i18n.t("Le bareme du score /100 n'est pas fixe par le cahier des charges : les scores affiches sont ceux saisis par les evaluateurs, et la note globale est calculee cote serveur.")}
           />
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Joueur</TableHead>
-                <TableHead>Technique</TableHead>
-                <TableHead>Physique</TableHead>
-                <TableHead>Tactique</TableHead>
-                <TableHead>Mental</TableHead>
-                <TableHead>Global</TableHead>
-                <TableHead>Visible au joueur</TableHead>
+                <TableHead>{i18n.t("Joueur")}</TableHead>
+                <TableHead>{i18n.t("Technique")}</TableHead>
+                <TableHead>{i18n.t("Physique")}</TableHead>
+                <TableHead>{i18n.t("Tactique")}</TableHead>
+                <TableHead>{i18n.t("Mental")}</TableHead>
+                <TableHead>{i18n.t("Global")}</TableHead>
+                <TableHead>{i18n.t("Visible au joueur")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -584,7 +570,7 @@ export default async function ScoutDayDetailPage({
                 const player = registration ? profiles.get(registration.player_id) : undefined;
                 return (
                   <TableRow key={evaluation.id}>
-                    <TableCell>{displayName(player)}</TableCell>
+                    <TableCell>{displayName(player, undefined, i18n.locale)}</TableCell>
                     <TableCell className="tabular-nums">{evaluation.technical_score}</TableCell>
                     <TableCell className="tabular-nums">{evaluation.physical_score}</TableCell>
                     <TableCell className="tabular-nums">{evaluation.tactical_score}</TableCell>
@@ -594,7 +580,7 @@ export default async function ScoutDayDetailPage({
                     </TableCell>
                     <TableCell>
                       <StatusPill tone={evaluation.visible_to_player ? "success" : "neutral"}>
-                        {evaluation.visible_to_player ? "Publie" : "Prive"}
+                        {evaluation.visible_to_player ? i18n.t("Publie") : i18n.t("Prive")}
                       </StatusPill>
                     </TableCell>
                   </TableRow>

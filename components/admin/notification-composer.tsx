@@ -1,5 +1,8 @@
 "use client";
 
+import { useAdminTranslations } from "@/lib/i18n/admin-client";
+
+
 import * as React from "react";
 import {
   BellIcon,
@@ -56,6 +59,8 @@ export function NotificationComposer({
   reach: { devices: number; activeAccounts: number };
   defaults?: { title?: string; body?: string };
 }) {
+  const i18n = useAdminTranslations();
+
   const [title, setTitle] = React.useState(defaults?.title ?? "");
   const [body, setBody] = React.useState(defaults?.body ?? "");
   const [targetType, setTargetType] = React.useState("all");
@@ -87,10 +92,10 @@ export function NotificationComposer({
   }
 
   const SEGMENTS = [
-    { value: "all", label: "Tous les utilisateurs", count: audiences.all },
-    { value: "role:player", label: "Joueurs uniquement", count: audiences.players },
-    { value: "role:professional", label: "Pros & recruteurs", count: audiences.professionals },
-    { value: "scout_day", label: "Scout Day", count: null },
+    { value: "all", label: i18n.t("Tous les utilisateurs"), count: audiences.all },
+    { value: "role:player", label: i18n.t("Joueurs uniquement"), count: audiences.players },
+    { value: "role:professional", label: i18n.t("Pros & recruteurs"), count: audiences.professionals },
+    { value: "scout_day", label: i18n.t("Scout Day"), count: null },
   ] as const;
 
   const selectedSegment = targetType === "role" ? `role:${targetValue}` : targetType;
@@ -98,17 +103,17 @@ export function NotificationComposer({
 
   const resolved =
     targetType === "all"
-      ? `Toute la plateforme (${audiences.all} compte(s) actif(s))`
+      ? i18n.t("Toute la plateforme ({0} compte(s) actif(s))", { "0": audiences.all })
       : targetType === "role" && targetValue === "player"
-        ? `Joueurs actifs (${audiences.players} compte(s))`
+        ? i18n.t("Joueurs actifs ({0} compte(s))", { "0": audiences.players })
         : targetType === "role" && targetValue === "professional"
-          ? `Professionnels actifs (${audiences.professionals} compte(s))`
+          ? i18n.t("Professionnels actifs ({0} compte(s))", { "0": audiences.professionals })
           : targetType === "scout_day"
             ? selectedScoutDay
-              ? `${selectedScoutDay.label} — ${selectedScoutDay.count} inscrit(s) non annule(s)`
-              : "Selectionnez un Scout Day"
+              ? i18n.t("{0} — {1} inscrit(s) non annule(s)", { "0": selectedScoutDay.label, "1": selectedScoutDay.count })
+              : i18n.t("Selectionnez un Scout Day")
             : targetType === "user"
-              ? (users.find((user) => user.id === targetValue)?.label ?? "Selectionnez un compte")
+              ? (users.find((user) => user.id === targetValue)?.label ?? i18n.t("Selectionnez un compte"))
               : "—";
 
   function pickSegment(value: string) {
@@ -138,33 +143,26 @@ export function NotificationComposer({
           <div className="flex h-12 items-center justify-between gap-2 border-b border-border bg-muted px-4">
             <h2 className="flex items-center gap-2 text-sm font-semibold">
               <SendIcon className="size-4 text-brand" />
-              Nouvel envoi de notification
-            </h2>
+              {i18n.t("Nouvel envoi de notification")}</h2>
             <span className="micro-label flex items-center gap-1.5 rounded bg-background px-2 py-1 text-muted-foreground">
               <span className="size-1.5 rounded-full bg-brand" />
-              Diffusion immediate
-            </span>
+              {i18n.t("Diffusion immediate")}</span>
           </div>
 
           <div className="space-y-4 p-4">
             <div className="flex items-start gap-2.5 rounded-lg bg-muted p-3">
               <InfoIcon className="mt-0.5 size-4 shrink-0 text-info" />
               <div>
-                <p className="text-sm font-medium">Il n&apos;y a pas de file d&apos;attente</p>
+                <p className="text-sm font-medium">{i18n.t("Il n'y a pas de file d'attente")}</p>
                 <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-                  L&apos;envoi ecrit une notification par destinataire ; c&apos;est cette ecriture
-                  qui declenche le push sur les appareils ayant enregistre un jeton. Rien ne reste
-                  en attente d&apos;un worker, et le nombre de destinataires servis est renvoye
-                  immediatement.
-                </p>
+                  {i18n.t("L'envoi ecrit une notification par destinataire ; c'est cette ecriture qui declenche le push sur les appareils ayant enregistre un jeton. Rien ne reste en attente d'un worker, et le nombre de destinataires servis est renvoye immediatement.")}</p>
               </div>
             </div>
 
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <label htmlFor="notif-title" className="micro-label">
-                  Titre de la notification
-                </label>
+                  {i18n.t("Titre de la notification")}</label>
                 <span className="text-[0.6875rem] text-muted-foreground tabular-nums">
                   {title.length} / 64
                 </span>
@@ -176,13 +174,13 @@ export function NotificationComposer({
                 maxLength={64}
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
-                placeholder="Ex : nouvelle session Scout Day a Tunis"
+                placeholder={i18n.t("Ex : nouvelle session Scout Day a Tunis")}
                 className="h-9 w-full rounded-lg bg-background px-3 text-sm outline-none placeholder:text-muted-foreground focus:ring-1 focus:ring-brand"
               />
             </div>
 
             <div className="space-y-1.5">
-              <label className="micro-label">Destinataires cibles (segmentation)</label>
+              <label className="micro-label">{i18n.t("Destinataires cibles (segmentation)")}</label>
               <div className="grid grid-cols-2 gap-0.5 rounded-lg bg-background p-1 sm:grid-cols-4">
                 {SEGMENTS.map((segment) => (
                   <button
@@ -218,11 +216,10 @@ export function NotificationComposer({
                   value={targetValue}
                   onChange={(event) => setTargetValue(event.target.value)}
                 >
-                  <option value="">Selectionner un Scout Day</option>
+                  <option value="">{i18n.t("Selectionner un Scout Day")}</option>
                   {scoutDays.map((event) => (
                     <option key={event.id} value={event.id}>
-                      {event.label} — {event.count} inscrit(s)
-                    </option>
+                      {event.label} — {event.count}  {i18n.t("inscrit(s)")}</option>
                   ))}
                 </NativeSelect>
               ) : null}
@@ -234,7 +231,7 @@ export function NotificationComposer({
                   value={targetValue}
                   onChange={(event) => setTargetValue(event.target.value)}
                 >
-                  <option value="">Selectionner un compte</option>
+                  <option value="">{i18n.t("Selectionner un compte")}</option>
                   {users.map((user) => (
                     <option key={user.id} value={user.id}>
                       {user.label}
@@ -247,7 +244,7 @@ export function NotificationComposer({
 
               <div className="flex flex-wrap items-center gap-2 rounded bg-muted px-3 py-1.5 text-xs text-muted-foreground">
                 <SlidersHorizontalIcon className="size-3.5 text-info" />
-                <span>Cible resolue :</span>
+                <span>{i18n.t("Cible resolue :")}</span>
                 <span className="font-semibold text-foreground">{resolved}</span>
                 <button
                   type="button"
@@ -257,30 +254,29 @@ export function NotificationComposer({
                   }}
                   className="ml-auto text-[0.6875rem] font-semibold text-brand hover:underline"
                 >
-                  Cibler un compte precis
-                </button>
+                  {i18n.t("Cibler un compte precis")}</button>
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <label className="micro-label">Canaux de diffusion</label>
+              <label className="micro-label">{i18n.t("Canaux de diffusion")}</label>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 <ChannelCard
                   icon={BellRingIcon}
                   title="In-app"
-                  hint="Fil et cloche de l'application"
+                  hint={i18n.t("Fil et cloche de l'application")}
                   active
                 />
                 <ChannelCard
                   icon={SmartphoneIcon}
-                  title="Push mobile"
-                  hint="Appareils avec un jeton enregistre"
+                  title={i18n.t("Push mobile")}
+                  hint={i18n.t("Appareils avec un jeton enregistre")}
                   active
                 />
                 <ChannelCard
                   icon={MailIcon}
-                  title="Email"
-                  hint="Aucun fournisseur configure"
+                  title={i18n.t("Email")}
+                  hint={i18n.t("Aucun fournisseur configure")}
                   active={false}
                 />
               </div>
@@ -290,8 +286,7 @@ export function NotificationComposer({
 
             <div className="space-y-1.5">
               <label htmlFor="notif-body" className="micro-label">
-                Corps du message
-              </label>
+                {i18n.t("Corps du message")}</label>
               <textarea
                 id="notif-body"
                 name="body"
@@ -299,19 +294,17 @@ export function NotificationComposer({
                 rows={4}
                 value={body}
                 onChange={(event) => setBody(event.target.value)}
-                placeholder="Detaillez la session, la date et ce que le destinataire doit faire."
+                placeholder={i18n.t("Detaillez la session, la date et ce que le destinataire doit faire.")}
                 className="w-full resize-y rounded-lg bg-background p-3 text-sm outline-none placeholder:text-muted-foreground focus:ring-1 focus:ring-brand"
               />
               <p className="text-[0.6875rem] text-muted-foreground">
-                Le texte part tel quel : aucune variable n&apos;est remplacee a l&apos;envoi.
-              </p>
+                {i18n.t("Le texte part tel quel : aucune variable n'est remplacee a l'envoi.")}</p>
             </div>
 
             <div className="flex flex-col items-center justify-between gap-2 pt-1 sm:flex-row">
               <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <BellIcon className="size-3.5" />
-                {reach.devices} compte(s) ont un appareil joignable par push
-              </span>
+                {reach.devices}  {i18n.t("compte(s) ont un appareil joignable par push")}</span>
               <div className="flex w-full items-center justify-end gap-2 sm:w-auto">
                 <button
                   type="button"
@@ -324,8 +317,7 @@ export function NotificationComposer({
                   ) : (
                     <BugIcon className="size-4" />
                   )}
-                  Envoi test (a moi)
-                </button>
+                  {i18n.t("Envoi test (a moi)")}</button>
                 <button
                   type="submit"
                   disabled={pending}
@@ -336,8 +328,7 @@ export function NotificationComposer({
                   ) : (
                     <SendIcon className="size-4" />
                   )}
-                  Envoyer maintenant
-                </button>
+                  {i18n.t("Envoyer maintenant")}</button>
               </div>
             </div>
           </div>
@@ -349,9 +340,8 @@ export function NotificationComposer({
           <div className="flex items-center justify-between gap-2 pb-3">
             <h2 className="flex items-center gap-2 text-sm font-semibold">
               <SmartphoneIcon className="size-4 text-brand" />
-              Apercu ecran verrouille
-            </h2>
-            <span className="micro-label text-muted-foreground">Maintenant</span>
+              {i18n.t("Apercu ecran verrouille")}</h2>
+            <span className="micro-label text-muted-foreground">{i18n.t("Maintenant")}</span>
           </div>
 
           <div className="space-y-2 rounded-lg bg-background p-3">
@@ -362,35 +352,35 @@ export function NotificationComposer({
                 </span>
                 <span className="micro-label">Ifriqiya Star</span>
               </span>
-              <span className="micro-label text-muted-foreground">Maintenant</span>
+              <span className="micro-label text-muted-foreground">{i18n.t("Maintenant")}</span>
             </div>
             <div className="pl-1">
               <p className="text-sm leading-snug font-bold break-words">
-                {title || "Titre de la notification"}
+                {title || i18n.t("Titre de la notification")}
               </p>
               <p className="mt-1 line-clamp-3 text-xs leading-tight text-muted-foreground break-words">
-                {body || "Le message apparaitra ici, tel que le destinataire le lira."}
+                {body || i18n.t("Le message apparaitra ici, tel que le destinataire le lira.")}
               </p>
             </div>
           </div>
 
           <div className="mt-3 flex items-center justify-between gap-2 text-[0.6875rem] text-muted-foreground">
-            <span>Notification in-app + push</span>
-            <span className="tabular-nums">{title.length + body.length} caracteres</span>
+            <span>{i18n.t("Notification in-app + push")}</span>
+            <span className="tabular-nums">{title.length + body.length}  {i18n.t("caracteres")}</span>
           </div>
         </div>
 
         <div className="space-y-3 rounded-xl border border-border bg-card p-4">
-          <h2 className="text-sm font-semibold">Portee reelle</h2>
+          <h2 className="text-sm font-semibold">{i18n.t("Portee reelle")}</h2>
           <ReachRow
-            label="Comptes actifs"
+            label={i18n.t("Comptes actifs")}
             value={`${reach.activeAccounts}`}
-            hint="Destinataires possibles d'une diffusion « toute la plateforme »"
+            hint={i18n.t("Destinataires possibles d'une diffusion « toute la plateforme »")}
           />
           <ReachRow
-            label="Appareils joignables"
+            label={i18n.t("Appareils joignables")}
             value={`${reach.devices}`}
-            hint="Comptes ayant enregistre un jeton push"
+            hint={i18n.t("Comptes ayant enregistre un jeton push")}
           />
           <span aria-hidden className="block h-1.5 w-full overflow-hidden rounded-full bg-accent">
             <span
@@ -401,10 +391,7 @@ export function NotificationComposer({
             />
           </span>
           <p className="text-[0.6875rem] leading-relaxed text-muted-foreground">
-            Les autres comptes recevront la notification dans l&apos;application, sans push. La
-            remise effective d&apos;un push n&apos;est pas mesuree : personne ne relit les accuses
-            de reception.
-          </p>
+            {i18n.t("Les autres comptes recevront la notification dans l'application, sans push. La remise effective d'un push n'est pas mesuree : personne ne relit les accuses de reception.")}</p>
         </div>
       </div>
     </div>

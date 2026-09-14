@@ -25,6 +25,7 @@ import {
 import { EllipsisVerticalIcon, ShieldCheckIcon, BellIcon, LogOutIcon } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { initials } from "@/lib/format"
+import { useAdminI18n } from "@/lib/i18n/admin-client"
 
 export function NavUser({
   user,
@@ -38,6 +39,7 @@ export function NavUser({
   }
 }) {
   const { isMobile } = useSidebar()
+  const { dict } = useAdminI18n()
   const router = useRouter()
   async function signOut() {
     await createClient().auth.signOut()
@@ -98,20 +100,19 @@ export function NavUser({
             <DropdownMenuGroup>
               <DropdownMenuItem render={<Link href="/admin/validations" />}>
                 <ShieldCheckIcon />
-                Validations
+                {dict.userMenu.validations}
               </DropdownMenuItem>
               {/* Le lien manquait : l'entree n'etait cliquable que pour ne
                   rien faire. */}
               <DropdownMenuItem render={<Link href="/admin/notifications" />}>
                 <BellIcon />
-                Notifications
+                {dict.userMenu.notifications}
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={signOut}>
-              <LogOutIcon
-              />
-              Se deconnecter
+              <LogOutIcon />
+              {dict.userMenu.signOut}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

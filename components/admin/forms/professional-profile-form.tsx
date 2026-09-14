@@ -1,5 +1,8 @@
 "use client";
 
+import { useAdminTranslations } from "@/lib/i18n/admin-client";
+
+
 import * as React from "react";
 import { toast } from "sonner";
 
@@ -7,7 +10,7 @@ import { Field, FieldGrid } from "@/components/admin/forms/field";
 import { SubmitRow } from "@/components/admin/forms/submit-row";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
-import { PROFESSIONAL_TYPE, options } from "@/lib/labels";
+import { PROFESSIONAL_TYPE } from "@/lib/labels";
 import type { ActionResult } from "@/lib/actions/result";
 
 export type ProfessionalProfileValues = {
@@ -26,6 +29,8 @@ export function ProfessionalProfileForm({
   values: ProfessionalProfileValues;
   action: (formData: FormData) => Promise<ActionResult>;
 }) {
+  const i18n = useAdminTranslations();
+
   const [pending, setPending] = React.useState(false);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
@@ -45,13 +50,13 @@ export function ProfessionalProfileForm({
     <form onSubmit={submit}>
       <div className="space-y-5 px-4 py-5 sm:px-5">
         <FieldGrid>
-          <Field label="Type de compte" htmlFor="professional_type">
+          <Field label={i18n.t("Type de compte")} htmlFor="professional_type">
             <NativeSelect
               id="professional_type"
               name="professional_type"
               defaultValue={values.professional_type}
             >
-              {options(PROFESSIONAL_TYPE).map((option) => (
+              {i18n.labels.options(PROFESSIONAL_TYPE).map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
@@ -59,9 +64,9 @@ export function ProfessionalProfileForm({
             </NativeSelect>
           </Field>
           <Field
-            label="Organisation"
+            label={i18n.t("Organisation")}
             htmlFor="organization_name"
-            hint="Obligatoire cote application pour un club ou une academie."
+            hint={i18n.t("Obligatoire cote application pour un club ou une academie.")}
           >
             <Input
               id="organization_name"
@@ -69,7 +74,7 @@ export function ProfessionalProfileForm({
               defaultValue={values.organization_name ?? ""}
             />
           </Field>
-          <Field label="Nom du contact" htmlFor="contact_full_name">
+          <Field label={i18n.t("Nom du contact")} htmlFor="contact_full_name">
             <Input
               id="contact_full_name"
               name="contact_full_name"
@@ -77,17 +82,17 @@ export function ProfessionalProfileForm({
               required
             />
           </Field>
-          <Field label="Fonction" htmlFor="position_title">
+          <Field label={i18n.t("Fonction")} htmlFor="position_title">
             <Input
               id="position_title"
               name="position_title"
               defaultValue={values.position_title ?? ""}
             />
           </Field>
-          <Field label="Pays" htmlFor="country">
+          <Field label={i18n.t("Pays")} htmlFor="country">
             <Input id="country" name="country" defaultValue={values.country ?? ""} />
           </Field>
-          <Field label="Ville" htmlFor="city">
+          <Field label={i18n.t("Ville")} htmlFor="city">
             <Input id="city" name="city" defaultValue={values.city ?? ""} />
           </Field>
         </FieldGrid>

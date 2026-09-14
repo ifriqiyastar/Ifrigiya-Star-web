@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ChevronRightIcon } from "lucide-react";
 
+import { getAdminDict } from "@/lib/i18n/admin";
 import { cn } from "@/lib/utils";
 
 export type Crumb = { label: string; href?: string };
@@ -14,7 +15,7 @@ export type Crumb = { label: string; href?: string };
  * en deux niveaux (« Utilisateurs et validations › Comptes »), et c'est la
  * seule indication de ce regroupement une fois la page ouverte.
  */
-export function PageHeader({
+export async function PageHeader({
   breadcrumb,
   kicker,
   title,
@@ -37,13 +38,16 @@ export function PageHeader({
   actions?: React.ReactNode;
   className?: string;
 }) {
+  // Composant serveur : il lit le dictionnaire plutot que de se faire passer
+  // un libelle qu'aucun de ses quinze appelants n'a de raison de connaitre.
+  const dict = await getAdminDict();
   const crumbs = breadcrumb ?? (kicker ? [{ label: kicker }] : []);
 
   return (
     <div className={cn("flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between", className)}>
       <div className="min-w-0 space-y-1.5">
         {crumbs.length ? (
-          <nav aria-label="Fil d'ariane" className="flex flex-wrap items-center gap-1.5">
+          <nav aria-label={dict.common.breadcrumb} className="flex flex-wrap items-center gap-1.5">
             {crumbs.map((crumb, index) => {
               const isLast = index === crumbs.length - 1;
               const content = (

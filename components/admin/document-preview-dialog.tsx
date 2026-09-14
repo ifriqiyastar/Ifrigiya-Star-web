@@ -1,5 +1,8 @@
 "use client";
 
+import { useAdminTranslations } from "@/lib/i18n/admin-client";
+
+
 import { ExternalLinkIcon, FileSearchIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -22,6 +25,8 @@ export function DocumentPreviewDialog({
   label: string;
   compact?: boolean;
 }) {
+  const i18n = useAdminTranslations();
+
   return (
     <Dialog>
       <DialogTrigger
@@ -34,8 +39,8 @@ export function DocumentPreviewDialog({
             type="button"
             variant={compact ? "ghost" : "outline"}
             size={compact ? "icon-xs" : "sm"}
-            aria-label={`Apercu : ${label}`}
-            title={`Apercu : ${label}`}
+            aria-label={i18n.t("Apercu : {0}", { "0": label })}
+            title={i18n.t("Apercu : {0}", { "0": label })}
           />
         }
       >
@@ -46,15 +51,14 @@ export function DocumentPreviewDialog({
         <DialogHeader className="pr-12">
           <DialogTitle className="normal-case tracking-normal">{label}</DialogTitle>
           <DialogDescription className="flex flex-wrap items-center justify-between gap-2">
-            <span>Verifiez le document avant de prendre une decision.</span>
+            <span>{i18n.t("Verifiez le document avant de prendre une decision.")}</span>
             <a
               href={url}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-1 font-medium text-foreground hover:text-brand"
             >
-              Ouvrir dans un onglet
-              <ExternalLinkIcon className="size-3.5" />
+              {i18n.t("Ouvrir dans un onglet")}<ExternalLinkIcon className="size-3.5" />
             </a>
           </DialogDescription>
         </DialogHeader>

@@ -6,9 +6,14 @@ import { PageHeader } from "@/components/admin/page-header";
 import { Panel } from "@/components/admin/panel";
 import { buttonVariants } from "@/components/ui/button";
 import { requireAdmin } from "@/lib/auth";
+import { getAdminDict, getAdminLocale } from "@/lib/i18n/admin";
+import { localePath } from "@/lib/i18n/config";
 import { cn } from "@/lib/utils";
 
-export const metadata: Metadata = { title: "Acces refuse" };
+export async function generateMetadata(): Promise<Metadata> {
+  const dict = await getAdminDict();
+  return { title: dict.accessDenied.metaTitle };
+}
 
 /**
  * L'ecran de refus de permission — et **la seule page de `/admin` qui
@@ -24,15 +29,17 @@ export default async function AccesRefusePage({
   searchParams,
 }: PageProps<"/[locale]/admin/acces-refuse">) {
   await requireAdmin();
+  const [locale, dict] = await Promise.all([getAdminLocale(), getAdminDict()]);
+  const d = dict.accessDenied;
   const resolved = await searchParams;
   const droit = typeof resolved.droit === "string" ? resolved.droit : null;
 
   return (
     <>
       <PageHeader
-        kicker="Securite"
-        title="Acces refuse"
-        description="Votre compte est bien administrateur, mais le role qui lui est attribue ne porte pas le droit necessaire a cet ecran."
+        kicker={d.kicker}
+        title={d.title}
+        description={d.description}
       />
 
       <Panel>
@@ -43,32 +50,30 @@ export default async function AccesRefusePage({
 
           {droit ? (
             <p className="text-sm">
-              Droit manquant : <code className="text-xs">{droit}</code>
+              {d.missing} <code className="text-xs">{droit}</code>
             </p>
           ) : null}
 
           <div className="space-y-2 text-sm leading-relaxed text-muted-foreground">
-            <p>
-              Deux causes possibles, et la seconde est la plus frequente en cours de
-              deploiement :
-            </p>
+            <p>{d.intro}</p>
             <ul className="list-disc space-y-1 pl-5">
               <li>
-                votre role d&apos;administrateur ne comporte pas ce droit — un super
-                administrateur doit vous en attribuer un autre dans
-                <code className="mx-1 text-xs">admin_user_roles</code> ;
+                {d.cause1a}
+                <code className="mx-1 text-xs">admin_user_roles</code>;
               </li>
               <li>
-                <strong>aucun role RBAC ne vous est attribue.</strong> C&apos;est le cas d&apos;un
-                compte promu administrateur apres l&apos;application de la migration
-                <code className="mx-1 text-xs">202608240001_admin_platform.sql</code>, qui
-                n&apos;attribue le role qu&apos;aux administrateurs existant a ce moment-la.
+                <strong>{d.cause2a}</strong> {d.cause2b}
+                <code className="mx-1 text-xs">202608240001_admin_platform.sql</code>
+                {d.cause2c}
               </li>
             </ul>
           </div>
 
-          <Link href="/admin" className={cn(buttonVariants({ variant: "outline" }))}>
-            Retour au tableau de bord
+          <Link
+            href={localePath(locale, "/admin")}
+            className={cn(buttonVariants({ variant: "outline" }))}
+          >
+            {d.back}
           </Link>
         </div>
       </Panel>

@@ -1,4 +1,5 @@
 import type { AdminPermission } from "@/lib/auth";
+import { plural, type AdminDictionary } from "@/lib/i18n/admin-shared";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -20,8 +21,15 @@ export type AdminTask = {
   key: string;
   /** Libelle au singulier / pluriel deja resolu, ex. « 2 dossiers joueurs a valider ». */
   label: string;
-  /** Section d'origine, affichee en sous-ligne. */
+  /** Section d'origine, **traduite**, affichee en sous-ligne. */
   section: string;
+  /**
+   * La meme section sous forme de cle stable. Le rail regroupe les files par
+   * elle : filtrer sur le libelle marchait tant que le back-office etait
+   * monolingue, et comptait zero validation des que l'ecran passait en
+   * anglais, la chaine comparee etant devenue « Validations » traduit.
+   */
+  group: keyof AdminDictionary["queue"]["sections"];
   href: string;
   count: number;
 };
@@ -34,18 +42,23 @@ export type NextAdminEvent = {
   location: string | null;
 };
 
-/** Definition d'une file : son compte, sa destination, et le droit qui la revele. */
+/**
+ * Definition d'une file : son compte, sa destination, et le droit qui la
+ * revele.
+ *
+ * `key` et `section` designent le dictionnaire plutot que de porter le texte :
+ * le type ci-dessous force chaque file a avoir ses deux formes (singulier et
+ * pluriel) dans `queue`, donc ajouter une file sans son libelle casse le
+ * build.
+ */
+type QueueKey = Exclude<keyof AdminDictionary["queue"], "sections">;
+
 type QueueSpec = {
-  key: string;
-  section: string;
+  key: QueueKey;
+  section: keyof AdminDictionary["queue"]["sections"];
   href: string;
   permission: AdminPermission;
-  /** `count` mis au pluriel par le compteur lui-meme. */
-  label: (count: number) => string;
 };
-
-const plural = (count: number, singular: string, plural: string) =>
-  `${count} ${count > 1 ? plural : singular}`;
 
 /**
  * Files d'attente du back-office, dans l'ordre du cahier des charges §12.
@@ -54,64 +67,53 @@ const plural = (count: number, singular: string, plural: string) =>
 const QUEUES: QueueSpec[] = [
   {
     key: "players",
-    section: "Validations",
+    section: "validations",
     href: "/admin/validations?vue=joueurs",
     permission: "verifications.review",
-    label: (count) => plural(count, "dossier joueur a valider", "dossiers joueurs a valider"),
   },
   {
     key: "professionals",
-    section: "Validations",
+    section: "validations",
     href: "/admin/validations?vue=professionnels",
     permission: "verifications.review",
-    label: (count) =>
-      plural(count, "compte professionnel a valider", "comptes professionnels a valider"),
   },
   {
     key: "documents",
-    section: "Validations",
+    section: "validations",
     href: "/admin/validations?vue=justificatifs",
     permission: "verifications.review",
-    label: (count) =>
-      plural(count, "justificatif professionnel a examiner", "justificatifs professionnels a examiner"),
   },
   {
     key: "identity",
-    section: "Validations",
+    section: "validations",
     href: "/admin/validations?vue=identite",
     permission: "verifications.review",
-    label: (count) => plural(count, "piece d'identite a examiner", "pieces d'identite a examiner"),
   },
   {
     key: "reports",
-    section: "Moderation",
+    section: "moderation",
     href: "/admin/moderation?vue=signalements&statut=en_attente",
     permission: "moderation.manage",
-    label: (count) => plural(count, "signalement a instruire", "signalements a instruire"),
   },
   {
     // Retraits proposes par un moderateur (migration mobile 0041) : seul un
     // super administrateur tranche, donc seul lui voit la ligne.
     key: "removals",
-    section: "Moderation",
+    section: "moderation",
     href: "/admin/moderation?vue=signalements&statut=a_valider",
     permission: "moderation.validate",
-    label: (count) => plural(count, "retrait a valider", "retraits a valider"),
   },
   {
     key: "scoutDays",
-    section: "Scout Days",
+    section: "scoutDays",
     href: "/admin/scout-days?statut=en_attente_validation",
     permission: "events.manage",
-    label: (count) => plural(count, "Scout Day a valider", "Scout Days a valider"),
   },
   {
     key: "deletions",
-    section: "Comptes",
+    section: "accounts",
     href: "/admin/utilisateurs?suppression=oui",
     permission: "users.read",
-    label: (count) =>
-      plural(count, "demande de suppression de compte", "demandes de suppression de compte"),
   },
 ];
 
@@ -124,7 +126,10 @@ const QUEUES: QueueSpec[] = [
  * que `requirePermission()` lui refusera n'est pas une notification, c'est une
  * impasse.
  */
-export async function fetchAdminQueue(permissions: AdminPermission[]) {
+export async function fetchAdminQueue(
+  permissions: AdminPermission[],
+  dict: AdminDictionary,
+) {
   const supabase = await createClient();
   const head = { count: "exact" as const, head: true };
 
@@ -162,8 +167,9 @@ export async function fetchAdminQueue(permissions: AdminPermission[]) {
     (queue) => granted.has(queue.permission) && counts[queue.key] > 0,
   ).map((queue) => ({
     key: queue.key,
-    label: queue.label(counts[queue.key]),
-    section: queue.section,
+    label: plural(counts[queue.key], dict.queue[queue.key]),
+    section: dict.queue.sections[queue.section],
+    group: queue.section,
     href: queue.href,
     count: counts[queue.key],
   }));

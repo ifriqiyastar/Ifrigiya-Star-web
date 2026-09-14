@@ -6,10 +6,10 @@ import { Panel, PanelHeader } from "@/components/admin/panel";
 import { NoteCards } from "@/components/admin/note-cards";
 import { LanguageChoice } from "@/components/admin/language-choice";
 import { requireAdmin } from "@/lib/auth";
-import { getDictionary } from "@/lib/i18n/dictionaries";
+import { getAdminDict } from "@/lib/i18n/admin";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const dict = await getDictionary();
+  const dict = await getAdminDict();
   return { title: dict.settings.title };
 }
 
@@ -29,7 +29,7 @@ export async function generateMetadata(): Promise<Metadata> {
  */
 export default async function ParametresPage() {
   await requireAdmin();
-  const dict = await getDictionary();
+  const dict = await getAdminDict();
 
   return (
     <div className="flex flex-col gap-6">

@@ -1,3 +1,4 @@
+import { getAdminI18n } from "@/lib/i18n/admin";
 import { cn } from "@/lib/utils";
 
 /**
@@ -69,11 +70,13 @@ export function DossierRail({
  * lue en base — une pastille verte qui ne verifie rien est pire qu'aucune
  * pastille.
  */
-export function ComplianceList({
+export async function ComplianceList({
   items,
 }: {
   items: { label: string; verdict: string; tone: "success" | "warning" | "danger" | "neutral" }[];
 }) {
+  const i18n = await getAdminI18n();
+
   const dot = {
     success: "bg-success",
     warning: "bg-warning",
@@ -89,7 +92,7 @@ export function ComplianceList({
 
   return (
     <section className="space-y-1.5">
-      <p className="micro-label text-muted-foreground">Controles de conformite</p>
+      <p className="micro-label text-muted-foreground">{i18n.t("Controles de conformite")}</p>
       <ul className="divide-y divide-border/70 rounded-lg border border-border">
         {items.map((item) => (
           <li key={item.label} className="flex items-center gap-2 px-3 py-2">

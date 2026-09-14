@@ -1,3 +1,4 @@
+import { getAdminI18n } from "@/lib/i18n/admin";
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
@@ -36,31 +37,26 @@ import {
   setPaymentStatus,
   setSubscriptionStatus,
 } from "@/lib/actions/finances";
-import { formatAmount, formatDate, formatNumber } from "@/lib/format";
-import {
-  PAYMENT_METHOD,
-  PAYMENT_STATUS,
-  PAYMENT_TYPE,
-  PLAN_CODE,
-  ROLE,
-  SUBSCRIPTION_STATUS,
-  entry,
-  label,
-  options,
-} from "@/lib/labels";
+
+import { PAYMENT_METHOD, PAYMENT_STATUS, PAYMENT_TYPE, PLAN_CODE, ROLE, SUBSCRIPTION_STATUS } from "@/lib/labels";
 import { displayName, fetchProfilesByIds } from "@/lib/queries/profiles";
 import { createClient } from "@/lib/supabase/server";
 import { requirePermission } from "@/lib/auth";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-export const metadata: Metadata = { title: "Abonnements & paiements" };
+export async function generateMetadata(): Promise<Metadata> {
+  const i18n = await getAdminI18n();
+  return { title: i18n.t("Abonnements & paiements") };
+}
 const PAGE_SIZE = 20;
 
 const VUES = ["paiements", "abonnements", "offres"] as const;
 type Vue = (typeof VUES)[number];
 
 export default async function FinancesPage({ searchParams }: PageProps<"/[locale]/admin/finances">) {
+  const i18n = await getAdminI18n();
+
   await requirePermission("finance.manage");
   const resolved = await searchParams;
   const requested = typeof resolved.vue === "string" ? resolved.vue : "paiements";
@@ -122,58 +118,58 @@ export default async function FinancesPage({ searchParams }: PageProps<"/[locale
   return (
     <>
       <PageHeader
-        breadcrumb={[{ label: "Paiements et revenus" }, { label: "Finances et tresorerie" }]}
-        title="Abonnements, encaissements & finances"
-        meta={<HeaderMeta tone="brand">{formatAmount(collected)} encaisses</HeaderMeta>}
-        description="Suivi des encaissements, des souscriptions et du catalogue d'offres. Les tarifs, commissions et regles de remboursement ne sont pas arretes par le cahier des charges : cet ecran suit ce qui est enregistre, il ne facture pas."
-        actions={<Link href="/admin/finances/export" className={cn(buttonVariants({ variant: "outline", size: "sm" }))}><DownloadIcon /> Exporter CSV</Link>}
+        breadcrumb={[{ label: i18n.t("Paiements et revenus") }, { label: i18n.t("Finances et tresorerie") }]}
+        title={i18n.t("Abonnements, encaissements & finances")}
+        meta={<HeaderMeta tone="brand">{i18n.format.formatAmount(collected)}  {i18n.t("encaisses")}</HeaderMeta>}
+        description={i18n.t("Suivi des encaissements, des souscriptions et du catalogue d'offres. Les tarifs, commissions et regles de remboursement ne sont pas arretes par le cahier des charges : cet ecran suit ce qui est enregistre, il ne facture pas.")}
+        actions={<Link href={i18n.path("/admin/finances/export")} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}><DownloadIcon />  {i18n.t("Exporter CSV")}</Link>}
       />
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          label="Encaisse"
-          value={formatAmount(collected)}
-          hint="Paiements « reussi » et « active manuellement »"
+          label={i18n.t("Encaisse")}
+          value={i18n.format.formatAmount(collected)}
+          hint={i18n.t("Paiements « reussi » et « active manuellement »")}
           icon={WalletIcon}
         />
         <StatCard
-          label="En attente"
-          value={formatAmount(pendingAmount)}
-          hint="A confirmer ou a activer manuellement"
+          label={i18n.t("En attente")}
+          value={i18n.format.formatAmount(pendingAmount)}
+          hint={i18n.t("A confirmer ou a activer manuellement")}
           icon={ReceiptTextIcon}
         />
         <StatCard
-          label="Rembourse"
-          value={formatAmount(refunded)}
+          label={i18n.t("Rembourse")}
+          value={i18n.format.formatAmount(refunded)}
           icon={Undo2Icon}
           deltaTone="warning"
         />
         <StatCard
-          label="Abonnements actifs"
-          value={formatNumber(activeSubscriptions ?? 0)}
+          label={i18n.t("Abonnements actifs")}
+          value={i18n.format.formatNumber(activeSubscriptions ?? 0)}
           icon={CreditCardIcon}
           accent="secondary"
-          href="/admin/finances?vue=abonnements"
+          href={i18n.path("/admin/finances?vue=abonnements")}
         />
       </section>
 
       <Panel>
         <PanelHeader
           icon={TrendingUpIcon}
-          title="Revenus par mois et projection comptable"
-          description="Recalcules depuis la date d'encaissement, decomposes par type de paiement."
+          title={i18n.t("Revenus par mois et projection comptable")}
+          description={i18n.t("Recalcules depuis la date d'encaissement, decomposes par type de paiement.")}
         />
         <RevenueChart rows={revenueRows} />
       </Panel>
 
       <SegmentedNav
-        basePath="/admin/finances"
+        basePath={i18n.path("/admin/finances")}
         active={vue}
         params={params}
         segments={[
-          { value: "paiements", label: "Paiements" },
-          { value: "abonnements", label: "Abonnements" },
-          { value: "offres", label: "Catalogue d'offres" },
+          { value: "paiements", label: i18n.t("Paiements") },
+          { value: "abonnements", label: i18n.t("Abonnements") },
+          { value: "offres", label: i18n.t("Catalogue d'offres") },
         ]}
       />
 
@@ -185,18 +181,18 @@ export default async function FinancesPage({ searchParams }: PageProps<"/[locale
         notes={[
           {
             icon: WalletIcon,
-            title: "Cet ecran suit, il ne facture pas",
-            body: "Les montants affiches sont ceux enregistres dans la table des paiements. Tarifs, commissions et regles de remboursement ne sont pas arretes par le cahier des charges : rien n'est calcule ici, tout est repris tel quel.",
+            title: i18n.t("Cet ecran suit, il ne facture pas"),
+            body: i18n.t("Les montants affiches sont ceux enregistres dans la table des paiements. Tarifs, commissions et regles de remboursement ne sont pas arretes par le cahier des charges : rien n'est calcule ici, tout est repris tel quel."),
           },
           {
             icon: ReceiptTextIcon,
-            title: "Activation manuelle",
-            body: "Un encaissement hors ligne se confirme a la main : le paiement passe a « active manuellement » et rejoint les montants encaisses. Le geste est trace, et il reste distinct d'un paiement confirme par la passerelle.",
+            title: i18n.t("Activation manuelle"),
+            body: i18n.t("Un encaissement hors ligne se confirme a la main : le paiement passe a « active manuellement » et rejoint les montants encaisses. Le geste est trace, et il reste distinct d'un paiement confirme par la passerelle."),
           },
           {
             icon: CreditCardIcon,
-            title: "Un abonnement actif n'est pas un paiement",
-            body: "Le compteur d'abonnements lit le statut des souscriptions, pas les transactions. Les deux peuvent diverger le temps qu'un paiement soit confirme — c'est normal, et c'est pourquoi ils sont affiches separement.",
+            title: i18n.t("Un abonnement actif n'est pas un paiement"),
+            body: i18n.t("Le compteur d'abonnements lit le statut des souscriptions, pas les transactions. Les deux peuvent diverger le temps qu'un paiement soit confirme — c'est normal, et c'est pourquoi ils sont affiches separement."),
           },
         ]}
       />
@@ -207,6 +203,8 @@ export default async function FinancesPage({ searchParams }: PageProps<"/[locale
 /* ----------------------------------------------------------------- paiements */
 
 async function PaymentsView({ params }: { params: Record<string, string | undefined> }) {
+  const i18n = await getAdminI18n();
+
   const supabase = await createClient();
   const page = Math.max(1, Number(params.page ?? 1) || 1);
 
@@ -242,42 +240,42 @@ async function PaymentsView({ params }: { params: Record<string, string | undefi
   return (
     <Panel>
       <PanelHeader
-        title="Paiements"
-        description="« Activer manuellement » sert aux encaissements hors ligne et laisse une trace de l'administrateur qui a valide."
+        title={i18n.t("Paiements")}
+        description={i18n.t("« Activer manuellement » sert aux encaissements hors ligne et laisse une trace de l'administrateur qui a valide.")}
       />
       <FilterBar
-        basePath="/admin/finances"
+        basePath={i18n.path("/admin/finances")}
         params={params}
-        searchPlaceholder="Reference, nom, email…"
+        searchPlaceholder={i18n.t("Reference, nom, email…")}
         filters={[
-          { name: "statut", label: "Statut", options: options(PAYMENT_STATUS) },
-          { name: "type", label: "Objet", options: options(PAYMENT_TYPE) },
-          { name: "moyen", label: "Moyen", options: options(PAYMENT_METHOD) },
+          { name: "statut", label: i18n.t("Statut"), options: i18n.labels.options(PAYMENT_STATUS) },
+          { name: "type", label: i18n.t("Objet"), options: i18n.labels.options(PAYMENT_TYPE) },
+          { name: "moyen", label: i18n.t("Moyen"), options: i18n.labels.options(PAYMENT_METHOD) },
         ]}
       />
       {error ? (
         <p className="border-b border-destructive/30 bg-destructive/10 px-4 py-3 text-xs text-destructive sm:px-5">
-          Lecture impossible : {error.message}
+          {i18n.t("Lecture impossible :")} {error.message}
         </p>
       ) : null}
       {!filtered.length ? (
         <EmptyState
           icon={ReceiptTextIcon}
-          title="Aucun paiement"
-          description="Aucun paiement ne correspond a ces criteres."
+          title={i18n.t("Aucun paiement")}
+          description={i18n.t("Aucun paiement ne correspond a ces criteres.")}
         />
       ) : (
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Compte</TableHead>
-              <TableHead>Objet</TableHead>
-              <TableHead>Montant</TableHead>
-              <TableHead>Moyen</TableHead>
-              <TableHead>Statut</TableHead>
-              <TableHead>Reference</TableHead>
-              <TableHead>Encaisse le</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead>{i18n.t("Compte")}</TableHead>
+              <TableHead>{i18n.t("Objet")}</TableHead>
+              <TableHead>{i18n.t("Montant")}</TableHead>
+              <TableHead>{i18n.t("Moyen")}</TableHead>
+              <TableHead>{i18n.t("Statut")}</TableHead>
+              <TableHead>{i18n.t("Reference")}</TableHead>
+              <TableHead>{i18n.t("Encaisse le")}</TableHead>
+              <TableHead className="text-right">{i18n.t("Actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -287,63 +285,60 @@ async function PaymentsView({ params }: { params: Record<string, string | undefi
                 <TableRow key={row.id}>
                   <TableCell>
                     <UserCell
-                      name={displayName(profile)}
+                      name={displayName(profile, undefined, i18n.locale)}
                       secondary={profile?.email}
                       avatarUrl={profile?.avatar_url}
-                      href={`/admin/utilisateurs/${row.profile_id}?vue=finances`}
+                      href={i18n.path(`/admin/utilisateurs/${row.profile_id}?vue=finances`)}
                     />
                   </TableCell>
                   <TableCell>
-                    <StatusPill tone={entry(PAYMENT_TYPE, row.payment_type).tone}>
-                      {label(PAYMENT_TYPE, row.payment_type)}
+                    <StatusPill tone={i18n.labels.entry(PAYMENT_TYPE, row.payment_type).tone}>
+                      {i18n.labels.label(PAYMENT_TYPE, row.payment_type)}
                     </StatusPill>
                   </TableCell>
                   <TableCell className="font-medium tabular-nums">
-                    {formatAmount(row.amount, row.currency ?? "TND")}
+                    {i18n.format.formatAmount(row.amount, row.currency ?? "TND")}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {label(PAYMENT_METHOD, row.method)}
+                    {i18n.labels.label(PAYMENT_METHOD, row.method)}
                   </TableCell>
                   <TableCell>
-                    <StatusPill tone={entry(PAYMENT_STATUS, row.status).tone}>
-                      {label(PAYMENT_STATUS, row.status)}
+                    <StatusPill tone={i18n.labels.entry(PAYMENT_STATUS, row.status).tone}>
+                      {i18n.labels.label(PAYMENT_STATUS, row.status)}
                     </StatusPill>
                   </TableCell>
                   <TableCell className="max-w-48 text-xs text-muted-foreground">
-                    {row.provider_reference ? <span className="flex items-center gap-1"><span className="max-w-32 truncate">{row.provider_reference}</span><CopyButton value={row.provider_reference} label="Copier la reference" /></span> : "—"}
+                    {row.provider_reference ? <span className="flex items-center gap-1"><span className="max-w-32 truncate">{row.provider_reference}</span><CopyButton value={row.provider_reference} label={i18n.t("Copier la reference")} /></span> : "—"}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {formatDate(row.paid_at)}
+                    {i18n.format.formatDate(row.paid_at)}
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap items-center justify-end gap-2">
                       {row.status === "en_attente" ? (
                         <>
                           <ActionButton action={activatePaymentManually.bind(null, row.id)}>
-                            Activer manuellement
-                          </ActionButton>
+                            {i18n.t("Activer manuellement")}</ActionButton>
                           <ActionButton
                             variant="secondary"
                             action={setPaymentStatus.bind(null, row.id, "reussi")}
                           >
-                            Marquer reussi
-                          </ActionButton>
+                            {i18n.t("Marquer reussi")}</ActionButton>
                           <ActionButton
                             variant="destructive"
                             action={setPaymentStatus.bind(null, row.id, "echoue")}
                           >
-                            Echoue
-                          </ActionButton>
+                            {i18n.t("Echoue")}</ActionButton>
                         </>
                       ) : null}
                       {["reussi", "active_manuellement"].includes(row.status) ? (
                         <ReasonDialog
                           action={setPaymentStatus.bind(null, row.id, "rembourse")}
-                          trigger={<Button variant="destructive" size="xs">Rembourser</Button>}
-                          title="Marquer ce paiement rembourse"
-                          description="Indiquez le motif. Le montant sortira des revenus encaisses, mais le remboursement effectif chez le prestataire doit etre confirme separement."
-                          label="Motif du remboursement"
-                          submitLabel="Marquer rembourse"
+                          trigger={<Button variant="destructive" size="xs">{i18n.t("Rembourser")}</Button>}
+                          title={i18n.t("Marquer ce paiement rembourse")}
+                          description={i18n.t("Indiquez le motif. Le montant sortira des revenus encaisses, mais le remboursement effectif chez le prestataire doit etre confirme separement.")}
+                          label={i18n.t("Motif du remboursement")}
+                          submitLabel={i18n.t("Marquer rembourse")}
                         />
                       ) : null}
                     </div>
@@ -354,7 +349,7 @@ async function PaymentsView({ params }: { params: Record<string, string | undefi
           </TableBody>
         </Table>
       )}
-      <Pagination basePath="/admin/finances" params={params} page={page} pageSize={PAGE_SIZE} total={count ?? 0} />
+      <Pagination basePath={i18n.path("/admin/finances")} params={params} page={page} pageSize={PAGE_SIZE} total={count ?? 0} />
     </Panel>
   );
 }
@@ -362,6 +357,8 @@ async function PaymentsView({ params }: { params: Record<string, string | undefi
 /* --------------------------------------------------------------- abonnements */
 
 async function SubscriptionsView({ params }: { params: Record<string, string | undefined> }) {
+  const i18n = await getAdminI18n();
+
   const supabase = await createClient();
   const page = Math.max(1, Number(params.page ?? 1) || 1);
 
@@ -399,40 +396,40 @@ async function SubscriptionsView({ params }: { params: Record<string, string | u
   return (
     <Panel>
       <PanelHeader
-        title="Abonnements"
-        description="Activer ou annuler une souscription depuis ici agit sur la base, sans passer par le prestataire de paiement : a reserver aux corrections et aux activations hors ligne."
+        title={i18n.t("Abonnements")}
+        description={i18n.t("Activer ou annuler une souscription depuis ici agit sur la base, sans passer par le prestataire de paiement : a reserver aux corrections et aux activations hors ligne.")}
       />
       <FilterBar
-        basePath="/admin/finances"
+        basePath={i18n.path("/admin/finances")}
         params={params}
-        searchPlaceholder="Nom ou email de l'abonne…"
+        searchPlaceholder={i18n.t("Nom ou email de l'abonne…")}
         filters={[
-          { name: "statut", label: "Statut", options: options(SUBSCRIPTION_STATUS) },
-          { name: "type", label: "Offre", options: options(PLAN_CODE) },
+          { name: "statut", label: i18n.t("Statut"), options: i18n.labels.options(SUBSCRIPTION_STATUS) },
+          { name: "type", label: i18n.t("Offre"), options: i18n.labels.options(PLAN_CODE) },
         ]}
       />
       {error ? (
         <p className="border-b border-destructive/30 bg-destructive/10 px-4 py-3 text-xs text-destructive sm:px-5">
-          Lecture impossible : {error.message}
+          {i18n.t("Lecture impossible :")} {error.message}
         </p>
       ) : null}
       {!filtered.length ? (
         <EmptyState
           icon={CreditCardIcon}
-          title="Aucun abonnement"
-          description="Aucune souscription ne correspond a ces criteres."
+          title={i18n.t("Aucun abonnement")}
+          description={i18n.t("Aucune souscription ne correspond a ces criteres.")}
         />
       ) : (
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Abonne</TableHead>
-              <TableHead>Offre</TableHead>
-              <TableHead>Statut</TableHead>
-              <TableHead>Debut</TableHead>
-              <TableHead>Fin</TableHead>
-              <TableHead>Renouvellement</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead>{i18n.t("Abonne")}</TableHead>
+              <TableHead>{i18n.t("Offre")}</TableHead>
+              <TableHead>{i18n.t("Statut")}</TableHead>
+              <TableHead>{i18n.t("Debut")}</TableHead>
+              <TableHead>{i18n.t("Fin")}</TableHead>
+              <TableHead>{i18n.t("Renouvellement")}</TableHead>
+              <TableHead className="text-right">{i18n.t("Actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -443,58 +440,55 @@ async function SubscriptionsView({ params }: { params: Record<string, string | u
                 <TableRow key={row.id}>
                   <TableCell>
                     <UserCell
-                      name={displayName(profile)}
+                      name={displayName(profile, undefined, i18n.locale)}
                       secondary={profile?.email}
                       avatarUrl={profile?.avatar_url}
-                      href={`/admin/utilisateurs/${row.profile_id}?vue=finances`}
+                      href={i18n.path(`/admin/utilisateurs/${row.profile_id}?vue=finances`)}
                     />
                   </TableCell>
                   <TableCell>
                     {plan ? (
                       <div className="flex flex-col gap-0.5">
-                        <span>{label(PLAN_CODE, plan.code)}</span>
+                        <span>{i18n.labels.label(PLAN_CODE, plan.code)}</span>
                         <span className="text-xs text-muted-foreground">
-                          {formatAmount(plan.price_amount, plan.price_currency ?? "TND")}
+                          {i18n.format.formatAmount(plan.price_amount, plan.price_currency ?? "TND")}
                         </span>
                       </div>
                     ) : (
-                      "Offre inconnue"
+                      i18n.t("Offre inconnue")
                     )}
                   </TableCell>
                   <TableCell>
-                    <StatusPill tone={entry(SUBSCRIPTION_STATUS, row.status).tone}>
-                      {label(SUBSCRIPTION_STATUS, row.status)}
+                    <StatusPill tone={i18n.labels.entry(SUBSCRIPTION_STATUS, row.status).tone}>
+                      {i18n.labels.label(SUBSCRIPTION_STATUS, row.status)}
                     </StatusPill>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {formatDate(row.starts_at)}
+                    {i18n.format.formatDate(row.starts_at)}
                   </TableCell>
-                  <TableCell className="text-muted-foreground">{formatDate(row.ends_at)}</TableCell>
+                  <TableCell className="text-muted-foreground">{i18n.format.formatDate(row.ends_at)}</TableCell>
                   <TableCell className="text-muted-foreground">
-                    {row.auto_renew ? "Automatique" : "Desactive"}
+                    {row.auto_renew ? i18n.t("Automatique") : i18n.t("Desactive")}
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap items-center justify-end gap-2">
                       {row.status !== "active" ? (
                         <ActionButton action={setSubscriptionStatus.bind(null, row.id, "active")}>
-                          Activer
-                        </ActionButton>
+                          {i18n.t("Activer")}</ActionButton>
                       ) : null}
                       {row.status !== "expiree" ? (
                         <ActionButton
                           variant="secondary"
                           action={setSubscriptionStatus.bind(null, row.id, "expiree")}
                         >
-                          Expirer
-                        </ActionButton>
+                          {i18n.t("Expirer")}</ActionButton>
                       ) : null}
                       {row.status !== "annulee" ? (
                         <ActionButton
                           variant="destructive"
                           action={setSubscriptionStatus.bind(null, row.id, "annulee")}
                         >
-                          Annuler
-                        </ActionButton>
+                          {i18n.t("Annuler")}</ActionButton>
                       ) : null}
                     </div>
                   </TableCell>
@@ -504,7 +498,7 @@ async function SubscriptionsView({ params }: { params: Record<string, string | u
           </TableBody>
         </Table>
       )}
-      <Pagination basePath="/admin/finances" params={params} page={page} pageSize={PAGE_SIZE} total={count ?? 0} />
+      <Pagination basePath={i18n.path("/admin/finances")} params={params} page={page} pageSize={PAGE_SIZE} total={count ?? 0} />
     </Panel>
   );
 }
@@ -512,6 +506,8 @@ async function SubscriptionsView({ params }: { params: Record<string, string | u
 /* -------------------------------------------------------------------- offres */
 
 async function PlansView() {
+  const i18n = await getAdminI18n();
+
   const supabase = await createClient();
   const [{ data: plans }, { data: subscriptions }] = await Promise.all([
     supabase
@@ -532,28 +528,28 @@ async function PlansView() {
   return (
     <Panel>
       <PanelHeader
-        title="Catalogue d'offres"
-        description="Lecture seule. Les limites listees ici sont celles que l'application fait respecter cote serveur ; les modifier passe par une intervention technique, pas par le back-office."
+        title={i18n.t("Catalogue d'offres")}
+        description={i18n.t("Lecture seule. Les limites listees ici sont celles que l'application fait respecter cote serveur ; les modifier passe par une intervention technique, pas par le back-office.")}
       />
       {!plans?.length ? (
         <EmptyState
           icon={CreditCardIcon}
-          title="Aucune offre"
-          description="Aucune offre n'est enregistree dans le catalogue."
+          title={i18n.t("Aucune offre")}
+          description={i18n.t("Aucune offre n'est enregistree dans le catalogue.")}
         />
       ) : (
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Offre</TableHead>
-              <TableHead>Public</TableHead>
-              <TableHead>Tarif</TableHead>
-              <TableHead>Periode</TableHead>
-              <TableHead>Videos max</TableHead>
-              <TableHead>Filtres avances</TableHead>
-              <TableHead>Messagerie directe</TableHead>
-              <TableHead>Base complete</TableHead>
-              <TableHead>Abonnes actifs</TableHead>
+              <TableHead>{i18n.t("Offre")}</TableHead>
+              <TableHead>{i18n.t("Public")}</TableHead>
+              <TableHead>{i18n.t("Tarif")}</TableHead>
+              <TableHead>{i18n.t("Periode")}</TableHead>
+              <TableHead>{i18n.t("Videos max")}</TableHead>
+              <TableHead>{i18n.t("Filtres avances")}</TableHead>
+              <TableHead>{i18n.t("Messagerie directe")}</TableHead>
+              <TableHead>{i18n.t("Base complete")}</TableHead>
+              <TableHead>{i18n.t("Abonnes actifs")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -561,23 +557,23 @@ async function PlansView() {
               <TableRow key={plan.id}>
                 <TableCell>
                   <div className="flex flex-col gap-0.5">
-                    <span className="font-medium">{plan.label}</span>
+                    <span className="font-medium">{i18n.locale === "en" && plan.code in PLAN_CODE ? i18n.labels.label(PLAN_CODE, plan.code) : plan.label}</span>
                     <code className="text-[0.6875rem] text-muted-foreground">{plan.code}</code>
                   </div>
                 </TableCell>
                 <TableCell>
-                  <StatusPill tone={entry(ROLE, plan.target_role).tone}>
-                    {label(ROLE, plan.target_role)}
+                  <StatusPill tone={i18n.labels.entry(ROLE, plan.target_role).tone}>
+                    {i18n.labels.label(ROLE, plan.target_role)}
                   </StatusPill>
                 </TableCell>
                 <TableCell className="tabular-nums">
-                  {formatAmount(plan.price_amount, plan.price_currency ?? "TND")}
+                  {i18n.format.formatAmount(plan.price_amount, plan.price_currency ?? "TND")}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {plan.billing_period_months ? `${plan.billing_period_months} mois` : "Illimitee"}
+                  {plan.billing_period_months ? i18n.t("{0} mois", { "0": plan.billing_period_months }) : i18n.t("Illimitee")}
                 </TableCell>
                 <TableCell className="tabular-nums text-muted-foreground">
-                  {plan.max_videos ?? "Illimite"}
+                  {plan.max_videos ?? i18n.t("Illimite")}
                 </TableCell>
                 <TableCell>
                   <Yes value={plan.includes_advanced_filters} />
@@ -589,7 +585,7 @@ async function PlansView() {
                   <Yes value={plan.includes_full_player_base} />
                 </TableCell>
                 <TableCell className="tabular-nums">
-                  {formatNumber(activeByPlan.get(plan.id) ?? 0)}
+                  {i18n.format.formatNumber(activeByPlan.get(plan.id) ?? 0)}
                 </TableCell>
               </TableRow>
             ))}
@@ -600,11 +596,13 @@ async function PlansView() {
   );
 }
 
-function Yes({ value }: { value: boolean }) {
+async function Yes({ value }: { value: boolean }) {
+  const i18n = await getAdminI18n();
+
   return value ? (
-    <StatusPill tone="success">Inclus</StatusPill>
+    <StatusPill tone="success">{i18n.t("Inclus")}</StatusPill>
   ) : (
-    <StatusPill tone="neutral">Non</StatusPill>
+    <StatusPill tone="neutral">{i18n.t("Non")}</StatusPill>
   );
 }
 

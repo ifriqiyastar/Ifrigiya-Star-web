@@ -16,6 +16,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import type { ActionResult } from "@/lib/actions/result";
+import { useAdminI18n } from "@/lib/i18n/admin-client";
 
 type Props = {
   /** Server Action deja liee a sa cible (`action.bind(null, id)`). */
@@ -41,6 +42,7 @@ export function ActionButton({
   className,
   confirm,
 }: Props) {
+  const { dict } = useAdminI18n();
   const [pending, setPending] = React.useState(false);
   const [open, setOpen] = React.useState(false);
 
@@ -51,7 +53,7 @@ export function ActionButton({
       if (result.ok) toast.success(result.message);
       else toast.error(result.message);
     } catch {
-      toast.error("L'action n'a pas pu aboutir.");
+      toast.error(dict.common.actionFailed);
     } finally {
       setPending(false);
       setOpen(false);
@@ -83,10 +85,10 @@ export function ActionButton({
             <AlertDialogDescription>{confirm.description}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={pending}>Annuler</AlertDialogCancel>
+            <AlertDialogCancel disabled={pending}>{dict.common.cancel}</AlertDialogCancel>
             <AlertDialogAction variant="destructive" disabled={pending} onClick={run}>
               {pending ? <Loader2Icon className="animate-spin" /> : null}
-              {confirm.actionLabel ?? "Confirmer"}
+              {confirm.actionLabel ?? dict.common.confirm}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

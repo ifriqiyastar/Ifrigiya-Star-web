@@ -1,9 +1,11 @@
+import { getAdminI18n } from "@/lib/i18n/admin";
+import type { AdminTranslations } from "@/lib/i18n/admin-shared";
 import Link from "next/link";
 import { CalendarDaysIcon, ChevronLeftIcon, ChevronRightIcon, MapPinIcon } from "lucide-react";
 
 import { Panel, PanelHeader } from "@/components/admin/panel";
 import { buttonVariants } from "@/components/ui/button";
-import { SCOUT_DAY_STATUS, label } from "@/lib/labels";
+import { SCOUT_DAY_STATUS } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
 export type CalendarEvent = {
@@ -51,15 +53,21 @@ const styleFor = (status: string) =>
     dot: "bg-muted-foreground",
   };
 
-const WEEKDAYS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
+function getWEEKDAYS(i18n: AdminTranslations) {
+  return [i18n.t("Lundi"), i18n.t("Mardi"), i18n.t("Mercredi"), i18n.t("Jeudi"), i18n.t("Vendredi"), i18n.t("Samedi"), i18n.t("Dimanche")];
+}
 
-const MONTH_LABEL = new Intl.DateTimeFormat("fr-FR", { month: "long", year: "numeric" });
-const DAY_LABEL = new Intl.DateTimeFormat("fr-FR", {
+function getMONTHLABEL(i18n: AdminTranslations) {
+  return new Intl.DateTimeFormat((i18n.locale === "en" ? "en-GB" : "fr-FR"), { month: "long", year: "numeric" });
+}
+function getDAYLABEL(i18n: AdminTranslations) {
+  return new Intl.DateTimeFormat((i18n.locale === "en" ? "en-GB" : "fr-FR"), {
   weekday: "short",
   day: "numeric",
   month: "short",
   timeZone: "UTC",
 });
+}
 
 /** `YYYY-MM` -> `YYYY-MM` du mois voisin, sans passer par un fuseau horaire. */
 function shiftMonth(month: string, delta: number) {
@@ -83,7 +91,7 @@ const MAX_PER_DAY = 3;
  * passer dans un `Date` local decalerait l'evenement d'un jour selon le
  * decalage horaire du serveur.
  */
-export function ScoutDayCalendar({
+export async function ScoutDayCalendar({
   events,
   month,
   basePath,
@@ -98,6 +106,8 @@ export function ScoutDayCalendar({
   /** Date du jour au format `YYYY-MM-DD`, calculee par la page. */
   today: string;
 }) {
+  const i18n = await getAdminI18n();
+
   const [year, monthIndex] = month.split("-").map(Number);
 
   // `Date.UTC` garde le calcul hors fuseau : on n'en tire que des numeros de
@@ -147,23 +157,23 @@ export function ScoutDayCalendar({
   return (
     <Panel>
       <PanelHeader
-        title="Calendrier des evenements"
-        description={`${events.length} evenement(s) ce mois-ci, tous statuts confondus — les filtres de la liste ci-dessous ne s'y appliquent pas.`}
+        title={i18n.t("Calendrier des evenements")}
+        description={i18n.t("{0} evenement(s) ce mois-ci, tous statuts confondus — les filtres de la liste ci-dessous ne s'y appliquent pas.", { "0": events.length })}
         action={
           <div className="flex items-center gap-1.5">
             <Link
               href={href(shiftMonth(month, -1))}
-              aria-label="Mois precedent"
+              aria-label={i18n.t("Mois precedent")}
               className={navButton}
             >
               <ChevronLeftIcon />
             </Link>
             <span className="min-w-36 text-center text-sm font-semibold capitalize">
-              {MONTH_LABEL.format(firstOfMonth)}
+              {getMONTHLABEL(i18n).format(firstOfMonth)}
             </span>
             <Link
               href={href(shiftMonth(month, 1))}
-              aria-label="Mois suivant"
+              aria-label={i18n.t("Mois suivant")}
               className={navButton}
             >
               <ChevronRightIcon />
@@ -172,8 +182,7 @@ export function ScoutDayCalendar({
               href={href(null)}
               className={cn(buttonVariants({ variant: "secondary", size: "xs" }), "ml-1")}
             >
-              Aujourd&apos;hui
-            </Link>
+              {i18n.t("Aujourd'hui")}</Link>
           </div>
         }
       />
@@ -183,7 +192,7 @@ export function ScoutDayCalendar({
             tient pas dans un septieme de largeur. L'agenda ci-dessous prend
             alors le relais. */}
         <div className="hidden grid-cols-7 gap-1.5 sm:grid">
-          {WEEKDAYS.map((day) => (
+          {getWEEKDAYS(i18n).map((day) => (
             <div key={day} className="pb-2 text-xs font-medium text-muted-foreground">
               <span className="lg:hidden">{day.slice(0, 3)}</span>
               <span className="hidden lg:inline">{day}</span>
@@ -237,8 +246,8 @@ export function ScoutDayCalendar({
                   {dayEvents.slice(0, MAX_PER_DAY).map((event) => (
                     <Link
                       key={event.id}
-                      href={`/admin/scout-days/${event.id}`}
-                      title={`${event.title}${event.location ? ` — ${event.location}` : ""} (${label(SCOUT_DAY_STATUS, event.status)})`}
+                      href={i18n.path(`/admin/scout-days/${event.id}`)}
+                      title={`${event.title}${event.location ? ` — ${event.location}` : ""} (${i18n.labels.label(SCOUT_DAY_STATUS, event.status)})`}
                       className={cn(
                         "flex flex-col gap-0.5 rounded-md px-1.5 py-1 transition-colors",
                         styleFor(event.status).chip,
@@ -263,8 +272,7 @@ export function ScoutDayCalendar({
                   ))}
                   {dayEvents.length > MAX_PER_DAY ? (
                     <span className="px-1.5 text-[0.625rem] text-muted-foreground">
-                      +{dayEvents.length - MAX_PER_DAY} autre(s)
-                    </span>
+                      +{dayEvents.length - MAX_PER_DAY}  {i18n.t("autre(s)")}</span>
                   ) : null}
                 </div>
               </div>
@@ -276,19 +284,17 @@ export function ScoutDayCalendar({
             au-dela — il montre les evenements que la grille tronque. */}
         <div className="sm:mt-5">
           <p className="mb-2 text-xs font-medium text-muted-foreground">
-            Agenda du mois
-          </p>
+            {i18n.t("Agenda du mois")}</p>
           {!sorted.length ? (
             <p className="flex items-center gap-2 py-3 text-xs text-muted-foreground">
               <CalendarDaysIcon className="size-3.5" />
-              Aucun evenement programme ce mois-ci.
-            </p>
+              {i18n.t("Aucun evenement programme ce mois-ci.")}</p>
           ) : (
             <ul className="flex flex-col gap-1.5">
               {sorted.map((event) => (
                 <li key={event.id}>
                   <Link
-                    href={`/admin/scout-days/${event.id}`}
+                    href={i18n.path(`/admin/scout-days/${event.id}`)}
                     className={cn(
                       "flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl px-3 py-2 transition-colors",
                       styleFor(event.status).chip,
@@ -299,7 +305,7 @@ export function ScoutDayCalendar({
                     )}
                   >
                     <span className="w-24 shrink-0 text-xs font-semibold opacity-75 capitalize">
-                      {DAY_LABEL.format(new Date(`${event.event_date}T00:00:00Z`))}
+                      {getDAYLABEL(i18n).format(new Date(`${event.event_date}T00:00:00Z`))}
                     </span>
                     {event.start_time ? (
                       <span className="shrink-0 text-xs font-semibold opacity-75 tabular-nums">
@@ -316,7 +322,7 @@ export function ScoutDayCalendar({
                       </span>
                     ) : null}
                     <span className="shrink-0 text-xs font-semibold opacity-75">
-                      {label(SCOUT_DAY_STATUS, event.status)}
+                      {i18n.labels.label(SCOUT_DAY_STATUS, event.status)}
                     </span>
                   </Link>
                 </li>
@@ -332,7 +338,7 @@ export function ScoutDayCalendar({
           ).map((status) => (
             <span key={status} className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <span className={cn("size-3 rounded-sm", styleFor(status).dot)} />
-              {label(SCOUT_DAY_STATUS, status)}
+              {i18n.labels.label(SCOUT_DAY_STATUS, status)}
             </span>
           ))}
         </div>

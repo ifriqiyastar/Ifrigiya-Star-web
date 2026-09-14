@@ -1,5 +1,8 @@
 "use client";
 
+import { useAdminTranslations } from "@/lib/i18n/admin-client";
+
+
 import * as React from "react";
 import { BanIcon, FileEditIcon, Loader2Icon, ShieldCheckIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -21,19 +24,22 @@ export function DossierDecision({
   approve,
   requestChanges,
   reject,
-  approveLabel = "Approuver et notifier",
+  approveLabel ,
 }: {
   approve: () => Promise<ActionResult>;
   requestChanges: (reason: string) => Promise<ActionResult>;
   reject: (reason: string) => Promise<ActionResult>;
   approveLabel?: string;
 }) {
+  const i18n = useAdminTranslations();
+  approveLabel ??= i18n.t("Approuver et notifier");
+
   const [note, setNote] = React.useState("");
   const [pending, startTransition] = React.useTransition();
 
   function run(task: () => Promise<ActionResult>, requiresNote: boolean) {
     if (requiresNote && !note.trim()) {
-      toast.error("Ce geste demande un motif : il est transmis a l'interesse.");
+      toast.error(i18n.t("Ce geste demande un motif : il est transmis a l'interesse."));
       return;
     }
     startTransition(async () => {
@@ -51,20 +57,17 @@ export function DossierDecision({
     <div className="flex flex-col gap-3">
       <div className="space-y-1.5">
         <Label htmlFor="dossier-note" className="micro-label text-muted-foreground">
-          Motif transmis au candidat
-        </Label>
+          {i18n.t("Motif transmis au candidat")}</Label>
         <Textarea
           id="dossier-note"
           rows={2}
           value={note}
           onChange={(event) => setNote(event.target.value)}
-          placeholder="Piece illisible, licence a joindre, informations a corriger…"
+          placeholder={i18n.t("Piece illisible, licence a joindre, informations a corriger…")}
           className="resize-none text-xs"
         />
         <p className="text-[0.6875rem] text-muted-foreground">
-          Obligatoire pour une demande de piece ou un rejet. Une validation efface ce champ :
-          le motif n&apos;y survit pas.
-        </p>
+          {i18n.t("Obligatoire pour une demande de piece ou un rejet. Une validation efface ce champ : le motif n'y survit pas.")}</p>
       </div>
 
       <button
@@ -85,8 +88,7 @@ export function DossierDecision({
           className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg bg-accent text-xs font-medium text-foreground transition-colors hover:bg-accent/70 disabled:opacity-60"
         >
           <FileEditIcon className="size-3.5" />
-          Demander piece
-        </button>
+          {i18n.t("Demander piece")}</button>
         <button
           type="button"
           disabled={pending}
@@ -94,8 +96,7 @@ export function DossierDecision({
           className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg bg-destructive/20 text-xs font-medium text-destructive transition-colors hover:bg-destructive/30 disabled:opacity-60"
         >
           <BanIcon className="size-3.5" />
-          Rejeter le profil
-        </button>
+          {i18n.t("Rejeter le profil")}</button>
       </div>
     </div>
   );

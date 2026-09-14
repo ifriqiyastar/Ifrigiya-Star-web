@@ -1,11 +1,14 @@
 "use server";
 
+import { getRequestAdminI18n } from "@/lib/i18n/admin";
+
+
 import { revalidatePath } from "next/cache";
 
 import { logAdminAction, requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { describeError, describeRpcError, fail, ok, type ActionResult } from "@/lib/actions/result";
+import { makeErrors, fail, ok, type ActionResult } from "@/lib/actions/result";
 import type { ModerationAction } from "@/lib/labels";
 import { QUARANTINABLE, removalOptions } from "@/lib/moderation-targets";
 
@@ -51,6 +54,8 @@ async function setHidden(
   targetId: string,
   hidden: boolean,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
+  const i18n = await getRequestAdminI18n();
+
   const supabase = await createClient();
 
   const { data, error } = await supabase.rpc("admin_set_content_hidden", {
@@ -63,20 +68,20 @@ async function setHidden(
     // La RPC renvoie faux quand aucune ligne ne correspond : un update qui ne
     // matche rien reussit sans rien dire, piege documente cote mobile.
     return data === false
-      ? { ok: false, message: "Ce contenu n'existe plus." }
+      ? { ok: false, message: i18n.t("Ce contenu n'existe plus.") }
       : { ok: true };
   }
 
   const rpcMissing =
     error.code === "PGRST202" || /admin_set_content_hidden/i.test(error.message ?? "");
-  if (!rpcMissing) return { ok: false, message: describeError(error) };
+  if (!rpcMissing) return { ok: false, message: makeErrors(i18n.locale).describeError(error) };
 
   const service = createServiceClient();
   if (!service) {
     return {
       ok: false,
       message:
-        "Masquage impossible : appliquez la migration 0042 (depot mobile), qui donne ce droit au back-office, ou renseignez SUPABASE_SERVICE_ROLE_KEY. Les migrations 0033/0035 ont retire ce droit aux sessions administrateur.",
+        i18n.t("Masquage impossible : appliquez la migration 0042 (depot mobile), qui donne ce droit au back-office, ou renseignez SUPABASE_SERVICE_ROLE_KEY. Les migrations 0033/0035 ont retire ce droit aux sessions administrateur."),
     };
   }
 
@@ -86,11 +91,13 @@ async function setHidden(
     .update({ is_hidden: hidden })
     .eq("id", targetId);
   return serviceError
-    ? { ok: false, message: describeError(serviceError) }
+    ? { ok: false, message: makeErrors(i18n.locale).describeError(serviceError) }
     : { ok: true };
 }
 
 export async function setPostHidden(postId: string, hidden: boolean): Promise<ActionResult> {
+  const i18n = await getRequestAdminI18n();
+
   await requirePermission("moderation.manage");
 
   const result = await setHidden("publication", postId, hidden);
@@ -98,25 +105,29 @@ export async function setPostHidden(postId: string, hidden: boolean): Promise<Ac
 
   await logAdminAction(hidden ? "hide_post" : "unhide_post", "post", postId);
   REFRESH();
-  return ok(hidden ? "Publication masquee." : "Publication remise en ligne.");
+  return ok(hidden ? i18n.t("Publication masquee.") : i18n.t("Publication remise en ligne."));
 }
 
 export async function setPostDeleted(postId: string, deleted: boolean): Promise<ActionResult> {
+  const i18n = await getRequestAdminI18n();
+
   await requirePermission("moderation.validate");
   const supabase = await createClient();
 
   const { error } = await supabase.from("posts").update({ is_deleted: deleted }).eq("id", postId);
-  if (error) return fail(describeError(error));
+  if (error) return fail(makeErrors(i18n.locale).describeError(error));
 
   await logAdminAction(deleted ? "delete_post" : "restore_post", "post", postId);
   REFRESH();
-  return ok(deleted ? "Publication supprimee." : "Publication restauree.");
+  return ok(deleted ? i18n.t("Publication supprimee.") : i18n.t("Publication restauree."));
 }
 
 export async function setCommentHidden(
   commentId: string,
   hidden: boolean,
 ): Promise<ActionResult> {
+  const i18n = await getRequestAdminI18n();
+
   await requirePermission("moderation.manage");
 
   const result = await setHidden("commentaire", commentId, hidden);
@@ -124,13 +135,15 @@ export async function setCommentHidden(
 
   await logAdminAction(hidden ? "hide_comment" : "unhide_comment", "post_comment", commentId);
   REFRESH();
-  return ok(hidden ? "Commentaire masque." : "Commentaire remis en ligne.");
+  return ok(hidden ? i18n.t("Commentaire masque.") : i18n.t("Commentaire remis en ligne."));
 }
 
 export async function setCommentDeleted(
   commentId: string,
   deleted: boolean,
 ): Promise<ActionResult> {
+  const i18n = await getRequestAdminI18n();
+
   await requirePermission("moderation.validate");
   const supabase = await createClient();
 
@@ -138,11 +151,11 @@ export async function setCommentDeleted(
     .from("post_comments")
     .update({ is_deleted: deleted })
     .eq("id", commentId);
-  if (error) return fail(describeError(error));
+  if (error) return fail(makeErrors(i18n.locale).describeError(error));
 
   await logAdminAction(deleted ? "delete_comment" : "restore_comment", "post_comment", commentId);
   REFRESH();
-  return ok(deleted ? "Commentaire supprime." : "Commentaire restaure.");
+  return ok(deleted ? i18n.t("Commentaire supprime.") : i18n.t("Commentaire restaure."));
 }
 
 /**
@@ -151,6 +164,8 @@ export async function setCommentDeleted(
  * en meme temps que la ligne, sinon l'objet resterait orphelin dans le bucket.
  */
 export async function deletePlayerVideo(videoId: string): Promise<ActionResult> {
+  const i18n = await getRequestAdminI18n();
+
   await requirePermission("moderation.validate");
   const supabase = await createClient();
 
@@ -161,7 +176,7 @@ export async function deletePlayerVideo(videoId: string): Promise<ActionResult> 
     .maybeSingle();
 
   const { error } = await supabase.from("player_videos").delete().eq("id", videoId);
-  if (error) return fail(describeError(error));
+  if (error) return fail(makeErrors(i18n.locale).describeError(error));
 
   if (video?.storage_path) {
     await supabase.storage.from("player-videos").remove([video.storage_path]);
@@ -169,10 +184,12 @@ export async function deletePlayerVideo(videoId: string): Promise<ActionResult> 
 
   await logAdminAction("delete_player_video", "player_video", videoId);
   REFRESH();
-  return ok("Video supprimee.");
+  return ok(i18n.t("Video supprimee."));
 }
 
 export async function deletePlayerPhoto(photoId: string): Promise<ActionResult> {
+  const i18n = await getRequestAdminI18n();
+
   await requirePermission("moderation.validate");
   const supabase = await createClient();
 
@@ -183,7 +200,7 @@ export async function deletePlayerPhoto(photoId: string): Promise<ActionResult> 
     .maybeSingle();
 
   const { error } = await supabase.from("player_photos").delete().eq("id", photoId);
-  if (error) return fail(describeError(error));
+  if (error) return fail(makeErrors(i18n.locale).describeError(error));
 
   if (photo?.storage_path) {
     await supabase.storage.from("player-photos").remove([photo.storage_path]);
@@ -191,7 +208,7 @@ export async function deletePlayerPhoto(photoId: string): Promise<ActionResult> 
 
   await logAdminAction("delete_player_photo", "player_photo", photoId);
   REFRESH();
-  return ok("Photo supprimee.");
+  return ok(i18n.t("Photo supprimee."));
 }
 
 /* ------------------------------------------------------------------ §12.2
@@ -277,11 +294,13 @@ async function applyRemoval(
   targetId: string,
   action: ModerationAction,
 ): Promise<string | null> {
+  const i18n = await getRequestAdminI18n();
+
   const supabase = await createClient();
 
   if (action === "utilisateur_suspendu") {
     const owner = await targetOwner(targetType, targetId);
-    if (!owner) return "Impossible d'identifier le compte a suspendre pour cette cible.";
+    if (!owner) return i18n.t("Impossible d'identifier le compte a suspendre pour cette cible.");
     const result = await suspendProfile(adminId, owner, "Contenu signale — retrait valide.");
     return result.ok ? null : result.message;
   }
@@ -296,7 +315,7 @@ async function applyRemoval(
       const table = targetType === "publication" ? "posts" : "post_comments";
       if (action === "supprime") {
         const { error } = await supabase.from(table).update({ is_deleted: true }).eq("id", targetId);
-        return error ? describeError(error) : null;
+        return error ? makeErrors(i18n.locale).describeError(error) : null;
       }
       const hiddenResult = await setHidden(targetType, targetId, true);
       return hiddenResult.ok ? null : hiddenResult.message;
@@ -308,7 +327,7 @@ async function applyRemoval(
         .eq("id", targetId)
         .maybeSingle();
       const { error } = await supabase.from("player_videos").delete().eq("id", targetId);
-      if (error) return describeError(error);
+      if (error) return makeErrors(i18n.locale).describeError(error);
       if (video?.storage_path) {
         await supabase.storage.from("player-videos").remove([video.storage_path]);
       }
@@ -321,12 +340,12 @@ async function applyRemoval(
         .from("scout_days")
         .update({ status: "annule" })
         .eq("id", targetId);
-      return error ? describeError(error) : null;
+      return error ? makeErrors(i18n.locale).describeError(error) : null;
     }
     default:
       // Profils et messages : le retrait passe par la suspension du compte,
       // seule mesure que le schema autorise ici.
-      return "Cette cible ne se retire pas directement : choisissez la suspension du compte.";
+      return i18n.t("Cette cible ne se retire pas directement : choisissez la suspension du compte.");
   }
 }
 
@@ -393,9 +412,11 @@ export async function proposeRemoval(
   action: string,
   reason: string,
 ): Promise<ActionResult> {
+  const i18n = await getRequestAdminI18n();
+
   const admin = await requirePermission("moderation.manage");
   const motif = reason.trim();
-  if (!motif) return fail("Motivez la proposition : le super administrateur la relira.");
+  if (!motif) return fail(i18n.t("Motivez la proposition : le super administrateur la relira."));
 
   const supabase = await createClient();
   const { data: report } = await supabase
@@ -403,12 +424,12 @@ export async function proposeRemoval(
     .select("id, status, target_type, target_id")
     .eq("id", reportId)
     .maybeSingle();
-  if (!report) return fail("Signalement introuvable.");
+  if (!report) return fail(i18n.t("Signalement introuvable."));
   if (report.status !== "en_attente") {
-    return fail("Ce signalement n'est plus en attente d'instruction.");
+    return fail(i18n.t("Ce signalement n'est plus en attente d'instruction."));
   }
   if (!removalOptions(report.target_type).includes(action as ModerationAction)) {
-    return fail("Ce retrait ne s'applique pas a ce type de contenu.");
+    return fail(i18n.t("Ce retrait ne s'applique pas a ce type de contenu."));
   }
 
   const quarantined = await quarantineTarget(report.target_type, report.target_id);
@@ -425,11 +446,11 @@ export async function proposeRemoval(
     .select("id");
   if (error) {
     if (quarantined) await liftQuarantine(report.target_type, report.target_id);
-    return fail(describeError(error));
+    return fail(makeErrors(i18n.locale).describeError(error));
   }
   if (!proposed?.length) {
     if (quarantined) await liftQuarantine(report.target_type, report.target_id);
-    return fail("Aucune ligne modifiee : la proposition n'a pas ete enregistree.");
+    return fail(i18n.t("Aucune ligne modifiee : la proposition n'a pas ete enregistree."));
   }
 
   await logAdminAction("propose_report_removal", "report", reportId, {
@@ -441,13 +462,15 @@ export async function proposeRemoval(
   REFRESH();
   return ok(
     quarantined
-      ? "Retrait propose. Le contenu est masque en attendant la validation."
-      : "Retrait propose. Cette cible ne peut pas etre masquee : elle reste en ligne jusqu'a la decision.",
+      ? i18n.t("Retrait propose. Le contenu est masque en attendant la validation.")
+      : i18n.t("Retrait propose. Cette cible ne peut pas etre masquee : elle reste en ligne jusqu'a la decision."),
   );
 }
 
 /** Etape 2a — le super administrateur confirme : le retrait est applique. */
 export async function confirmRemoval(reportId: string): Promise<ActionResult> {
+  const i18n = await getRequestAdminI18n();
+
   const admin = await requirePermission("moderation.validate");
   const supabase = await createClient();
 
@@ -456,8 +479,8 @@ export async function confirmRemoval(reportId: string): Promise<ActionResult> {
     .select("id, status, target_type, target_id, proposed_action")
     .eq("id", reportId)
     .maybeSingle();
-  if (!report) return fail("Signalement introuvable.");
-  if (report.status !== "a_valider") return fail("Ce signalement n'attend pas de validation.");
+  if (!report) return fail(i18n.t("Signalement introuvable."));
+  if (report.status !== "a_valider") return fail(i18n.t("Ce signalement n'attend pas de validation."));
 
   // L'effet d'abord : si Postgres le refuse, le signalement ne doit pas
   // annoncer un retrait qui n'a pas eu lieu.
@@ -474,12 +497,12 @@ export async function confirmRemoval(reportId: string): Promise<ActionResult> {
     .update({ status: "traite" })
     .eq("id", reportId)
     .select("id");
-  if (error) return fail(describeError(error));
+  if (error) return fail(makeErrors(i18n.locale).describeError(error));
   // Une ecriture filtree par la RLS reussit sur zero ligne : sans `.select()`,
   // le retrait serait applique et le signalement resterait ouvert, en silence.
   if (!closed?.length) {
     return fail(
-      "Le retrait a ete applique mais le signalement n'a pas pu etre clos : aucune ligne modifiee.",
+      i18n.t("Le retrait a ete applique mais le signalement n'a pas pu etre clos : aucune ligne modifiee."),
     );
   }
 
@@ -489,14 +512,16 @@ export async function confirmRemoval(reportId: string): Promise<ActionResult> {
     target_id: report.target_id,
   });
   REFRESH();
-  return ok("Retrait valide et applique.");
+  return ok(i18n.t("Retrait valide et applique."));
 }
 
 /** Etape 2b — le super administrateur refuse : la quarantaine est levee. */
 export async function refuseRemoval(reportId: string, reason: string): Promise<ActionResult> {
+  const i18n = await getRequestAdminI18n();
+
   await requirePermission("moderation.validate");
   const motif = reason.trim();
-  if (!motif) return fail("Motivez le refus : il reste au journal des decisions.");
+  if (!motif) return fail(i18n.t("Motivez le refus : il reste au journal des decisions."));
 
   const supabase = await createClient();
   const { data: report } = await supabase
@@ -504,16 +529,16 @@ export async function refuseRemoval(reportId: string, reason: string): Promise<A
     .select("id, status, target_type, target_id, quarantined")
     .eq("id", reportId)
     .maybeSingle();
-  if (!report) return fail("Signalement introuvable.");
-  if (report.status !== "a_valider") return fail("Ce signalement n'attend pas de validation.");
+  if (!report) return fail(i18n.t("Signalement introuvable."));
+  if (report.status !== "a_valider") return fail(i18n.t("Ce signalement n'attend pas de validation."));
 
   const { data: closed, error } = await supabase
     .from("reports")
     .update({ status: "rejete", decision_reason: motif, quarantined: false })
     .eq("id", reportId)
     .select("id");
-  if (error) return fail(describeError(error));
-  if (!closed?.length) return fail("Aucune ligne modifiee : le signalement n'a pas ete clos.");
+  if (error) return fail(makeErrors(i18n.locale).describeError(error));
+  if (!closed?.length) return fail(i18n.t("Aucune ligne modifiee : le signalement n'a pas ete clos."));
 
   if (report.quarantined) await liftQuarantine(report.target_type, report.target_id);
 
@@ -521,13 +546,15 @@ export async function refuseRemoval(reportId: string, reason: string): Promise<A
   REFRESH();
   return ok(
     report.quarantined
-      ? "Retrait refuse : le contenu est remis en ligne."
-      : "Retrait refuse.",
+      ? i18n.t("Retrait refuse : le contenu est remis en ligne.")
+      : i18n.t("Retrait refuse."),
   );
 }
 
 /** Classement sans suite, avant toute proposition. Aucun contenu n'est retire. */
 export async function dismissReport(reportId: string): Promise<ActionResult> {
+  const i18n = await getRequestAdminI18n();
+
   await requirePermission("moderation.manage");
   const supabase = await createClient();
 
@@ -536,12 +563,12 @@ export async function dismissReport(reportId: string): Promise<ActionResult> {
     .update({ status: "rejete" })
     .eq("id", reportId)
     .select("id");
-  if (error) return fail(describeError(error));
-  if (!closed?.length) return fail("Aucune ligne modifiee : le signalement n'a pas ete classe.");
+  if (error) return fail(makeErrors(i18n.locale).describeError(error));
+  if (!closed?.length) return fail(i18n.t("Aucune ligne modifiee : le signalement n'a pas ete classe."));
 
   await logAdminAction("dismiss_report", "report", reportId);
   REFRESH();
-  return ok("Signalement classe sans suite.");
+  return ok(i18n.t("Signalement classe sans suite."));
 }
 
 /**
@@ -569,6 +596,8 @@ async function suspendProfile(
   profileId: string,
   reason: string,
 ): Promise<ActionResult> {
+  const i18n = await getRequestAdminI18n();
+
   const supabase = await createClient();
 
   // Un seul appel la ou il y en avait trois : `profiles.is_active` n'est pas
@@ -585,11 +614,11 @@ async function suspendProfile(
   // ou un message : si la RPC manque, ces signalements-la n'ont aucune issue.
   // Le dire, plutot que de renvoyer « function not found ».
   if (error) {
-    return fail(describeRpcError(error, "admin_set_account_active", "Suspension indisponible"));
+    return fail(makeErrors(i18n.locale).describeRpcError(error, "admin_set_account_active", i18n.t("Suspension indisponible")));
   }
-  if (data === false) return fail("Compte introuvable.");
+  if (data === false) return fail(i18n.t("Compte introuvable."));
 
   await logAdminAction("suspend_user", "profile", profileId, { reason, by: adminId });
   REFRESH();
-  return ok("Utilisateur suspendu.");
+  return ok(i18n.t("Utilisateur suspendu."));
 }

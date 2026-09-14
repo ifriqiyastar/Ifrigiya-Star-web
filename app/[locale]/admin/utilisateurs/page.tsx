@@ -1,3 +1,4 @@
+import { getAdminI18n } from "@/lib/i18n/admin";
 import Link from "next/link";
 import type { Metadata } from "next";
 import {
@@ -33,18 +34,30 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatDate, formatNumber } from "@/lib/format";
+import { makeFormat } from "@/lib/format";
 import { suspendUser } from "@/lib/actions/moderation";
-import { ACCOUNT_STATUS, ROLE, entry, label, options } from "@/lib/labels";
+import { fill, getAdminDict, getAdminLocale } from "@/lib/i18n/admin";
+import { localePath } from "@/lib/i18n/config";
+import { ACCOUNT_STATUS, ROLE, makeLabels } from "@/lib/labels";
 import { listUsers, USERS_PAGE_SIZE } from "@/lib/queries/users";
 import { createClient } from "@/lib/supabase/server";
 import { requirePermission } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
-export const metadata: Metadata = { title: "Utilisateurs" };
+export async function generateMetadata(): Promise<Metadata> {
+  const dict = await getAdminDict();
+  return { title: dict.users.metaTitle };
+}
 
 export default async function UsersPage({ searchParams }: PageProps<"/[locale]/admin/utilisateurs">) {
+  const i18n = await getAdminI18n();
+
   const admin = await requirePermission("users.read");
+  const [locale, dict] = await Promise.all([getAdminLocale(), getAdminDict()]);
+  const d = dict.users;
+  const { formatDate, formatNumber } = makeFormat(locale);
+  const { entry, label, options } = makeLabels(locale);
+  const href = (path: string) => localePath(locale, path);
   const resolved = await searchParams;
   const params = {
     q: str(resolved.q),
@@ -98,9 +111,9 @@ export default async function UsersPage({ searchParams }: PageProps<"/[locale]/a
     if (roleIds.length) {
       const { data: roles } = await supabase
         .from("admin_roles")
-        .select("id, label")
+        .select("id, code, label")
         .in("id", roleIds);
-      const labelById = new Map((roles ?? []).map((row) => [row.id, row.label as string]));
+      const labelById = new Map((roles ?? []).map((row) => [row.id, dict.roles.names[row.code as keyof typeof dict.roles.names] ?? row.label as string]));
       for (const assignment of assignments ?? []) {
         const roleLabel = labelById.get(assignment.role_id);
         if (roleLabel) adminRoleById.set(assignment.admin_id as string, roleLabel);
@@ -118,63 +131,80 @@ export default async function UsersPage({ searchParams }: PageProps<"/[locale]/a
   return (
     <>
       <PageHeader
-        breadcrumb={[{ label: "Utilisateurs et validations" }, { label: "Comptes" }]}
-        title="Annuaire des comptes & utilisateurs"
+        breadcrumb={[{ label: d.breadcrumbSection }, { label: d.breadcrumbCurrent }]}
+        title={d.title}
         meta={
           <HeaderMeta tone="brand" dot>
-            {formatNumber(allCount)} comptes enregistres
+            {fill(d.registeredAccounts, { count: formatNumber(allCount) })}
           </HeaderMeta>
         }
-        description="Gestion centrale des profils Ifriqiya Star : consultation, affectation, moderation statutaire et tracabilite d'activite. Ouvrir une fiche donne acces a la modification, la suspension, la reactivation et la suppression."
+        description={d.description}
         actions={
           // Un seul bouton : l'export existe. Pas de « Creer un compte » —
           // l'inscription passe par l'application mobile, aucun fournisseur
           // d'email d'invitation n'est configure, et l'attribution d'un role
           // administrateur se fait en SQL depuis la migration 202608240006.
           <Link
-            href={`/admin/utilisateurs/export${exportQuery.size ? `?${exportQuery}` : ""}`}
+            href={href(
+              i18n.path(`/admin/utilisateurs/export${exportQuery.size ? `?${exportQuery}` : ""}`),
+            )}
             className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-accent px-3 text-sm font-semibold hover:bg-accent/70"
           >
             <DownloadIcon className="size-4" />
-            Exporter CSV
+            {dict.common.export}
           </Link>
         }
       />
 
       <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <KpiTile
-          label="Total comptes"
+          label={d.kpiTotal}
           value={formatNumber(allCount)}
           qualifier={
-            allCount ? `${Math.round(((activeAccounts.count ?? 0) / allCount) * 100)} % actifs` : undefined
+            allCount
+              ? fill(d.kpiActiveShare, {
+                  percent: Math.round(((activeAccounts.count ?? 0) / allCount) * 100),
+                })
+              : undefined
           }
           share={allCount ? (activeAccounts.count ?? 0) / allCount : undefined}
           icon={UsersIcon}
         />
         <KpiTile
-          label="Joueurs"
+          label={d.kpiPlayers}
           value={formatNumber(playerCount)}
-          qualifier={allCount ? `${Math.round((playerCount / allCount) * 100)} % de la base` : undefined}
+          qualifier={
+            allCount
+              ? fill(d.kpiShareOfBase, { percent: Math.round((playerCount / allCount) * 100) })
+              : undefined
+          }
           share={allCount ? playerCount / allCount : undefined}
           icon={UserRoundIcon}
           accent="secondary"
         />
         <KpiTile
-          label="Scouts & clubs"
+          label={d.kpiPros}
           value={formatNumber(proCount)}
-          qualifier={allCount ? `${Math.round((proCount / allCount) * 100)} % de la base` : undefined}
+          qualifier={
+            allCount
+              ? fill(d.kpiShareOfBase, { percent: Math.round((proCount / allCount) * 100) })
+              : undefined
+          }
           share={allCount ? proCount / allCount : undefined}
           icon={ShieldCheckIcon}
           accent="secondary"
         />
         <KpiTile
-          label="Pieces d'identite validees"
+          label={d.kpiIdentity}
           value={
             playersWithProfile
               ? `${Math.round((Math.min(kycCount, playersWithProfile) / playersWithProfile) * 100)} %`
               : "—"
           }
-          qualifier={`${formatNumber(kycCount)} / ${formatNumber(playersWithProfile)} joueurs`}
+          qualifier={fill(d.kpiIdentityQualifier, {
+            done: formatNumber(kycCount),
+            total: formatNumber(playersWithProfile),
+          })}
           share={playersWithProfile ? Math.min(kycCount, playersWithProfile) / playersWithProfile : undefined}
           icon={BadgeCheckIcon}
           accent="tertiary"
@@ -194,11 +224,11 @@ export default async function UsersPage({ searchParams }: PageProps<"/[locale]/a
             <input
               name="q"
               defaultValue={params.q ?? ""}
-              placeholder="Filtrer par nom, email ou telephone…"
+              placeholder={d.searchPlaceholder}
               className="w-full bg-transparent text-xs outline-none placeholder:text-muted-foreground"
             />
             <kbd className="shrink-0 rounded bg-accent px-1.5 py-0.5 text-[0.625rem] text-muted-foreground">
-              Entree
+              {d.enterKey}
             </kbd>
           </div>
           <button
@@ -206,40 +236,46 @@ export default async function UsersPage({ searchParams }: PageProps<"/[locale]/a
             className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-muted px-3 text-xs font-semibold hover:bg-accent"
           >
             <SlidersHorizontalIcon className="size-3.5" />
-            Appliquer
+            {d.apply}
           </button>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Selector name="role" label="Type" value={params.role} options={options(ROLE)} all="Tous" />
+          <Selector
+            name="role"
+            label={d.filterType}
+            value={params.role}
+            options={options(ROLE)}
+            all={d.filterAll}
+          />
           <Selector
             name="statut"
-            label="Statut"
+            label={d.filterStatus}
             value={params.statut}
             options={options(ACCOUNT_STATUS)}
-            all="Tous"
+            all={d.filterAll}
           />
           <Selector
             name="actif"
-            label="Etat"
+            label={d.filterState}
             value={params.actif}
             options={[
-              { value: "oui", label: "Actif uniquement" },
-              { value: "non", label: "Desactive" },
+              { value: "oui", label: d.activeOnly },
+              { value: "non", label: d.deactivated },
             ]}
-            all="Actif (tous)"
+            all={d.activeAll}
           />
           <Selector
             name="suppression"
-            label="Suppression"
+            label={d.filterDeletion}
             value={params.suppression}
-            options={[{ value: "oui", label: "Demande en cours" }]}
-            all="Toutes"
+            options={[{ value: "oui", label: d.deletionPending }]}
+            all={d.filterAllFem}
           />
           <Link
-            href="/admin/utilisateurs"
-            title="Reinitialiser les filtres"
-            aria-label="Reinitialiser les filtres"
+            href={href("/admin/utilisateurs")}
+            title={d.resetFilters}
+            aria-label={d.resetFilters}
             className="inline-flex size-9 items-center justify-center rounded-lg bg-muted text-muted-foreground hover:bg-accent hover:text-foreground"
           >
             <RotateCcwIcon className="size-4" />
@@ -250,27 +286,27 @@ export default async function UsersPage({ searchParams }: PageProps<"/[locale]/a
       <Panel>
         {error ? (
           <p className="border-b border-destructive/30 bg-destructive/10 px-4 py-3 text-xs text-destructive sm:px-5">
-            Lecture impossible : {error}
+            {fill(d.readError, { error })}
           </p>
         ) : null}
 
         {!rows.length ? (
           <EmptyState
             icon={UsersIcon}
-            title="Aucun compte"
-            description="Aucun compte ne correspond a ces criteres."
+            title={d.emptyTitle}
+            description={d.emptyDesc}
           />
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Utilisateur &amp; contact</TableHead>
-                <TableHead>Role / profil</TableHead>
-                <TableHead>Conformite</TableHead>
-                <TableHead>Detail &amp; affectation</TableHead>
-                <TableHead>Etat compte</TableHead>
-                <TableHead className="text-right">Inscrit le</TableHead>
-                <TableHead className="text-right">Actions operationnelles</TableHead>
+                <TableHead>{d.colUser}</TableHead>
+                <TableHead>{d.colRole}</TableHead>
+                <TableHead>{d.colCompliance}</TableHead>
+                <TableHead>{d.colDetail}</TableHead>
+                <TableHead>{d.colState}</TableHead>
+                <TableHead className="text-right">{d.colRegistered}</TableHead>
+                <TableHead className="text-right">{d.colActions}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -284,11 +320,11 @@ export default async function UsersPage({ searchParams }: PageProps<"/[locale]/a
                           name={row.full_name}
                           secondary={undefined}
                           avatarUrl={row.avatar_url}
-                          href={`/admin/utilisateurs/${row.id}`}
+                          href={href(`/admin/utilisateurs/${row.id}`)}
                         />
                         {isSelf ? (
                           <span className="micro-label shrink-0 rounded bg-warning/20 px-1.5 py-0.5 text-warning">
-                            Moi
+                            {d.self}
                           </span>
                         ) : null}
                       </div>
@@ -317,7 +353,7 @@ export default async function UsersPage({ searchParams }: PageProps<"/[locale]/a
                       {row.role === "admin" ? (
                         <span className="inline-flex items-center gap-1.5 rounded bg-muted px-2 py-0.5 text-[0.6875rem] font-semibold text-warning">
                           <ShieldCheckIcon className="size-3" />
-                          {adminRoleById.get(row.id) ?? "Administrateur"}
+                          {adminRoleById.get(row.id) ?? dict.roles.fallback}
                         </span>
                       ) : row.businessStatus ? (
                         <StatusPill tone={entry(ACCOUNT_STATUS, row.businessStatus).tone} dot>
@@ -325,7 +361,7 @@ export default async function UsersPage({ searchParams }: PageProps<"/[locale]/a
                         </StatusPill>
                       ) : (
                         <StatusPill tone="neutral" dot>
-                          Non verifie
+                          {d.notVerified}
                         </StatusPill>
                       )}
                     </TableCell>
@@ -346,11 +382,11 @@ export default async function UsersPage({ searchParams }: PageProps<"/[locale]/a
                         </span>
                       ) : row.role === "admin" ? (
                         <span className="text-[0.6875rem] text-muted-foreground">
-                          Acces back-office
+                          {d.backOfficeAccess}
                         </span>
                       ) : (
                         <span className="text-[0.6875rem] text-muted-foreground italic">
-                          Profil standard
+                          {d.standardProfile}
                         </span>
                       )}
                     </TableCell>
@@ -358,15 +394,15 @@ export default async function UsersPage({ searchParams }: PageProps<"/[locale]/a
                     <TableCell>
                       {row.deletion_requested_at ? (
                         <StatusPill tone="danger" dot>
-                          Suppression demandee
+                          {d.deletionRequested}
                         </StatusPill>
                       ) : row.is_active ? (
                         <StatusPill tone="success" dot>
-                          Actif
+                          {d.active}
                         </StatusPill>
                       ) : (
                         <StatusPill tone="neutral" dot>
-                          Desactive
+                          {d.deactivated}
                         </StatusPill>
                       )}
                     </TableCell>
@@ -378,9 +414,11 @@ export default async function UsersPage({ searchParams }: PageProps<"/[locale]/a
                     <TableCell>
                       <div className="flex items-center justify-end gap-1.5">
                         <Link
-                          href={`/admin/utilisateurs/${row.id}`}
-                          title="Consulter la fiche"
-                          aria-label={`Consulter la fiche de ${row.full_name || "ce compte"}`}
+                          href={href(`/admin/utilisateurs/${row.id}`)}
+                          title={d.openRecord}
+                          aria-label={fill(d.openRecordOf, {
+                            name: row.full_name || d.thisAccount,
+                          })}
                           className="inline-flex size-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"
                         >
                           <EyeIcon className="size-4" />
@@ -392,7 +430,7 @@ export default async function UsersPage({ searchParams }: PageProps<"/[locale]/a
                             l'hydratation de la page entiere. */}
                         {isSelf ? (
                           <span className="rounded bg-muted px-2 py-1 text-[0.6875rem] text-muted-foreground italic">
-                            Votre compte
+                            {d.yourAccount}
                           </span>
                         ) : row.is_active && !row.deletion_requested_at ? (
                           <ReasonDialog
@@ -401,23 +439,25 @@ export default async function UsersPage({ searchParams }: PageProps<"/[locale]/a
                               <Button
                                 variant="destructive"
                                 size="xs"
-                                aria-label={`Suspendre ${row.full_name || "ce compte"}`}
+                                aria-label={fill(d.suspendName, {
+                                  name: row.full_name || d.thisAccount,
+                                })}
                               >
                                 <BanIcon />
-                                Suspendre
+                                {d.suspend}
                               </Button>
                             }
-                            title="Suspendre cet utilisateur"
-                            description="Le profil metier passe a « suspendu » : au prochain demarrage, l'application deconnecte l'utilisateur. La session deja ouverte, elle, continue — c'est reversible depuis sa fiche."
-                            placeholder="Comportement abusif, contenu inapproprie…"
-                            submitLabel="Suspendre le compte"
+                            title={d.suspendTitle}
+                            description={d.suspendDesc}
+                            placeholder={d.suspendPlaceholder}
+                            submitLabel={d.suspendSubmit}
                           />
                         ) : (
                           <Link
-                            href={`/admin/utilisateurs/${row.id}`}
+                            href={href(`/admin/utilisateurs/${row.id}`)}
                             className="rounded bg-muted px-2 py-1 text-[0.6875rem] font-semibold text-muted-foreground hover:bg-accent hover:text-foreground"
                           >
-                            Ouvrir la fiche
+                            {d.openFile}
                           </Link>
                         )}
                       </div>
@@ -430,7 +470,7 @@ export default async function UsersPage({ searchParams }: PageProps<"/[locale]/a
         )}
 
         <Pagination
-          basePath="/admin/utilisateurs"
+          basePath={href("/admin/utilisateurs")}
           params={params}
           page={page}
           pageSize={USERS_PAGE_SIZE}
@@ -442,18 +482,18 @@ export default async function UsersPage({ searchParams }: PageProps<"/[locale]/a
         notes={[
           {
             icon: ShieldCheckIcon,
-            title: "Suspendre n'est pas bannir",
-            body: "Suspendre desactive le compte et passe son profil en « suspendu ». Rien ne touche l'authentification : la session deja ouverte continue jusqu'au redemarrage de l'application, qui lit alors le statut du profil et deconnecte l'utilisateur.",
+            title: d.noteSuspendTitle,
+            body: d.noteSuspendBody,
           },
           {
             icon: BanIcon,
-            title: "Reactiver ne revalide pas",
-            body: "Un compte reactive repart en « en attente de validation », lui-meme bloquant : le dossier revient dans la file au lieu de retrouver l'acces au passage. La regle est appliquee par la base, pas par cet ecran.",
+            title: d.noteReactivateTitle,
+            body: d.noteReactivateBody,
           },
           {
             icon: Trash2Icon,
-            title: "Demande de suppression",
-            body: "Une demande faite depuis l'application est seulement enregistree : elle n'efface rien. La suppression definitive reste un geste manuel depuis la fiche du compte — elle retire l'acces et les donnees, et elle est irreversible.",
+            title: d.noteDeletionTitle,
+            body: d.noteDeletionBody,
           },
         ]}
       />

@@ -1,10 +1,16 @@
 "use server";
 
+import { getRequestAdminI18n } from "@/lib/i18n/admin";
+import type { AdminTranslations } from "@/lib/i18n/admin-shared";
+
+
+import { REGISTRATION_STATUS } from "@/lib/labels";
+
 import { revalidatePath } from "next/cache";
 
 import { logAdminAction, requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { describeError, fail, ok, type ActionResult } from "@/lib/actions/result";
+import { makeErrors, fail, ok, type ActionResult } from "@/lib/actions/result";
 import { cleanCriteria, type EligibilityCriteria } from "@/lib/football";
 import type { RegistrationStatus, ScoutDayStatus } from "@/lib/labels";
 
@@ -12,13 +18,15 @@ import type { RegistrationStatus, ScoutDayStatus } from "@/lib/labels";
 
 const REFRESH = () => revalidatePath("/[locale]/admin", "layout");
 
-const STATUS_MESSAGES: Record<ScoutDayStatus, string> = {
-  brouillon: "Evenement repasse en brouillon.",
-  en_attente_validation: "Evenement remis en attente de validation.",
-  publie: "Evenement publie.",
-  annule: "Evenement annule.",
-  cloture: "Evenement cloture.",
+function getSTATUSMESSAGES(i18n: AdminTranslations): Record<ScoutDayStatus, string> {
+  return {
+  brouillon: i18n.t("Evenement repasse en brouillon."),
+  en_attente_validation: i18n.t("Evenement remis en attente de validation."),
+  publie: i18n.t("Evenement publie."),
+  annule: i18n.t("Evenement annule."),
+  cloture: i18n.t("Evenement cloture."),
 };
+}
 
 /** Une coordonnee, ou `null` : un champ vide ne doit pas devenir `0`. */
 const coordinate = (formData: FormData, key: string) => {
@@ -103,6 +111,8 @@ function criteriaFrom(formData: FormData): EligibilityCriteria {
 
 /** Creation et modification complete d'un Scout Day. */
 export async function saveScoutDay(formData: FormData): Promise<ActionResult> {
+  const i18n = await getRequestAdminI18n();
+
   const admin = await requirePermission("events.manage");
   const supabase = await createClient();
   const id = text(formData, "id");
@@ -114,18 +124,18 @@ export async function saveScoutDay(formData: FormData): Promise<ActionResult> {
   const isPaid = formData.get("is_paid") === "on";
 
   if (!title || !eventDate || !location) {
-    return fail("Titre, date et lieu sont obligatoires.");
+    return fail(i18n.t("Titre, date et lieu sont obligatoires."));
   }
   const capacity = capacityRaw ? Number(capacityRaw) : null;
   const priceAmount = isPaid && priceRaw ? Number(priceRaw) : 0;
   if (capacity !== null && (!Number.isInteger(capacity) || capacity < 1)) {
-    return fail("La capacite doit etre un entier positif.");
+    return fail(i18n.t("La capacite doit etre un entier positif."));
   }
-  if (!Number.isFinite(priceAmount) || priceAmount < 0) return fail("Le prix est invalide.");
+  if (!Number.isFinite(priceAmount) || priceAmount < 0) return fail(i18n.t("Le prix est invalide."));
   // `chk_scout_day_price` exige un montant strictement positif des que
   // l'evenement est payant : on le dit en francais plutot qu'en 23514.
   if (isPaid && priceAmount <= 0) {
-    return fail("Un evenement payant demande un prix superieur a zero.");
+    return fail(i18n.t("Un evenement payant demande un prix superieur a zero."));
   }
 
   const payload = {
@@ -159,9 +169,9 @@ export async function saveScoutDay(formData: FormData): Promise<ActionResult> {
       .update(payload)
       .eq("id", id)
       .select("id");
-    if (error) return fail(describeError(error));
+    if (error) return fail(makeErrors(i18n.locale).describeError(error));
     if (!touched(updated)) {
-      return fail("Aucune ligne modifiee : l'evenement n'existe plus, ou le RLS ne vous laisse pas l'ecrire.");
+      return fail(i18n.t("Aucune ligne modifiee : l'evenement n'existe plus, ou le RLS ne vous laisse pas l'ecrire."));
     }
     await logAdminAction("update_scout_day", "scout_day", id, { previous, next: payload });
     if (
@@ -178,7 +188,7 @@ export async function saveScoutDay(formData: FormData): Promise<ActionResult> {
       );
     }
     REFRESH();
-    return ok("Scout Day mis a jour.");
+    return ok(i18n.t("Scout Day mis a jour."));
   }
 
   // `scout_days.organizer_id` reference `professional_profiles(id)`, pas
@@ -187,7 +197,7 @@ export async function saveScoutDay(formData: FormData): Promise<ActionResult> {
   // etrangere. On verifie la fiche avant l'insert pour renvoyer un message
   // clair plutot qu'un 23503.
   const organizerId = String(formData.get("organizer_id") ?? "").trim();
-  if (!organizerId) return fail("Selectionnez le professionnel organisateur de l'evenement.");
+  if (!organizerId) return fail(i18n.t("Selectionnez le professionnel organisateur de l'evenement."));
 
   const { data: organizer } = await supabase
     .from("professional_profiles")
@@ -196,7 +206,7 @@ export async function saveScoutDay(formData: FormData): Promise<ActionResult> {
     .maybeSingle();
   if (!organizer) {
     return fail(
-      "Ce compte n'a pas de fiche professionnelle valide : il ne peut pas organiser un Scout Day.",
+      i18n.t("Ce compte n'a pas de fiche professionnelle valide : il ne peut pas organiser un Scout Day."),
     );
   }
 
@@ -213,10 +223,10 @@ export async function saveScoutDay(formData: FormData): Promise<ActionResult> {
     // de renvoyer un refus RLS opaque — meme convention que les ecrans mobiles.
     if (error.code === "42501") {
       return fail(
-        "Creation refusee par le RLS Postgres : appliquez la migration 202608240002_admin_authoring_policies.sql, qui autorise l'administration a creer un Scout Day. Sans elle, seule la fiche du professionnel organisateur peut le faire.",
+        i18n.t("Creation refusee par le RLS Postgres : appliquez la migration 202608240002_admin_authoring_policies.sql, qui autorise l'administration a creer un Scout Day. Sans elle, seule la fiche du professionnel organisateur peut le faire."),
       );
     }
-    return fail(describeError(error));
+    return fail(makeErrors(i18n.locale).describeError(error));
   }
   await logAdminAction("create_scout_day", "scout_day", data.id, {
     ...payload,
@@ -224,7 +234,7 @@ export async function saveScoutDay(formData: FormData): Promise<ActionResult> {
     createdByAdmin: admin.userId,
   });
   REFRESH();
-  return ok("Scout Day cree en brouillon.");
+  return ok(i18n.t("Scout Day cree en brouillon."));
 }
 
 /**
@@ -242,6 +252,8 @@ export async function setScoutDayStatus(
   scoutDayId: string,
   status: ScoutDayStatus,
 ): Promise<ActionResult> {
+  const i18n = await getRequestAdminI18n();
+
   const admin = await requirePermission(
     status === "publie" ? "events.validate" : "events.manage",
   );
@@ -252,9 +264,9 @@ export async function setScoutDayStatus(
     .update({ status })
     .eq("id", scoutDayId)
     .select("id");
-  if (error) return fail(describeError(error));
+  if (error) return fail(makeErrors(i18n.locale).describeError(error));
   if (!touched(data)) {
-    return fail("Aucune ligne modifiee : l'evenement n'existe plus, ou le RLS ne vous laisse pas l'ecrire.");
+    return fail(i18n.t("Aucune ligne modifiee : l'evenement n'existe plus, ou le RLS ne vous laisse pas l'ecrire."));
   }
 
   await logAdminAction(`scout_day_${status}`, "scout_day", scoutDayId, { status });
@@ -267,7 +279,7 @@ export async function setScoutDayStatus(
     );
   }
   REFRESH();
-  return ok(STATUS_MESSAGES[status]);
+  return ok(getSTATUSMESSAGES(i18n)[status]);
 }
 
 /**
@@ -279,6 +291,8 @@ export async function setScoutDayStatus(
  * campagne, qui viserait les inscrits et non l'organisateur.
  */
 export async function validateScoutDay(scoutDayId: string): Promise<ActionResult> {
+  const i18n = await getRequestAdminI18n();
+
   await requirePermission("events.validate");
   const supabase = await createClient();
 
@@ -287,16 +301,16 @@ export async function validateScoutDay(scoutDayId: string): Promise<ActionResult
     .update({ status: "publie" })
     .eq("id", scoutDayId)
     .select("id");
-  if (error) return fail(describeError(error));
+  if (error) return fail(makeErrors(i18n.locale).describeError(error));
   if (!touched(data)) {
     return fail(
-      "Aucune ligne modifiee : l'evenement n'existe plus, ou le RLS ne vous laisse pas l'ecrire. Rien n'a ete publie.",
+      i18n.t("Aucune ligne modifiee : l'evenement n'existe plus, ou le RLS ne vous laisse pas l'ecrire. Rien n'a ete publie."),
     );
   }
 
   await logAdminAction("validate_scout_day", "scout_day", scoutDayId, { status: "publie" });
   REFRESH();
-  return ok("Scout Day valide et publie.");
+  return ok(i18n.t("Scout Day valide et publie."));
 }
 
 /**
@@ -309,9 +323,11 @@ export async function refuseScoutDay(
   scoutDayId: string,
   reason: string,
 ): Promise<ActionResult> {
+  const i18n = await getRequestAdminI18n();
+
   await requirePermission("events.validate");
   const motif = reason.trim();
-  if (!motif) return fail("Indiquez le motif du refus : l'organisateur le recevra tel quel.");
+  if (!motif) return fail(i18n.t("Indiquez le motif du refus : l'organisateur le recevra tel quel."));
 
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -319,14 +335,14 @@ export async function refuseScoutDay(
     .update({ status: "brouillon", validation_reason: motif })
     .eq("id", scoutDayId)
     .select("id");
-  if (error) return fail(describeError(error));
+  if (error) return fail(makeErrors(i18n.locale).describeError(error));
   if (!touched(data)) {
-    return fail("Aucune ligne modifiee : l'evenement n'existe plus, ou le RLS ne vous laisse pas l'ecrire.");
+    return fail(i18n.t("Aucune ligne modifiee : l'evenement n'existe plus, ou le RLS ne vous laisse pas l'ecrire."));
   }
 
   await logAdminAction("refuse_scout_day", "scout_day", scoutDayId, { reason: motif });
   REFRESH();
-  return ok("Evenement refuse : l'organisateur est prevenu du motif.");
+  return ok(i18n.t("Evenement refuse : l'organisateur est prevenu du motif."));
 }
 
 /**
@@ -336,21 +352,25 @@ export async function refuseScoutDay(
  * lesquelles le statut `annule` existe et previent les inscrits).
  */
 export async function deleteScoutDay(scoutDayId: string): Promise<ActionResult> {
+  const i18n = await getRequestAdminI18n();
+
   await requirePermission("events.manage");
   const supabase = await createClient();
 
   const { error } = await supabase.from("scout_days").delete().eq("id", scoutDayId);
-  if (error) return fail(describeError(error));
+  if (error) return fail(makeErrors(i18n.locale).describeError(error));
 
   await logAdminAction("delete_scout_day", "scout_day", scoutDayId);
   REFRESH();
-  return ok("Evenement supprime.");
+  return ok(i18n.t("Evenement supprime."));
 }
 
 export async function setRegistrationStatus(
   registrationId: string,
   status: RegistrationStatus,
 ): Promise<ActionResult> {
+  const i18n = await getRequestAdminI18n();
+
   await requirePermission("events.manage");
   const supabase = await createClient();
 
@@ -358,11 +378,11 @@ export async function setRegistrationStatus(
     .from("scout_day_registrations")
     .update({ status, updated_at: new Date().toISOString() })
     .eq("id", registrationId);
-  if (error) return fail(describeError(error));
+  if (error) return fail(makeErrors(i18n.locale).describeError(error));
 
   await logAdminAction(`registration_${status}`, "scout_day_registration", registrationId, {
     status,
   });
   REFRESH();
-  return ok(`Inscription : ${status}.`);
+  return ok(i18n.t("Inscription : {0}.", { "0": i18n.labels.label(REGISTRATION_STATUS, status) }));
 }

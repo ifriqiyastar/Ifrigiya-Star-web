@@ -1,3 +1,4 @@
+import { getAdminI18n } from "@/lib/i18n/admin";
 import Link from "next/link";
 import type { Metadata } from "next";
 import {
@@ -41,17 +42,22 @@ import {
   sendTestNotification,
 } from "@/lib/actions/notifications";
 import { requirePermission } from "@/lib/auth";
-import { formatDate, formatDateTime, formatNumber } from "@/lib/format";
+
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 
-export const metadata: Metadata = { title: "Notifications" };
+export async function generateMetadata(): Promise<Metadata> {
+  const i18n = await getAdminI18n();
+  return { title: i18n.t("Notifications") };
+}
 
 const PAGE_SIZE = 20;
 
 export default async function NotificationsPage({
   searchParams,
 }: PageProps<"/[locale]/admin/notifications">) {
+  const i18n = await getAdminI18n();
+
   await requirePermission("notifications.manage");
   const resolved = await searchParams;
   const page = Math.max(
@@ -156,11 +162,11 @@ export default async function NotificationsPage({
 
   const userOptions = (profileResult.data ?? []).map((profile) => ({
     id: profile.id,
-    label: `${profile.full_name ?? profile.email ?? "Compte"} — ${profile.role}`,
+    label: `${profile.full_name ?? profile.email ?? i18n.t("Compte")} — ${profile.role}`,
   }));
   const scoutDayOptions = (scoutDayResult.data ?? []).map((event) => ({
     id: event.id,
-    label: `${event.title} — ${formatDate(event.event_date)}`,
+    label: `${event.title} — ${i18n.format.formatDate(event.event_date)}`,
     count: registrationsByEvent.get(event.id) ?? 0,
   }));
   const userById = new Map(userOptions.map((option) => [option.id, option.label]));
@@ -169,15 +175,15 @@ export default async function NotificationsPage({
   );
 
   const targetLabel = (type: string, value: string | null) => {
-    if (type === "all") return "Toute la plateforme";
+    if (type === "all") return i18n.t("Toute la plateforme");
     if (type === "role") {
-      return value === "player" ? "Tous les joueurs" : "Tous les professionnels";
+      return value === "player" ? i18n.t("Tous les joueurs") : i18n.t("Tous les professionnels");
     }
     if (type === "user") {
-      return userById.get(value ?? "") ?? "Utilisateur supprimé";
+      return userById.get(value ?? "") ?? i18n.t("Utilisateur supprimé");
     }
     if (type === "scout_day") {
-      return scoutDayById.get(value ?? "") ?? "Scout Day supprimé";
+      return scoutDayById.get(value ?? "") ?? i18n.t("Scout Day supprimé");
     }
     return value ?? type;
   };
@@ -185,24 +191,24 @@ export default async function NotificationsPage({
   return (
     <>
       <PageHeader
-        breadcrumb={[{ label: "Communication" }, { label: "Notifications push" }]}
-        title="Diffusion & notifications push"
+        breadcrumb={[{ label: i18n.t("Communication") }, { label: i18n.t("Notifications push") }]}
+        title={i18n.t("Diffusion & notifications push")}
         meta={
           <HeaderMeta tone="brand" dot>
-            {formatNumber(total)} campagne{total > 1 ? "s" : ""} enregistrée{total > 1 ? "s" : ""}
+            {i18n.t(total === 1 ? "{0} campagne enregistree" : "{0} campagnes enregistrees", { "0": i18n.format.formatNumber(total) })}
           </HeaderMeta>
         }
-        description="Envois individuels ou segmentés : notification dans l'application et push mobile. Chaque diffusion indique combien de destinataires ont réellement été servis."
+        description={i18n.t("Envois individuels ou segmentés : notification dans l'application et push mobile. Chaque diffusion indique combien de destinataires ont réellement été servis.")}
         actions={
           // Trois mesures, toutes issues des campagnes enregistrées. Pas de
           // taux d'ouverture : rien ne relit les accusés de réception, et
           // aucune passerelle n'est interrogée depuis cet écran.
           <div className="flex items-center divide-x divide-border rounded-lg border border-border bg-card">
-            <HeaderStat label="Destinataires (30 j)" value={formatNumber(recipients30d)} />
-            <HeaderStat label="Envois réussis (30 j)" value={formatNumber(sent30d)} tone="brand" />
+            <HeaderStat label={i18n.t("Destinataires (30 j)")} value={i18n.format.formatNumber(recipients30d)} />
+            <HeaderStat label={i18n.t("Envois réussis (30 j)")} value={i18n.format.formatNumber(sent30d)} tone="brand" />
             <HeaderStat
-              label="Échecs (30 j)"
-              value={formatNumber(failed30d)}
+              label={i18n.t("Échecs (30 j)")}
+              value={i18n.format.formatNumber(failed30d)}
               tone={failed30d ? "danger" : "muted"}
             />
           </div>
@@ -211,30 +217,30 @@ export default async function NotificationsPage({
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          label="Campagnes"
-          value={formatNumber(total)}
-          hint="Historique complet"
+          label={i18n.t("Campagnes")}
+          value={i18n.format.formatNumber(total)}
+          hint={i18n.t("Historique complet")}
           icon={MegaphoneIcon}
         />
         <StatCard
-          label="Envois réussis"
-          value={formatNumber(sentCampaigns)}
-          hint={total ? `${Math.round((sentCampaigns / total) * 100)}% des campagnes` : "Aucun envoi"}
+          label={i18n.t("Envois réussis")}
+          value={i18n.format.formatNumber(sentCampaigns)}
+          hint={total ? i18n.t("{0}% des campagnes", { "0": Math.round((sentCampaigns / total) * 100) }) : i18n.t("Aucun envoi")}
           icon={CheckCircle2Icon}
           progress={total ? sentCampaigns / total : 0}
         />
         <StatCard
-          label="Destinataires servis"
-          value={formatNumber(servedOnPage)}
-          hint="Sur les campagnes affichées"
+          label={i18n.t("Destinataires servis")}
+          value={i18n.format.formatNumber(servedOnPage)}
+          hint={i18n.t("Sur les campagnes affichées")}
           icon={UsersIcon}
         />
         <StatCard
-          label="Échecs de diffusion"
-          value={formatNumber(failedCampaigns)}
-          hint={failedCampaigns ? "Une relance est disponible" : "Aucune action requise"}
+          label={i18n.t("Échecs de diffusion")}
+          value={i18n.format.formatNumber(failedCampaigns)}
+          hint={failedCampaigns ? i18n.t("Une relance est disponible") : i18n.t("Aucune action requise")}
           icon={TriangleAlertIcon}
-          delta={failedCampaigns ? "À traiter" : "Stable"}
+          delta={failedCampaigns ? i18n.t("À traiter") : i18n.t("Stable")}
           deltaTone={failedCampaigns ? "danger" : "brand"}
         />
       </section>
@@ -256,8 +262,8 @@ export default async function NotificationsPage({
       <Panel>
         <PanelHeader
           icon={HistoryIcon}
-          title="Journal de livraison"
-          description="Traçabilité des campagnes, de leur audience et du résultat de diffusion."
+          title={i18n.t("Journal de livraison")}
+          description={i18n.t("Traçabilité des campagnes, de leur audience et du résultat de diffusion.")}
           action={
             <div className="flex flex-wrap items-center gap-2">
               {/* Filtre de statut en GET : il vit dans l'URL, et l'export
@@ -269,47 +275,45 @@ export default async function NotificationsPage({
                   defaultValue={statut ?? ""}
                   className="cursor-pointer bg-transparent text-xs font-semibold outline-none"
                 >
-                  <option value="">Tous les statuts</option>
-                  <option value="sent">Envoyées</option>
-                  <option value="failed">En échec</option>
+                  <option value="">{i18n.t("Tous les statuts")}</option>
+                  <option value="sent">{i18n.t("Envoyées")}</option>
+                  <option value="failed">{i18n.t("En échec")}</option>
                 </select>
                 <button type="submit" className="text-[0.6875rem] font-semibold text-brand">
-                  OK
-                </button>
+                  {i18n.t("OK")}</button>
               </form>
               <Link
-                href={`/admin/notifications/export${statut ? `?statut=${statut}` : ""}`}
+                href={i18n.path(`/admin/notifications/export${statut ? `?statut=${statut}` : ""}`)}
                 className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-accent px-2.5 text-xs font-semibold hover:bg-accent/70"
               >
                 <DownloadIcon className="size-3.5" />
-                Exporter CSV
-              </Link>
+                {i18n.t("Exporter CSV")}</Link>
             </div>
           }
         />
 
         {campaignResult.error ? (
           <p className="p-5 text-sm text-destructive">
-            Appliquez la migration administrateur pour activer ce module :{" "}
+            {i18n.t("Appliquez la migration administrateur pour activer ce module :")}{" "}
             {campaignResult.error.message}
           </p>
         ) : !campaigns.length ? (
           <EmptyState
             icon={BellRingIcon}
-            title="Aucune campagne"
-            description="Votre première diffusion apparaîtra ici avec son audience et son statut."
+            title={i18n.t("Aucune campagne")}
+            description={i18n.t("Votre première diffusion apparaîtra ici avec son audience et son statut.")}
           />
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Campagne & message</TableHead>
-                <TableHead>Audience</TableHead>
-                <TableHead>Canaux</TableHead>
-                <TableHead>Statut</TableHead>
-                <TableHead>Destinataires</TableHead>
-                <TableHead>Expédition</TableHead>
-                <TableHead className="text-right">Action</TableHead>
+                <TableHead>{i18n.t("Campagne & message")}</TableHead>
+                <TableHead>{i18n.t("Audience")}</TableHead>
+                <TableHead>{i18n.t("Canaux")}</TableHead>
+                <TableHead>{i18n.t("Statut")}</TableHead>
+                <TableHead>{i18n.t("Destinataires")}</TableHead>
+                <TableHead>{i18n.t("Expédition")}</TableHead>
+                <TableHead className="text-right">{i18n.t("Action")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -349,14 +353,14 @@ export default async function NotificationsPage({
                   <TableCell>
                     <div className="flex items-baseline gap-1">
                       <span className="font-heading text-lg font-extrabold text-brand tabular-nums">
-                        {formatNumber(campaign.recipient_count ?? 0)}
+                        {i18n.format.formatNumber(campaign.recipient_count ?? 0)}
                       </span>
-                      <span className="text-[0.625rem] text-muted-foreground">servis</span>
+                      <span className="text-[0.625rem] text-muted-foreground">{i18n.t("servis")}</span>
                     </div>
                   </TableCell>
                   <TableCell>
                     <p className="text-xs text-foreground">
-                      {formatDateTime(campaign.created_at)}
+                      {i18n.format.formatDateTime(campaign.created_at)}
                     </p>
                   </TableCell>
                   <TableCell>
@@ -364,9 +368,9 @@ export default async function NotificationsPage({
                       {/* Dupliquer prefixe le composeur par l'URL : pas d'etat
                           partage a inventer, et le lien est partageable. */}
                       <Link
-                        href={`/admin/notifications?titre=${encodeURIComponent(campaign.title)}&message=${encodeURIComponent(campaign.body ?? "")}`}
-                        title="Reprendre ce message dans le composeur"
-                        aria-label="Reprendre ce message dans le composeur"
+                        href={i18n.path(`/admin/notifications?titre=${encodeURIComponent(campaign.title)}&message=${encodeURIComponent(campaign.body ?? "")}`)}
+                        title={i18n.t("Reprendre ce message dans le composeur")}
+                        aria-label={i18n.t("Reprendre ce message dans le composeur")}
                         className="inline-flex size-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"
                       >
                         <CopyIcon className="size-4" />
@@ -377,10 +381,9 @@ export default async function NotificationsPage({
                           variant="outline"
                         >
                           <RotateCcwIcon />
-                          Réessayer
-                        </ActionButton>
+                          {i18n.t("Réessayer")}</ActionButton>
                       ) : (
-                        <span className="micro-label text-muted-foreground">Terminé</span>
+                        <span className="micro-label text-muted-foreground">{i18n.t("Terminé")}</span>
                       )}
                     </div>
                   </TableCell>
@@ -391,7 +394,7 @@ export default async function NotificationsPage({
         )}
 
         <Pagination
-          basePath="/admin/notifications"
+          basePath={i18n.path("/admin/notifications")}
           params={{ statut, page: String(page) }}
           page={page}
           pageSize={PAGE_SIZE}
@@ -403,18 +406,18 @@ export default async function NotificationsPage({
         notes={[
           {
             icon: SendIcon,
-            title: "Diffusion synchrone",
-            body: "La campagne est envoyée au moment de la validation. Le journal indique le nombre réel de destinataires servis, sans file d'attente fictive.",
+            title: i18n.t("Diffusion synchrone"),
+            body: i18n.t("La campagne est envoyée au moment de la validation. Le journal indique le nombre réel de destinataires servis, sans file d'attente fictive."),
           },
           {
             icon: SmartphoneIcon,
-            title: "Couverture mobile conditionnelle",
-            body: "Tous les destinataires reçoivent la notification dans l'application. Le push dépend de la présence d'un jeton valide sur leur appareil.",
+            title: i18n.t("Couverture mobile conditionnelle"),
+            body: i18n.t("Tous les destinataires reçoivent la notification dans l'application. Le push dépend de la présence d'un jeton valide sur leur appareil."),
           },
           {
             icon: BellRingIcon,
-            title: "Email volontairement indisponible",
-            body: "Aucun fournisseur email n'est configuré. Le canal reste absent de la composition afin de ne jamais promettre une livraison inexistante.",
+            title: i18n.t("Email volontairement indisponible"),
+            body: i18n.t("Aucun fournisseur email n'est configuré. Le canal reste absent de la composition afin de ne jamais promettre une livraison inexistante."),
           },
         ]}
       />
@@ -443,7 +446,9 @@ function AudienceCell({ type, label }: { type: string; label: string }) {
   );
 }
 
-function ChannelPill({ channel }: { channel: string }) {
+async function ChannelPill({ channel }: { channel: string }) {
+  const i18n = await getAdminI18n();
+
   const isPush = channel === "push";
   return (
     <span
@@ -452,17 +457,19 @@ function ChannelPill({ channel }: { channel: string }) {
         isPush ? "bg-brand/12 text-brand" : "bg-info/12 text-info",
       )}
     >
-      {channel === "in_app" ? "In-App" : channel === "push" ? "Push" : channel}
+      {channel === "in_app" ? "In-App" : channel === "push" ? i18n.t("Push") : channel}
     </span>
   );
 }
 
-function CampaignStatus({ status }: { status: string }) {
+async function CampaignStatus({ status }: { status: string }) {
+  const i18n = await getAdminI18n();
+
   const details = {
-    sent: { label: "Envoyée", tone: "success" as const },
-    failed: { label: "Échec", tone: "danger" as const },
-    processing: { label: "En cours", tone: "info" as const },
-    queued: { label: "En attente", tone: "warning" as const },
+    sent: { label: i18n.t("Envoyée"), tone: "success" as const },
+    failed: { label: i18n.t("Échec"), tone: "danger" as const },
+    processing: { label: i18n.t("En cours"), tone: "info" as const },
+    queued: { label: i18n.t("En attente"), tone: "warning" as const },
   };
   const entry = details[status as keyof typeof details] ?? {
     label: status,

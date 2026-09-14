@@ -1,3 +1,4 @@
+import { getRequestAdminI18n } from "@/lib/i18n/admin";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { requireAdmin } from "@/lib/auth";
@@ -29,16 +30,18 @@ const ALLOWED_BUCKETS = new Set([
 const EXPIRY_SECONDS = 60 * 5;
 
 export async function GET(request: NextRequest) {
+  const i18n = await getRequestAdminI18n();
+
   await requireAdmin();
 
   const bucket = request.nextUrl.searchParams.get("bucket");
   const path = request.nextUrl.searchParams.get("path");
 
   if (!bucket || !path) {
-    return NextResponse.json({ error: "Parametres bucket et path requis." }, { status: 400 });
+    return NextResponse.json({ error: i18n.t("Parametres bucket et path requis.") }, { status: 400 });
   }
   if (!ALLOWED_BUCKETS.has(bucket)) {
-    return NextResponse.json({ error: "Bucket non autorise." }, { status: 403 });
+    return NextResponse.json({ error: i18n.t("Bucket non autorise.") }, { status: 403 });
   }
 
   const supabase = await createClient();
@@ -58,9 +61,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         error: bucketMissing
-          ? `Le bucket « ${bucket} » n'existe pas sur ce projet Supabase. Creez-le depuis Storage → New bucket, en le laissant **prive**, puis reessayez. (Verification : select id, public from storage.buckets;)`
+          ? i18n.t("Le bucket « {0} » n'existe pas sur ce projet Supabase. Creez-le depuis Storage → New bucket, en le laissant **prive**, puis reessayez. (Verification : select id, public from storage.buckets;)", { "0": bucket })
           : (error?.message ??
-            "Document introuvable dans le stockage. Le chemin enregistre en base ne correspond peut-etre a aucun fichier."),
+            i18n.t("Document introuvable dans le stockage. Le chemin enregistre en base ne correspond peut-etre a aucun fichier.")),
       },
       { status: 404 },
     );

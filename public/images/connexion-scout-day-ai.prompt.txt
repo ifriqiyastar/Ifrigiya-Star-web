@@ -1,0 +1,8 @@
+Generated with the built-in image_gen tool.
+
+Use case: photorealistic-natural
+Asset type: background photograph for the Ifriqiya Star football scouting platform sign-in page.
+Primary request: a group of people participating in a football Scout Day, an organized talent identification session on a Tunisian football training pitch. Six adult North African and sub-Saharan African players in plain dark training kits and lime green training bibs doing a short passing and dribbling drill between orange cones, with two adult coaches standing to the side observing with a clipboard. Footballs and realistic relaxed athletic movement. A credible scouting session, not a match or a posed team portrait.
+Style/medium: premium candid sports editorial photography, realistic people and anatomy, subtle film grain, cinematic natural late-afternoon light with cool deep charcoal shadows, green grass and subtle lime accents.
+Composition/framing: wide landscape 3:2 image. People and the visible drill concentrated in the left half and middle of the frame, shot from the sideline at human eye level, a modest training ground with low stands in the distance. Rightmost third is quiet darker out-of-focus pitch to sit behind a login panel. Show multiple participants clearly, players full-body with breathing room around them. No extreme closeups. Upper left sky quiet enough for a small logo overlay added later in HTML.
+Constraints: no text, no typography, no logos, no brands, no watermark, no interface. Standalone realistic photograph only. No invented visible scoreboards. All participants are adults.

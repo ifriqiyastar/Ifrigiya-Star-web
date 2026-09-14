@@ -10,6 +10,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
+import { useAdminI18n } from "@/lib/i18n/admin-client"
 import { cn } from "@/lib/utils"
 
 /**
@@ -34,13 +35,14 @@ export function NavMain({
   }[]
 }) {
   const pathname = usePathname()
+  const { dict } = useAdminI18n()
   return (
     <SidebarGroup className="p-0">
       {/* Repli en mode icone : la regle de base compense un intitule de 2rem
           par une marge negative, ce que cette variante a hauteur libre ne
           verifie pas — elle remontait donc la liste sous l'en-tete. */}
       <SidebarGroupLabel className="micro-label h-auto px-2 pb-2 text-muted-foreground/80 group-data-[collapsible=icon]:hidden">
-        Navigation operationnelle
+        {dict.nav.groupLabel}
       </SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu className="gap-0.5">

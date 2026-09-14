@@ -1,3 +1,4 @@
+import { getAdminI18n } from "@/lib/i18n/admin";
 import Link from "next/link";
 import type { Metadata } from "next";
 import {
@@ -29,14 +30,27 @@ import { RevenueChart, type RevenueRow } from "@/components/admin/revenue-chart"
 import { StatCard } from "@/components/admin/stat-card";
 import { getDashboard } from "@/lib/queries/dashboard";
 import { requirePermission } from "@/lib/auth";
-import { formatAmount, formatDuration, formatNumber } from "@/lib/format";
-import { ROLE, entry, label } from "@/lib/labels";
+import { makeFormat } from "@/lib/format";
+import { fill, getAdminDict, getAdminLocale } from "@/lib/i18n/admin";
+import type { AdminDictionary } from "@/lib/i18n/admin-shared";
+import { localePath } from "@/lib/i18n/config";
+import { PLAN_CODE, ROLE, makeLabels } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 
-export const metadata: Metadata = { title: "Tableau de bord" };
+export async function generateMetadata(): Promise<Metadata> {
+  const dict = await getAdminDict();
+  return { title: dict.dashboard.metaTitle };
+}
 
 export default async function DashboardPage({ searchParams }: PageProps<"/[locale]/admin">) {
+  const i18n = await getAdminI18n();
+
   await requirePermission("dashboard.read");
+  const [locale, dict] = await Promise.all([getAdminLocale(), getAdminDict()]);
+  const d = dict.dashboard;
+  const { formatAmount, formatDuration, formatNumber } = makeFormat(locale);
+  const { entry, label } = makeLabels(locale);
+  const href = (path: string) => localePath(locale, path);
   const resolved = await searchParams;
   const requestedPeriod = Number(typeof resolved.periode === "string" ? resolved.periode : 30);
   const period = [7, 30, 90, 365].includes(requestedPeriod) ? requestedPeriod : 30;
@@ -110,12 +124,39 @@ export default async function DashboardPage({ searchParams }: PageProps<"/[local
     0,
   );
 
+  /** Onglets du panneau financier : libelle, et type de paiement filtre. */
+  const fluxTabs = [
+    { value: "tous", label: d.fluxAll },
+    { value: "scout_days", label: d.fluxScoutDays },
+    { value: "abonnements", label: d.fluxSubscriptions },
+  ] as const;
+
+  /**
+   * Les quatre etapes du parcours d'inscription joueur. Ce sont les membres
+   * reels de `player_profile_status` — pas une modelisation d'entonnoir
+   * inventee pour l'ecran : `suspendu` en est exclu parce qu'il n'appartient
+   * pas au parcours.
+   */
+  const funnelSteps = [
+    { status: "incomplet", label: d.funnelIncomplete, dot: "bg-muted-foreground/40" },
+    { status: "en_attente_validation", label: d.funnelPending, dot: "bg-warning" },
+    { status: "refuse", label: d.funnelRejected, dot: "bg-destructive" },
+    { status: "valide", label: d.funnelApproved, dot: "bg-brand" },
+  ] as const;
+
+  /** Precision affichee derriere chaque role dans la repartition des comptes. */
+  const roleNotes: Record<string, string> = {
+    player: d.roleNotePlayer,
+    professional: d.roleNoteProfessional,
+    admin: d.roleNoteAdmin,
+  };
+
   const roleRows: BreakdownRow[] = users
     .map((row) => ({
       label: entry(ROLE, row.role).label,
       value: Number(row.total),
       tone: entry(ROLE, row.role).tone,
-      note: ROLE_NOTE[row.role],
+      note: roleNotes[row.role],
     }))
     .sort((a, b) => b.value - a.value);
 
@@ -123,28 +164,31 @@ export default async function DashboardPage({ searchParams }: PageProps<"/[local
   return (
     <>
       <PageHeader
-        breadcrumb={[{ label: "Accueil", href: "/admin" }, { label: "Tableau de bord" }]}
-        title="Vue d'ensemble analytique"
-        description="Activite et indicateurs de performance d'Ifriqiya Star. Les agregats sont recalcules a chaque ouverture de l'ecran ; chaque tuile renvoie a la liste qui la produit."
+        breadcrumb={[
+          { label: d.home, href: href("/admin") },
+          { label: d.current },
+        ]}
+        title={d.title}
+        description={d.description}
         actions={
           <>
             <DashboardPeriod value={period} />
             <Link
-              href="/admin/utilisateurs"
+              href={href("/admin/utilisateurs")}
               className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-muted px-3 text-sm font-semibold hover:bg-accent"
             >
               <SlidersHorizontalIcon className="size-4" />
-              Filtrer
+              {d.filter}
             </Link>
             {/* « Exporter » pointe sur l'export qui existe : le journal des
                 paiements en CSV. Pas d'export du tableau de bord lui-meme —
                 il n'y a pas de fichier derriere. */}
             <Link
-              href="/admin/finances/export"
+              href={href("/admin/finances/export")}
               className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand px-3 text-sm font-bold text-brand-foreground transition-[filter] hover:brightness-110"
             >
               <DownloadIcon className="size-4" />
-              Exporter
+              {d.export}
             </Link>
           </>
         }
@@ -153,99 +197,111 @@ export default async function DashboardPage({ searchParams }: PageProps<"/[local
       {data.error ? (
         <p className="flex items-start gap-2 rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-xs leading-relaxed text-destructive">
           <CircleAlertIcon className="mt-0.5 size-4 shrink-0" />
-          <span>
-            Les agregats du tableau de bord n&apos;ont pas pu etre lus : {data.error}
-          </span>
+          <span>{fill(d.aggregateError, { error: data.error })}</span>
         </p>
       ) : null}
 
       {/* Huit indicateurs, dans l'ordre de la maquette. */}
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          label="Comptes au total"
+          label={d.totalAccounts}
           value={formatNumber(totalUsers)}
           icon={UsersIcon}
-          delta={newUsers30d ? `+${formatNumber(newUsers30d)} ce mois` : undefined}
-          hint={`${formatNumber(activeUsers)} profils actifs`}
-          footNote={totalUsers ? `${Math.round((activeUsers / totalUsers) * 100)} % act.` : undefined}
-          href="/admin/utilisateurs"
+          delta={
+            newUsers30d ? fill(d.newThisMonth, { count: formatNumber(newUsers30d) }) : undefined
+          }
+          hint={fill(d.activeProfiles, { count: formatNumber(activeUsers) })}
+          footNote={
+            totalUsers
+              ? fill(d.activeShare, { percent: Math.round((activeUsers / totalUsers) * 100) })
+              : undefined
+          }
+          href={href("/admin/utilisateurs")}
         />
         <StatCard
-          label="Joueurs valides"
+          label={d.validatedPlayers}
           value={formatNumber(validatedPlayers)}
           icon={BadgeCheckIcon}
-          delta={validatedPlayers ? "Certifies" : undefined}
+          delta={validatedPlayers ? d.certified : undefined}
           deltaTone="info"
-          hint={`${formatNumber(data.visiblePlayers)} indexes dans la recherche`}
-          href="/admin/utilisateurs?role=player&statut=valide"
+          hint={fill(d.indexed, { count: formatNumber(data.visiblePlayers) })}
+          href={href("/admin/utilisateurs?role=player&statut=valide")}
         />
         <StatCard
-          label="Abonnements actifs"
+          label={d.activeSubscriptions}
           value={formatNumber(activeSubscriptions)}
           icon={CreditCardIcon}
           accent="secondary"
-          delta={activeSubscriptions ? undefined : "Aucun actif"}
+          delta={activeSubscriptions ? undefined : d.noneActive}
           deltaTone="neutral"
-          hint={`${formatNumber(successfulTransactions)} transactions enregistrees`}
-          footHref="/admin/finances?vue=offres"
-          footLabel="Tarifs"
+          hint={fill(d.transactions, { count: formatNumber(successfulTransactions) })}
+          footHref={href("/admin/finances?vue=offres")}
+          footLabel={d.pricing}
         />
         <StatCard
-          label="Revenus encaisses"
-          value={formatAmount(totalRevenue).replace(/\s*TND$/, "")}
+          label={d.revenue}
+          value={formatNumber(Math.round(totalRevenue))}
           unit="TND"
           icon={WalletIcon}
           accent="tertiary"
-          delta="Statut « reussi »"
+          delta={d.statusSucceeded}
           deltaTone="neutral"
-          hint="Somme des paiements encaisses"
-          footNote={`${period} derniers jours`}
-          href="/admin/finances"
+          hint={d.revenueHint}
+          footNote={fill(d.lastDays, { days: period })}
+          href={href("/admin/finances")}
         />
 
         <StatCard
-          label={`Connexions (${period} j)`}
+          label={fill(d.logins, { days: period })}
           value={formatNumber(data.activePeriod)}
           icon={EyeIcon}
           accent="neutral"
-          hint={`${formatNumber(data.active7d)} sur 7 j · ${formatNumber(data.active30d)} sur 30 j`}
-          footNote="Comptes connectes"
+          hint={fill(d.loginsHint, {
+            week: formatNumber(data.active7d),
+            month: formatNumber(data.active30d),
+          })}
+          footNote={d.loginsFoot}
         />
         <StatCard
-          label="Scout Days"
+          label={d.scoutDays}
           value={formatNumber(scoutDays?.total_evenements ?? 0)}
           icon={CalendarDaysIcon}
           delta={
             scoutDays?.total_inscriptions
-              ? `${formatNumber(scoutDays.total_inscriptions)} inscrits`
+              ? fill(d.registeredCount, {
+                  count: formatNumber(scoutDays.total_inscriptions),
+                })
               : undefined
           }
-          hint={`${formatNumber(scoutDays?.publies ?? 0)} evenements publies`}
-          href="/admin/scout-days"
+          hint={fill(d.publishedCount, { count: formatNumber(scoutDays?.publies ?? 0) })}
+          href={href("/admin/scout-days")}
         />
         <StatCard
-          label="En attente valid."
+          label={d.pendingValidation}
           value={formatNumber(pendingPlayers + data.docsPending)}
           icon={ClockIcon}
           accent="tertiary"
           glow
-          delta={pendingPlayers + data.docsPending > 0 ? "Priorite" : undefined}
+          delta={pendingPlayers + data.docsPending > 0 ? d.priority : undefined}
           deltaTone="warning"
-          hint={`${formatNumber(pendingPlayers)} joueurs · ${formatNumber(data.docsPending)} justificatifs`}
-          footHref="/admin/validations"
-          footLabel="Traiter"
+          hint={fill(d.pendingHint, {
+            players: formatNumber(pendingPlayers),
+            docs: formatNumber(data.docsPending),
+          })}
+          footHref={href("/admin/validations")}
+          footLabel={d.handle}
         />
         <StatCard
-          label="Signalements"
+          label={d.reports}
           value={formatNumber(data.pendingReports)}
           icon={FlagIcon}
           accent="error"
           glow
-          delta={data.pendingReports ? "Arbitrage" : undefined}
+          delta={data.pendingReports ? d.arbitration : undefined}
           deltaTone="danger"
-          hint="Contenus a instruire"
-          footHref="/admin/moderation"
-          footLabel="Ouvrir"
+          hint={d.reportsHint}
+          footHref={href("/admin/moderation")}
+          footLabel={d.openReports}
         />
       </section>
 
@@ -257,17 +313,17 @@ export default async function DashboardPage({ searchParams }: PageProps<"/[local
             <div>
               <h2 className="flex items-center gap-2 font-heading text-base font-bold">
                 <TrendingUpIcon className="size-4 text-brand" />
-                Revenus &amp; flux financiers
+                {d.fluxTitle}
               </h2>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                Paiements encaisses, decomposes en abonnements et inscriptions Scout Day.
-              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">{d.fluxDesc}</p>
             </div>
             <div className="flex shrink-0 items-center gap-0.5 self-start rounded-lg bg-accent p-0.5 sm:self-auto">
-              {FLUX_TABS.map((tab) => (
+              {fluxTabs.map((tab) => (
                 <Link
                   key={tab.value}
-                  href={`/admin?periode=${period}${tab.value === "tous" ? "" : `&flux=${tab.value}`}`}
+                  href={href(
+                    i18n.path(`/admin?periode=${period}${tab.value === "tous" ? "" : `&flux=${tab.value}`}`),
+                  )}
                   className={cn(
                     "micro-label rounded px-2 py-1 transition-colors",
                     flux === tab.value
@@ -285,25 +341,28 @@ export default async function DashboardPage({ searchParams }: PageProps<"/[local
               le « revenu brut » affiche est celui des barres visibles. */}
           <div className="grid grid-cols-1 gap-3 rounded-lg bg-background/60 p-3 sm:grid-cols-3">
             <MiniMetric
-              label="Revenu brut"
+              label={d.grossRevenue}
               value={formatAmount(chartTotal)}
-              hint={`${period} derniers jours`}
+              hint={fill(d.lastDays, { days: period })}
             />
             <MiniMetric
-              label="Panier moyen"
+              label={d.averageBasket}
               value={
                 successfulTransactions ? formatAmount(totalRevenue / successfulTransactions) : "—"
               }
-              hint={`${formatNumber(successfulTransactions)} transaction(s) reussie(s)`}
+              hint={fill(d.basketHint, { count: formatNumber(successfulTransactions) })}
             />
             <MiniMetric
-              label="Taux de reussite"
+              label={d.successRate}
               value={
                 data.paymentsTotal
                   ? `${Math.round((data.paymentsSucceeded / data.paymentsTotal) * 100)} %`
                   : "—"
               }
-              hint={`${formatNumber(data.paymentsSucceeded)} / ${formatNumber(data.paymentsTotal)} paiements`}
+              hint={fill(d.successHint, {
+                ok: formatNumber(data.paymentsSucceeded),
+                total: formatNumber(data.paymentsTotal),
+              })}
               tone="brand"
             />
           </div>
@@ -313,15 +372,12 @@ export default async function DashboardPage({ searchParams }: PageProps<"/[local
           </div>
 
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2 pt-1">
-            <span className="text-xs text-muted-foreground">
-              Les montants sont ceux enregistres dans la table des paiements : aucun encaissement
-              n&apos;est calcule ici.
-            </span>
+            <span className="text-xs text-muted-foreground">{d.fluxFootnote}</span>
             <Link
-              href="/admin/finances"
+              href={href("/admin/finances")}
               className="inline-flex items-center gap-1 text-sm font-semibold text-brand hover:underline"
             >
-              Consulter le journal des paiements
+              {d.paymentJournal}
               <ArrowRightIcon className="size-4" />
             </Link>
           </div>
@@ -332,20 +388,18 @@ export default async function DashboardPage({ searchParams }: PageProps<"/[local
             <div className="flex items-center justify-between gap-2 pb-3">
               <h2 className="flex items-center gap-2 font-heading text-base font-bold">
                 <PieChartIcon className="size-4 text-info" />
-                Comptes par type
+                {d.accountsTitle}
               </h2>
               <span className="micro-label rounded bg-accent px-1.5 py-0.5 text-muted-foreground">
-                {formatNumber(totalUsers)} total
+                {fill(d.accountsTotal, { count: formatNumber(totalUsers) })}
               </span>
             </div>
-            <p className="mb-4 text-xs text-muted-foreground">
-              Repartition des comptes par type sur la plateforme.
-            </p>
+            <p className="mb-4 text-xs text-muted-foreground">{d.accountsDesc}</p>
 
             {roleRows.length ? (
               <BreakdownMeter rows={roleRows} total={totalUsers} />
             ) : (
-              <p className="text-xs text-muted-foreground">Aucun compte.</p>
+              <p className="text-xs text-muted-foreground">{d.accountsEmpty}</p>
             )}
 
             <div className="mt-4 flex items-center justify-between gap-3 rounded-lg bg-background/80 p-3">
@@ -354,9 +408,12 @@ export default async function DashboardPage({ searchParams }: PageProps<"/[local
                   <BadgeCheckIcon className="size-5" />
                 </span>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold">Profils joueurs valides</p>
+                  <p className="truncate text-sm font-semibold">{d.validatedProfiles}</p>
                   <p className="truncate text-[0.6875rem] text-muted-foreground">
-                    {formatNumber(validatedPlayers)} sur {formatNumber(totalPlayers)} profils
+                    {fill(d.validatedProfilesHint, {
+                      done: formatNumber(validatedPlayers),
+                      total: formatNumber(totalPlayers),
+                    })}
                   </p>
                 </div>
               </div>
@@ -367,11 +424,11 @@ export default async function DashboardPage({ searchParams }: PageProps<"/[local
           </div>
 
           <Link
-            href="/admin/utilisateurs"
+            href={href("/admin/utilisateurs")}
             className="mt-3 inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-lg bg-muted text-sm font-semibold hover:bg-accent"
           >
             <UsersIcon className="size-4" />
-            Gerer l&apos;annuaire des utilisateurs
+            {d.manageDirectory}
           </Link>
         </Panel>
       </div>
@@ -383,21 +440,19 @@ export default async function DashboardPage({ searchParams }: PageProps<"/[local
             <div className="flex items-center justify-between gap-2">
               <h3 className="flex items-center gap-2 font-heading text-base font-bold">
                 <FilterIcon className="size-4 text-brand" />
-                Entonnoir d&apos;inscription joueurs
+                {d.funnelTitle}
               </h3>
               <Link
-                href="/admin/utilisateurs?role=player"
+                href={href("/admin/utilisateurs?role=player")}
                 className="rounded bg-muted px-2 py-1 text-xs font-semibold text-muted-foreground hover:bg-accent hover:text-foreground"
               >
-                Voir details
+                {d.funnelDetails}
               </Link>
             </div>
-            <p className="mt-1 mb-3 text-xs text-muted-foreground">
-              Etat d&apos;avancement des profils joueurs dans le parcours de validation.
-            </p>
+            <p className="mt-1 mb-3 text-xs text-muted-foreground">{d.funnelDesc}</p>
 
             <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
-              {FUNNEL_STEPS.map((step, index) => {
+              {funnelSteps.map((step, index) => {
                 const value = Number(
                   players.find((row) => row.status === step.status)?.total ?? 0,
                 );
@@ -410,7 +465,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/[local
                           step.status === "valide" ? "text-brand" : "text-muted-foreground",
                         )}
                       >
-                        Etape {index + 1}
+                        {fill(d.funnelStep, { index: index + 1 })}
                       </span>
                       <span className={cn("size-2 rounded-full", step.dot)} />
                     </div>
@@ -432,15 +487,13 @@ export default async function DashboardPage({ searchParams }: PageProps<"/[local
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-background/80 p-3">
             <span className="flex items-center gap-2 text-xs text-muted-foreground">
               <ShieldCheckIcon className="size-4 text-brand" />
-              Delai moyen d&apos;approbation administrative :{" "}
+              {d.approvalDelay}{" "}
               <strong className="text-foreground">
                 {data.approvalDelay === null ? "—" : formatDuration(data.approvalDelay)}
               </strong>
             </span>
             <span className="micro-label text-muted-foreground">
-              {data.approvalDelay === null
-                ? "Aucun profil valide"
-                : "Moyenne sur les 200 derniers profils valides"}
+              {data.approvalDelay === null ? d.approvalNone : d.approvalNote}
             </span>
           </div>
         </Panel>
@@ -450,19 +503,16 @@ export default async function DashboardPage({ searchParams }: PageProps<"/[local
             <div className="flex items-center justify-between gap-2">
               <h3 className="flex items-center gap-2 font-heading text-base font-bold">
                 <AwardIcon className="size-4 text-warning" />
-                Abonnements actifs par offre
+                {d.plansTitle}
               </h3>
               <Link
-                href="/admin/finances?vue=offres"
+                href={href("/admin/finances?vue=offres")}
                 className="rounded bg-muted px-2 py-1 text-xs font-semibold text-muted-foreground hover:bg-accent hover:text-foreground"
               >
-                Gerer les forfaits
+                {d.plansManage}
               </Link>
             </div>
-            <p className="mt-1 mb-3 text-xs text-muted-foreground">
-              Seules les souscriptions en cours sont comptabilisees. Les tarifs affiches sont
-              ceux du catalogue d&apos;offres.
-            </p>
+            <p className="mt-1 mb-3 text-xs text-muted-foreground">{d.plansDesc}</p>
 
             {data.plans.length ? (
               <ul className="flex flex-col gap-2">
@@ -476,10 +526,10 @@ export default async function DashboardPage({ searchParams }: PageProps<"/[local
                         <AwardIcon className="size-4" />
                       </span>
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-bold">{plan.label}</p>
+                        <p className="truncate text-sm font-bold">{locale === "en" && plan.code in PLAN_CODE ? label(PLAN_CODE, plan.code) : plan.label}</p>
                         <p className="truncate text-[0.6875rem] text-muted-foreground">
                           {label(ROLE, plan.targetRole)}
-                          {plan.isActive ? "" : " · offre desactivee"}
+                          {plan.isActive ? "" : d.planDisabled}
                         </p>
                       </div>
                     </div>
@@ -491,8 +541,8 @@ export default async function DashboardPage({ searchParams }: PageProps<"/[local
                         <span className="text-[0.6875rem] text-muted-foreground tabular-nums">
                           {formatAmount(plan.priceAmount, plan.priceCurrency)}
                           {plan.billingPeriodMonths === 1
-                            ? " / mois"
-                            : ` / ${plan.billingPeriodMonths} mois`}
+                            ? d.perMonth
+                            : fill(d.perMonths, { count: plan.billingPeriodMonths })}
                         </span>
                       </div>
                       <span
@@ -506,22 +556,17 @@ export default async function DashboardPage({ searchParams }: PageProps<"/[local
                 ))}
               </ul>
             ) : (
-              <p className="text-xs text-muted-foreground">
-                La table subscription_plans est vide : aucune offre a afficher.
-              </p>
+              <p className="text-xs text-muted-foreground">{d.plansEmpty}</p>
             )}
           </div>
 
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2 pt-1 text-xs text-muted-foreground">
-            <span>
-              Le catalogue est en lecture seule : un tarif se change par migration, pas depuis le
-              back-office.
-            </span>
+            <span>{d.plansReadOnly}</span>
             <Link
-              href="/admin/finances?vue=abonnements"
+              href={href("/admin/finances?vue=abonnements")}
               className="font-semibold text-brand hover:underline"
             >
-              Voir les souscriptions
+              {d.plansSubscriptions}
             </Link>
           </div>
         </Panel>
@@ -537,16 +582,18 @@ export default async function DashboardPage({ searchParams }: PageProps<"/[local
             <div className="min-w-0">
               <p className="flex flex-wrap items-center gap-2">
                 <span className="truncate text-sm font-bold">
-                  Prochain evenement : {data.nextEvent.title}
+                  {fill(d.nextEvent, { title: data.nextEvent.title })}
                 </span>
                 <span className="micro-label rounded bg-brand px-1.5 py-0.5 text-brand-foreground">
-                  {daysUntil(data.nextEvent.event_date)}
+                  {daysUntil(data.nextEvent.event_date, d)}
                 </span>
               </p>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                {formatNumber(data.nextEventRegistrations)} inscrit(s)
+                {fill(d.eventRegistrations, {
+                  count: formatNumber(data.nextEventRegistrations),
+                })}
                 {data.nextEvent.capacity
-                  ? ` sur ${formatNumber(data.nextEvent.capacity)} places`
+                  ? fill(d.eventCapacity, { count: formatNumber(data.nextEvent.capacity) })
                   : ""}
                 {data.nextEvent.location ? ` · ${data.nextEvent.location}` : ""}
                 {data.nextEvent.start_time
@@ -557,10 +604,10 @@ export default async function DashboardPage({ searchParams }: PageProps<"/[local
           </div>
           <div className="flex w-full shrink-0 items-center justify-end gap-2 md:w-auto">
             <Link
-              href={`/admin/scout-days/${data.nextEvent.id}`}
+              href={href(`/admin/scout-days/${data.nextEvent.id}`)}
               className="inline-flex h-8 items-center rounded-lg bg-brand px-3 text-sm font-bold text-brand-foreground transition-[filter] hover:brightness-110"
             >
-              Gerer la session
+              {d.manageSession}
             </Link>
           </div>
         </Panel>
@@ -569,34 +616,20 @@ export default async function DashboardPage({ searchParams }: PageProps<"/[local
   );
 }
 
-/** Onglets du panneau financier : le libelle, et le type de paiement filtre. */
-const FLUX_TABS = [
-  { value: "tous", label: "Tous flux" },
-  { value: "scout_days", label: "Scout Days" },
-  { value: "abonnements", label: "Abonnements" },
-] as const;
-
-/** Precision affichee derriere chaque role dans la repartition des comptes. */
-const ROLE_NOTE: Record<string, string> = {
-  player: "Talents",
-  professional: "Scouts, clubs",
-  admin: "Staff Ifriqiya",
-};
-
 /**
  * Nombre de jours jusqu'a une date `YYYY-MM-DD`, en clair. Compare des chaines
  * de date, pas des `Date` locales : `event_date` est un `date` Postgres sans
  * fuseau, et le convertir decalerait l'evenement d'un jour selon le serveur.
  */
-function daysUntil(date: string) {
+function daysUntil(date: string, d: AdminDictionary["dashboard"]) {
   const today = new Date();
   const start = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
   const [year, month, day] = date.split("-").map(Number);
   const target = Date.UTC(year, month - 1, day);
   const days = Math.round((target - start) / 86_400_000);
-  if (days <= 0) return "Aujourd'hui";
-  if (days === 1) return "Demain";
-  return `Dans ${days} jours`;
+  if (days <= 0) return d.today;
+  if (days === 1) return d.tomorrow;
+  return fill(d.inDays, { days });
 }
 
 /** Une mesure compacte dans l'en-tete d'un panneau (maquette « flux financiers »). */
@@ -627,14 +660,4 @@ function MiniMetric({
   );
 }
 
-/**
- * Les quatre etapes du parcours d'inscription joueur. Ce sont les membres reels
- * de `player_profile_status` — pas une modelisation d'entonnoir inventee pour
- * l'ecran : `suspendu` en est exclu parce qu'il n'appartient pas au parcours.
- */
-const FUNNEL_STEPS = [
-  { status: "incomplet", label: "Dossier incomplet", dot: "bg-muted-foreground/40" },
-  { status: "en_attente_validation", label: "Pieces a examiner", dot: "bg-warning" },
-  { status: "refuse", label: "Refuse, a corriger", dot: "bg-destructive" },
-  { status: "valide", label: "Valides (actifs)", dot: "bg-brand" },
-] as const;
+

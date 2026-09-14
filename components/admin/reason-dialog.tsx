@@ -18,6 +18,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { ActionResult } from "@/lib/actions/result";
+import { useAdminI18n } from "@/lib/i18n/admin-client";
 
 /**
  * Base UI compose le declencheur via `render` : le `Button` pose
@@ -46,9 +47,9 @@ export function ReasonDialog({
   trigger,
   title,
   description,
-  label = "Motif",
+  label,
   placeholder,
-  submitLabel = "Confirmer",
+  submitLabel,
   required = true,
   destructive = true,
 }: {
@@ -62,6 +63,7 @@ export function ReasonDialog({
   required?: boolean;
   destructive?: boolean;
 }) {
+  const { dict } = useAdminI18n();
   const [open, setOpen] = React.useState(false);
   const [reason, setReason] = React.useState("");
   const [pending, setPending] = React.useState(false);
@@ -82,7 +84,7 @@ export function ReasonDialog({
         toast.error(result.message);
       }
     } catch {
-      toast.error("L'action n'a pas pu aboutir.");
+      toast.error(dict.common.actionFailed);
     } finally {
       setPending(false);
     }
@@ -98,7 +100,7 @@ export function ReasonDialog({
             {description ? <DialogDescription>{description}</DialogDescription> : null}
           </DialogHeader>
           <div className="space-y-2">
-            <Label htmlFor="reason">{label}</Label>
+            <Label htmlFor="reason">{label ?? dict.common.reason}</Label>
             <Textarea
               id="reason"
               value={reason}
@@ -109,14 +111,16 @@ export function ReasonDialog({
             />
           </div>
           <DialogFooter>
-            <DialogClose render={<Button type="button" variant="outline" />}>Annuler</DialogClose>
+            <DialogClose render={<Button type="button" variant="outline" />}>
+              {dict.common.cancel}
+            </DialogClose>
             <Button
               type="submit"
               variant={destructive ? "destructive" : "default"}
               disabled={pending || (required && !trimmed)}
             >
               {pending ? <Loader2Icon className="animate-spin" /> : null}
-              {submitLabel}
+              {submitLabel ?? dict.common.confirm}
             </Button>
           </DialogFooter>
         </form>
