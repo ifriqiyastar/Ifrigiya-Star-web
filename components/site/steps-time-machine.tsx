@@ -271,7 +271,7 @@ function Stack({
           la carte de devant n'auraient rien contre quoi se detacher. */}
       <span
         aria-hidden
-        className="absolute -inset-x-8 -top-8 bottom-0 -z-10 rounded-[50%] bg-[radial-gradient(closest-side,color-mix(in_srgb,var(--site-accent)_22%,transparent),transparent)] blur-2xl"
+        className="pointer-events-none absolute -inset-x-8 -top-8 bottom-0 -z-10 rounded-[50%] bg-[radial-gradient(closest-side,color-mix(in_srgb,var(--site-accent)_22%,transparent),transparent)] blur-2xl"
       />
 
       {steps.map((step, index) => {
@@ -281,7 +281,20 @@ function Stack({
           <span
             key={step.number}
             aria-hidden
-            className="site-step-card absolute inset-0 overflow-hidden rounded-[1.75rem] border border-white/12 bg-(--site-card) shadow-[0_34px_90px_-30px_rgba(0,0,0,0.95)]"
+            // `pointer-events-none`, ET C'EST CE QUI FAIT MARCHER LA REGLETTE.
+            // Une carte franchie part vers la camera : `translateZ(280px)` sous
+            // une perspective de 1100 px l'agrandit d'un tiers, et `scale(1.12)`
+            // acheve de porter sa largeur projetee a une fois et demie celle de
+            // la pile — environ 76 px de debord de chaque cote, vers le bas.
+            // Elle est a `opacity: 0`, mais une chose transparente reste
+            // cliquable : elle recouvrait donc la moitie basse de la reglette,
+            // et avalait le survol comme le clic des etapes 02 a 04 des qu'une
+            // etape avait ete franchie. Le survol etait bien cable, il
+            // n'arrivait jamais jusqu'au bouton.
+            //
+            // Les cartes sont decoratives (`aria-hidden`) et c'est le cadre qui
+            // porte le clic : les neutraliser au pointeur ne retire aucun geste.
+            className="site-step-card pointer-events-none absolute inset-0 overflow-hidden rounded-[1.75rem] border border-white/12 bg-(--site-card) shadow-[0_34px_90px_-30px_rgba(0,0,0,0.95)]"
             style={{
               zIndex: steps.length - index,
               // Franchie, la carte passe devant la camera et vers le bas ;
@@ -349,7 +362,27 @@ function Scrubber({
       {steps.map((step, index) => {
         const selected = index === active;
         return (
-          <Fragment key={step.number}>
+          // LE SURVOL EST PORTE PAR CE BLOC, pas par le bouton seul, et c'est
+          // une question de geometrie. Au-dessus de `sm`, un onglet mesure
+          // 11 px de haut (un trait de 3 px et ses 4 px de marge) et deux
+          // traits fins de 9 px l'eloignent du suivant : les deux tiers de la
+          // hauteur de la reglette etaient donc du vide, et un curseur qui la
+          // parcourait tombait le plus souvent entre deux etapes. En groupant
+          // chaque onglet avec les traits qui le suivent, les zones sensibles
+          // se touchent et la pile suit reellement le curseur.
+          //
+          // `presentation` efface ce conteneur de l'arbre d'accessibilite :
+          // une `tablist` n'attend que des `tab` pour enfants, et le bouton
+          // garde le sien.
+          <div
+            key={step.number}
+            role="presentation"
+            className="flex flex-col items-end"
+            // Le balayage a la souris explore, il ne choisit pas : pas de
+            // reecriture du texte (second argument a faux). Un doigt n'entre
+            // nulle part — il touche, et c'est le clic qui repond.
+            onPointerEnter={(event) => { if (event.pointerType === "mouse") onSelect(index, false); }}
+          >
             <button
               ref={(node) => { register(index, node); }}
               type="button"
@@ -359,9 +392,6 @@ function Scrubber({
               aria-controls={`etape-panneau-${index}`}
               tabIndex={selected ? 0 : -1}
               onClick={() => onSelect(index)}
-              // Le balayage a la souris explore, il ne choisit pas : pas de
-              // reecriture du texte (second argument a faux).
-              onPointerEnter={(event) => { if (event.pointerType === "mouse") onSelect(index, false); }}
               aria-label={goToLabel.replace("{number}", step.number).replace("{title}", step.title)}
               // `min-h-11` : 44 px de cible tactile. Les 31 px d'avant
               // passaient le minimum de la norme (24 px) mais restaient sous
@@ -390,9 +420,12 @@ function Scrubber({
               />
             </button>
 
-            {/* Les traits fins ne sont qu'un rythme : ils ne commandent rien,
-                ils ne sont ni cliquables ni annonces. Ils disparaissent sur
-                telephone, ou ils ne feraient que retrecir les vraies cibles. */}
+            {/* Les traits fins ne sont qu'un rythme : ni cliquables, ni
+                annonces, ni atteignables au clavier. Ils font desormais partie
+                de la zone de survol de l'etape au-dessus d'eux — c'est tout
+                l'objet du conteneur — mais ils ne deviennent pas des cibles
+                pour autant. Ils disparaissent sur telephone, ou ils ne
+                feraient que retrecir les vraies. */}
             {index < steps.length - 1
               ? Array.from({ length: SUB_TICKS }, (_, tick) => (
                   <span key={tick} aria-hidden className="hidden py-[3px] sm:block">
@@ -400,7 +433,7 @@ function Scrubber({
                   </span>
                 ))
               : null}
-          </Fragment>
+          </div>
         );
       })}
     </div>
