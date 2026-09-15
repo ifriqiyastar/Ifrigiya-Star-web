@@ -21,6 +21,18 @@ export const DEFAULT_LOCALE: Locale = "fr";
 export const LOCALE_COOKIE = "ifriqiya-langue";
 export const ADMIN_LOCALE_HEADER = "x-ifriqiya-admin-locale";
 
+/**
+ * La langue que `proxy.ts` a resolue pour la requete courante.
+ *
+ * Elle n'existe que pour `app/global-not-found.tsx` : cette page court-circuite
+ * la mise en page — donc le segment `[locale]`, donc `next/root-params` — et
+ * n'a pas non plus d'URL fiable a lire, puisque l'adresse demandee est
+ * justement fausse. Sans cet en-tete, `/ar/page-inconnue` repondait une 404 en
+ * francais a qui n'avait pas de preference arabe, alors que partout ailleurs
+ * le prefixe d'URL l'emporte sur le cookie.
+ */
+export const SITE_LOCALE_HEADER = "x-ifriqiya-locale";
+
 /** Un an : le choix de langue n'a aucune raison d'expirer plus tot. */
 export const LOCALE_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 

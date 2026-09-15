@@ -41,7 +41,16 @@ export async function getLocale(): Promise<Locale> {
 }
 
 export async function getDictionary(): Promise<Dictionary> {
-  return dictionaries[await getLocale()]();
+  return getDictionaryFor(await getLocale());
+}
+
+/**
+ * Le dictionnaire d'une langue **donnee**, sans passer par le segment
+ * `[locale]`. Sert a `app/global-not-found.tsx`, qui court-circuite la mise en
+ * page — donc `next/root-params` — et renegocie la langue lui-meme.
+ */
+export async function getDictionaryFor(locale: Locale): Promise<Dictionary> {
+  return dictionaries[locale]();
 }
 
 /** Le sens d'ecriture de la requete courante. */

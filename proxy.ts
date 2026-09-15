@@ -8,6 +8,7 @@ import {
   isAdminPath,
   isLocale,
   LOCALE_COOKIE,
+  SITE_LOCALE_HEADER,
   negotiateLocale,
   toAdminLocale,
 } from "@/lib/i18n/config";
@@ -73,7 +74,11 @@ export async function proxy(request: NextRequest) {
   const bare = urlLocale ? pathname.slice(urlLocale.length + 1) || "/" : pathname;
   const adminPath = isAdminPath(bare);
   const requestHeaders = new Headers(request.headers);
+  // Les deux en-tetes sont **effaces avant d'etre poses** : ils sont produits
+  // ici et nulle part ailleurs, donc une valeur deja presente ne peut venir
+  // que du client.
   requestHeaders.delete(ADMIN_LOCALE_HEADER);
+  requestHeaders.delete(SITE_LOCALE_HEADER);
 
   // Le back-office ne parle pas arabe. Plutot que de rendre une page a moitie
   // traduite, on **retire le prefixe** et on laisse la branche ci-dessous
@@ -106,12 +111,14 @@ export async function proxy(request: NextRequest) {
     // Francais : on reecrit sans toucher a l'adresse affichee.
     const rewritten = request.nextUrl.clone();
     rewritten.pathname = `/${DEFAULT_LOCALE}${pathname === "/" ? "" : pathname}`;
+    requestHeaders.set(SITE_LOCALE_HEADER, DEFAULT_LOCALE);
     if (adminPath) requestHeaders.set(ADMIN_LOCALE_HEADER, DEFAULT_LOCALE);
     return withSupabaseSession(request, NextResponse.rewrite(rewritten, {
       request: { headers: requestHeaders },
     }));
   }
 
+  requestHeaders.set(SITE_LOCALE_HEADER, urlLocale);
   if (adminPath) requestHeaders.set(ADMIN_LOCALE_HEADER, toAdminLocale(urlLocale));
   return withSupabaseSession(request, NextResponse.next({
     request: { headers: requestHeaders },

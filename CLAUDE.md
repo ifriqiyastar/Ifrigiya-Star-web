@@ -34,6 +34,36 @@ its phone mockups are real screenshots of the mobile app in `public/app/`.
 It carries **no audience figures and no testimonials** — inventing either on a
 public page manufactures evidence.
 
+**The 404 page is served by `app/global-not-found.tsx`, and that is not a
+stylistic choice.** Next only serves a global 404 from `app/not-found.tsx`,
+which must render inside a *root layout* — and this repo's root layout is a
+top-level dynamic segment (`app/[locale]/layout.tsx`), exactly the case its own
+docs hand over to `global-not-found.js`. With `app/[locale]/not-found.tsx`
+alone the response was a correct 404 wrapped in a bare `<html
+id="__next_error__">` document: empty body server-side, no `dir="rtl"` in
+Arabic, no `dark` class, no brand fonts — everything arrived only in the RSC
+payload and was painted after hydration. That is still what happens for any
+`notFound()` thrown inside the tree (the admin dossiers, `getLocale()` on an
+unknown locale), and it is why `app/[locale]/admin/[...reste]/page.tsx` exists:
+a mistyped admin URL is more useful inside the admin shell — behind
+`requireAdmin()` — than on a marketing page, and the back-office is an
+authenticated JavaScript screen where a hydration-time paint costs nothing.
+Three consequences worth knowing before touching it:
+`experimental.globalNotFound` must stay on in `next.config.ts` or the file is
+ignored silently; `global-not-found.tsx` bypasses the layout, so it imports
+`globals.css` and `lib/fonts.ts` itself and writes its own `<html>` — which is
+why the fonts were extracted there rather than declared twice; and the locale
+cannot come from the URL (it is the wrong URL) nor from `next/root-params` (no
+segment), so `proxy.ts` passes the one it already resolved through
+`SITE_LOCALE_HEADER`, deleted before being set like `ADMIN_LOCALE_HEADER`. The
+priority order stays the proxy's own — URL prefix, then cookie, then
+`Accept-Language` — so `/ar/adresse-fausse` answers in Arabic. The page itself
+lives in `components/site/not-found-view.tsx` and takes `dict`/`locale` as
+props, because its two callers resolve them differently; `SiteFooter` gained
+the same optional props for that reason. Paths ending in an extension keep
+Next's bare 404: `proxy.ts` short-circuits them as static files, and a missing
+`.png` has no use for a marketing page.
+
 Next.js 16 App Router · React 19 · Tailwind v4 · shadcn/ui (`base-sera` style,
 built on **Base UI**, not Radix) · `@supabase/ssr`.
 

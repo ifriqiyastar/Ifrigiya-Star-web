@@ -356,5 +356,16 @@
     "openDirect": "Ouvrir directement",
     "playbackFailed": "La lecture n’a pas démarré. Appuyez sur lecture pour réessayer.",
     "soundBlocked": "Cliquez sur le haut-parleur pour activer le son."
+  },
+  "notFound": {
+    "metaTitle": "Page introuvable",
+    "metaDescription": "Cette page n’existe pas ou a été déplacée. Revenez à l’accueil d’Ifriqiya Star.",
+    "pill": "Page introuvable",
+    "titleLine1": "Cette page est",
+    "titleAccent": "hors-jeu",
+    "lead": "L’adresse demandée n’existe plus, a été déplacée, ou comporte une faute de frappe. Le reste de l’académie, lui, est toujours là.",
+    "ctaPrimary": "Retour à l’accueil",
+    "ctaSecondary": "Nous contacter",
+    "linksHeading": "Continuer ici"
   }
 }

@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import type { Locale } from "@/lib/i18n/config";
+import type { Dictionary } from "@/lib/i18n/dictionaries";
 import { getDictionary, getLocale } from "@/lib/i18n/dictionaries";
 
 
@@ -11,10 +13,22 @@ function Logo({ size = 32 }: { size?: number }) {
   );
 }
 
-export async function SiteFooter() {
-  const dict = await getDictionary();
+/**
+ * Langue et dictionnaire sont **optionnels** : le pied de page les lit du
+ * segment `[locale]` quand il en a un. `app/global-not-found.tsx` n'en a pas —
+ * il court-circuite la mise en page, donc `next/root-params` — et les lui
+ * passe alors en props.
+ */
+export async function SiteFooter({
+  locale: localeFourni,
+  dict: dictFourni,
+}: {
+  locale?: Locale;
+  dict?: Dictionary;
+} = {}) {
+  const dict = dictFourni ?? (await getDictionary());
   const t = dict.footer;
-  const locale = await getLocale();
+  const locale = localeFourni ?? (await getLocale());
   // Comme dans l'entete : les ancres restent en francais, le prefixe porte la
   // langue. Sans lui, chaque lien du pied de page ramenerait en francais.
   const prefix = locale === "fr" ? "" : `/${locale}`;

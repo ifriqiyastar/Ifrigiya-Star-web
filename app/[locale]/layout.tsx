@@ -1,37 +1,13 @@
-import { Nunito_Sans, Poppins } from "next/font/google";
 import type { Metadata } from "next";
 
 import "../globals.css";
 import { cn } from "@/lib/utils";
+import { FONT_CLASSNAMES } from "@/lib/fonts";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { I18nProvider } from "@/lib/i18n/client";
 import { getDictionary, getLocale } from "@/lib/i18n/dictionaries";
 import { LOCALE_DIR, LOCALES } from "@/lib/i18n/config";
-
-/**
- * Typographie de marque, identique a l'app mobile (`BrandFonts` dans
- * `src/constants/theme.ts` d'ifriqiyastar) : Nunito Sans pour les titres,
- * Poppins pour le corps de texte.
- *
- * Les deux polices embarquent le sous-ensemble arabe en plus du latin : sans
- * lui, une page en arabe retomberait sur la police systeme et perdrait la
- * charte. Poppins n'ayant pas de glyphes arabes, c'est Nunito Sans — puis le
- * repli systeme — qui rend le texte arabe.
- */
-const nunitoSans = Nunito_Sans({
-  subsets: ["latin"],
-  variable: "--font-heading",
-  weight: ["500", "600", "700", "800"],
-  display: "swap",
-});
-
-const poppins = Poppins({
-  subsets: ["latin"],
-  variable: "--font-sans",
-  weight: ["300", "400", "500", "600"],
-  display: "swap",
-});
 
 /**
  * `hreflang` et `canonical` doivent etre des URL **absolues** pour que Google
@@ -76,9 +52,7 @@ export default async function RootLayout({ children }: LayoutProps<"/[locale]">)
       className={cn(
         "dark h-full",
         "antialiased",
-        poppins.variable,
-        nunitoSans.variable,
-        "font-sans",
+        FONT_CLASSNAMES,
       )}
     >
       <body className="flex min-h-full flex-col bg-background text-foreground">

@@ -87,6 +87,7 @@ la fiche compte du back-office (le trigger est alors satisfait).
 | Section | Ecran | Ce qui est couvert |
 |---|---|---|
 | — | `/` | **Site public** : page vitrine d'Ifriqiya Star (charte graphique Wii Studio — noir `#000000`, vert neon `#aff70f`, Nunito Sans / Poppins), captures reelles de l'application mobile. La racine ne redirige plus vers `/admin`. |
+| — | Page 404 | **Page introuvable** aux couleurs du site public, dans la langue du visiteur (prefixe d'URL, puis cookie, puis `Accept-Language`). Servie par `app/global-not-found.tsx` — voir « Choix d'implementation notables ». Une adresse `/admin` erronee reste, elle, dans le chassis d'administration. |
 | §12.1 | `/admin/validations` | Files d'attente : profils joueurs, comptes professionnels, justificatifs pro, pieces d'identite. Validation / refus motive. |
 | §12.1 | `/admin/utilisateurs` + `/admin/utilisateurs/[id]` | Annuaire filtrable (type, statut, actif, demande de suppression) ; consultation et **modification** (fiche compte, profil sportif, fiche pro) ; suspension, reactivation, suppression ; suivi du statut de verification ; visibilite du profil joueur. |
 | §12.2 | `/admin/moderation` | Signalements : un moderateur propose un retrait motive, un **super administrateur** le valide ou le refuse. Publications, commentaires, medias joueurs (videos, photos), **comptes et messages**. Masquage, suppression, suspension d'un utilisateur. |
@@ -233,6 +234,14 @@ jamais seule l'information.
 - **L'etat des filtres vit dans l'URL**, pas dans le composant : les pages
   restent des Server Components, un filtre est partageable par lien et le retour
   navigateur fonctionne.
+- **La 404 globale passe par `app/global-not-found.tsx`** et le drapeau
+  `experimental.globalNotFound`. La mise en page racine de ce depot est un
+  segment dynamique (`app/[locale]/layout.tsx`) : Next n'a donc aucune mise en
+  page ou composer une 404 globale, et `not-found.tsx` seul rendait un document
+  d'erreur nu — corps vide cote serveur, pas de `dir="rtl"` en arabe, pas de
+  polices de marque. Ce fichier court-circuitant la mise en page, il importe
+  lui-meme `globals.css` et `lib/fonts.ts`, et recoit la langue deja resolue par
+  `proxy.ts` via l'en-tete `x-ifriqiya-locale`.
 - **Le catalogue d'offres est en lecture seule.** Les limites qu'il decrit sont
   appliquees cote serveur (`can_message()`, RLS) ; les modifier releve d'une
   migration, pas du back-office.

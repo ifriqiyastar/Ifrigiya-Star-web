@@ -356,5 +356,16 @@
     "openDirect": "Open it directly",
     "playbackFailed": "Playback did not start. Press play to try again.",
     "soundBlocked": "Click the speaker to turn the sound on."
+  },
+  "notFound": {
+    "metaTitle": "Page not found",
+    "metaDescription": "This page does not exist or has been moved. Head back to the Ifriqiya Star home page.",
+    "pill": "Page not found",
+    "titleLine1": "This page is",
+    "titleAccent": "offside",
+    "lead": "The address you asked for no longer exists, has moved, or contains a typo. The rest of the academy is still right here.",
+    "ctaPrimary": "Back to home",
+    "ctaSecondary": "Contact us",
+    "linksHeading": "Carry on here"
   }
 }
