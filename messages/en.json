@@ -14,13 +14,10 @@
     "drawerLabel": "Main navigation"
   },
   "hero": {
-    "pill": "Elite football academy · Scouting · Progression",
     "titleLine1": "No African talent",
     "titleLine2": "should remain",
     "titleAccent": "invisible",
     "lead": "Ifriqiya Star is an elite football academy devoted to training, technical development and the growth of young talent. A verified profile, match footage, scouting days and direct contact with recruiters — all from your phone.",
-    "ctaPrimary": "Join the academy",
-    "ctaSecondary": "How it works",
     "pillars": {
       "detection": {
         "title": "Scouting",
