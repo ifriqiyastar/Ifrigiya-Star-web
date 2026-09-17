@@ -1,7 +1,8 @@
 "use client"
 
-import Link from "next/link"
+import Link, { useLinkStatus } from "next/link"
 import { usePathname } from "next/navigation"
+import { Loader2Icon } from "lucide-react"
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -12,6 +13,27 @@ import {
 } from "@/components/ui/sidebar"
 import { useAdminI18n } from "@/lib/i18n/admin-client"
 import { cn } from "@/lib/utils"
+
+/**
+ * Les pages admin sont rendues a la demande (elles lisent la session et
+ * interrogent Supabase — voir `app/[locale]/admin/loading.tsx`), donc un clic
+ * sur le rail ne montre rien de nouveau tant que la reponse n'est pas
+ * arrivee. `useLinkStatus` (next/link) expose l'etat de **ce** lien precis
+ * pendant que Next recupere sa page ; il ne peut etre lu que par un enfant du
+ * `Link`, ce qui marche ici malgre le passage par `render={<Link />}` — le
+ * slot `useRender` de `SidebarMenuButton` fait de ce composant un enfant
+ * React du lien, pas seulement un voisin dans le DOM.
+ */
+function NavLinkSpinner() {
+  const { pending } = useLinkStatus()
+  if (!pending) return null
+  return (
+    <Loader2Icon
+      className="ml-auto size-3.5 shrink-0 animate-spin text-brand group-data-[collapsible=icon]:hidden"
+      aria-hidden
+    />
+  )
+}
 
 /**
  * Rail de navigation des maquettes de septembre 2026 : une liste compacte sous
@@ -79,6 +101,7 @@ export function NavMain({
                       {item.badge}
                     </span>
                   ) : null}
+                  <NavLinkSpinner />
                 </SidebarMenuButton>
               </SidebarMenuItem>
             )
