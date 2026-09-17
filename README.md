@@ -30,6 +30,8 @@ les deux jeux de variables :
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | oui | Cle publique (le RLS fait le reste) |
 | `SUPABASE_SERVICE_ROLE_KEY` | non (voir ci-dessous) | Suppression definitive d'un compte, webhook de paiement, et **repli** du masquage si la migration 0042 n'est pas appliquee |
 | `PAYMENT_WEBHOOK_SECRET` | pour les paiements en ligne | Signature HMAC-SHA256 de `/api/webhooks/payment-provider` |
+| `NEXT_PUBLIC_APP_STORE_URL` | non — a renseigner le jour de la publication | Fiche App Store ; des qu'elle existe, le badge Apple du site devient un vrai lien et le QR de l'entete redirige un iPhone qui le scanne directement vers elle (`lib/store-urls.ts`) |
+| `NEXT_PUBLIC_PLAY_STORE_URL` | non — a renseigner le jour de la publication | Meme mecanique, cote Google Play / Android |
 
 **Masquage d'un contenu.** Les migrations 0033 et 0035 ont retire le droit
 d'ecrire `is_hidden` aux sessions `authenticated` — session administrateur

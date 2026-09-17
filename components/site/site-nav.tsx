@@ -3,10 +3,13 @@
 import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
+import QRCode from "react-qr-code";
 import { ArrowUpRightIcon, MenuIcon, XIcon } from "lucide-react";
 
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { useI18n } from "@/lib/i18n/client";
+import { useDeviceOs } from "@/lib/use-device-os";
+import { QR_REDIRECT_PARAM } from "@/lib/store-urls";
 
 /**
  * L'entete du site public et son tiroir de navigation.
@@ -33,6 +36,12 @@ import { useI18n } from "@/lib/i18n/client";
  *
  * Le panneau reste monte pour pouvoir glisser ; `inert` le retire du parcours
  * clavier et de l'arbre d'accessibilite tant qu'il est ferme.
+ *
+ * La popup de QR code (telechargement depuis un ordinateur) est batie sur le
+ * meme modele que le tiroir — voile + panneau, freres de `<header>`, jamais
+ * portes — et pour la meme raison : `components/ui/dialog.tsx` porte dans
+ * `document.body` et son bouton de fermeture lit `useAdminTranslations()`,
+ * le dictionnaire de l'admin, pas celui du site.
  */
 /**
  * Les ancres restent en francais dans l'URL (`#academie`, `#fonctionnalites`)
@@ -40,26 +49,9 @@ import { useI18n } from "@/lib/i18n/client";
  * texte affiche. Les traduire casserait les liens deja partages et obligerait
  * a renommer les `id` de `app/[locale]/page.tsx` dans chaque langue.
  */
-const NAV_HREFS = [
-  "/#academie",
-  "/#comment",
-  "/#fonctionnalites",
-  "/#valeurs",
-  "/#faq",
-  "/contact",
-] as const;
-
 export function SiteNav() {
   const { dict, locale } = useI18n();
   const nav = dict.nav;
-  const labels: Record<(typeof NAV_HREFS)[number], string> = {
-    "/#academie": nav.academy,
-    "/#comment": nav.how,
-    "/#fonctionnalites": nav.features,
-    "/#valeurs": nav.values,
-    "/#faq": nav.faq,
-    "/contact": nav.contact,
-  };
   // Le prefixe de langue : `/` en francais, `/en` et `/ar` sinon. Les liens
   // internes de l'entete doivent le porter, sinon un clic depuis `/ar`
   // renverrait le visiteur en francais.
@@ -96,46 +88,88 @@ export function SiteNav() {
 
   const close = () => setOpen(false);
 
+  // Sur telephone (iOS/Android detecte), le bouton reste un lien direct vers
+  // la section : le visiteur peut deja installer depuis cet appareil. Sur un
+  // ordinateur — ou tant que le systeme n'est pas encore connu, cote serveur
+  // — un clic ouvre plutot la popup de QR code ci-dessous.
+  const os = useDeviceOs();
+  const [qrOpen, setQrOpen] = React.useState(false);
+  const [qrUrl, setQrUrl] = React.useState("");
+  const qrCloseRef = React.useRef<HTMLButtonElement>(null);
+  const qrTriggerRef = React.useRef<HTMLButtonElement>(null);
+
+  const openQr = () => {
+    // Le lien de la page elle-meme : une fois les fiches App Store / Google
+    // Play publiees, `StoreButtons` n'affichera plus qu'un seul bouton actif
+    // sur le telephone qui a scanne — ce QR n'aura jamais besoin d'etre
+    // regenere. Le parametre `?qr=1` (avant le `#`) est ce que
+    // `QrStoreRedirect` lit pour distinguer ce flux d'un visiteur qui
+    // atteint la meme section en faisant simplement defiler la page.
+    setQrUrl(`${window.location.origin}${prefix}/?${QR_REDIRECT_PARAM}=1#telecharger`);
+    setQrOpen(true);
+  };
+  const closeQr = () => setQrOpen(false);
+
+  React.useEffect(() => {
+    if (!qrOpen) return;
+
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setQrOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+
+    const { overflow } = document.body.style;
+    document.body.style.overflow = "hidden";
+    qrCloseRef.current?.focus();
+
+    const trigger = qrTriggerRef.current;
+
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = overflow;
+      trigger?.focus();
+    };
+  }, [qrOpen]);
+
   return (
     <>
       <header className="sticky top-0 z-50 border-b border-[var(--site-line)] bg-black/80 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-5 sm:px-8">
           <Link href="/" className="flex shrink-0 items-center gap-2.5" onClick={close}>
-            <Image src="/brand/ifriqiya-star.svg" alt="Ifriqiya Star" width={34} height={34} priority />
+            <Image src="/brand/ifriqiya-star.svg" alt="Ifriqiya Soccer Star" width={34} height={34} priority />
             <span className="font-heading text-[0.9375rem] font-extrabold tracking-tight sm:text-base">
-              Ifriqiya Star
+              Ifriqiya Soccer Star
             </span>
           </Link>
 
-          <nav className="hidden flex-1 items-center justify-center gap-4 lg:flex xl:gap-5">
-            {NAV_HREFS.map((href) => (
-              <Link
-                key={href}
-                href={`${prefix}${href}`}
-                className="text-sm whitespace-nowrap text-[var(--site-muted)] transition-colors hover:text-[var(--site-fg)]"
-              >
-                {labels[href]}
-              </Link>
-            ))}
-          </nav>
-
-          <div className="ms-auto flex items-center gap-2 lg:ms-0">
+          <div className="ms-auto flex items-center gap-4">
             {/* Le selecteur de langue, en haut de page comme demande. Il est
                 visible des le mobile — c'est le premier reglage qu'un
                 visiteur arabophone cherche, et l'enfouir dans le tiroir le
                 rendrait introuvable. */}
             <LanguageSwitcher />
+            {os === "ios" || os === "android" ? (
+              <Link
+                href={`${prefix}/#telecharger`}
+                className="hidden rounded-full border border-[var(--site-accent)] px-5 py-2 text-sm font-semibold whitespace-nowrap text-[var(--site-accent)] transition-colors hover:bg-[var(--site-accent)] hover:text-[var(--site-ink)] sm:inline-flex"
+              >
+                {nav.download}
+              </Link>
+            ) : (
+              <button
+                ref={qrTriggerRef}
+                type="button"
+                onClick={openQr}
+                className="hidden rounded-full border border-[var(--site-accent)] px-5 py-2 text-sm font-semibold whitespace-nowrap text-[var(--site-accent)] transition-colors hover:bg-[var(--site-accent)] hover:text-[var(--site-ink)] sm:inline-flex"
+              >
+                {nav.download}
+              </button>
+            )}
             <Link
-              href={`${prefix}/admin`}
-              className="hidden rounded-full px-4 py-2 text-sm whitespace-nowrap text-[var(--site-muted)] transition-colors hover:text-[var(--site-fg)] 2xl:inline-flex"
+              href={`${prefix}/contact`}
+              className="hidden rounded-full border border-[var(--site-line-strong)] px-5 py-2 text-sm whitespace-nowrap text-[var(--site-muted)] transition-colors hover:border-[var(--site-accent)] hover:text-[var(--site-fg)] lg:inline-flex"
             >
-              {nav.admin}
-            </Link>
-            <Link
-              href={`${prefix}/#telecharger`}
-              className="hidden rounded-full border border-[var(--site-accent)] px-5 py-2 text-sm font-semibold whitespace-nowrap text-[var(--site-accent)] transition-colors hover:bg-[var(--site-accent)] hover:text-[var(--site-ink)] sm:inline-flex"
-            >
-              {nav.download}
+              {nav.contact}
             </Link>
 
             <button
@@ -177,7 +211,7 @@ export function SiteNav() {
         <div className="flex h-16 shrink-0 items-center justify-between border-b border-[var(--site-line)] px-5">
           <span className="flex items-center gap-2.5">
             <Image src="/brand/ifriqiya-star.svg" alt="" width={30} height={30} />
-            <span className="font-heading text-[0.9375rem] font-extrabold">Ifriqiya Star</span>
+            <span className="font-heading text-[0.9375rem] font-extrabold">Ifriqiya Soccer Star</span>
           </span>
           <button
             ref={closeRef}
@@ -190,19 +224,7 @@ export function SiteNav() {
           </button>
         </div>
 
-        <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-4 py-5">
-          {NAV_HREFS.map((href) => (
-            <Link
-              key={href}
-              href={`${prefix}${href}`}
-              onClick={close}
-              className="flex items-center justify-between rounded-xl px-3 py-3.5 text-base font-medium text-[var(--site-fg)] transition-colors hover:bg-white/5 hover:text-[var(--site-accent)]"
-            >
-              {labels[href]}
-              <ArrowUpRightIcon className="size-4 text-[var(--site-muted)] rtl:-scale-x-100" />
-            </Link>
-          ))}
-        </nav>
+        <div className="flex-1" />
 
         <div className="shrink-0 space-y-3 border-t border-[var(--site-line)] px-4 py-5">
           <Link
@@ -213,15 +235,58 @@ export function SiteNav() {
             {nav.download}
           </Link>
           <Link
-            href={`${prefix}/admin`}
+            href={`${prefix}/contact`}
             onClick={close}
-            className="block rounded-full border border-[var(--site-line-strong)] px-5 py-3 text-center text-sm text-[var(--site-muted)] transition-colors hover:text-[var(--site-fg)]"
+            className="flex items-center justify-between rounded-xl px-3 py-3 text-sm font-medium text-[var(--site-fg)] transition-colors hover:bg-white/5 hover:text-[var(--site-accent)]"
           >
-            {nav.admin}
+            {nav.contact}
+            <ArrowUpRightIcon className="size-4 text-[var(--site-muted)] rtl:-scale-x-100" />
           </Link>
           <p className="pt-1 text-center text-xs text-[var(--site-muted)]">{nav.slogan}</p>
         </div>
       </aside>
+
+      {/* Popup de QR code. Meme construction que le tiroir juste au-dessus —
+          voile + panneau freres de `<header>` — et pour la meme raison :
+          voir le commentaire de tete de fichier. */}
+      <div
+        onClick={closeQr}
+        aria-hidden
+        className={`fixed inset-0 z-[80] bg-black/70 backdrop-blur-sm transition-opacity duration-300 ${
+          qrOpen ? "opacity-100" : "pointer-events-none opacity-0"
+        }`}
+      />
+
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={nav.qr.title}
+        inert={!qrOpen}
+        className={`fixed inset-0 z-[90] flex items-center justify-center p-5 transition-opacity duration-300 ${
+          qrOpen ? "opacity-100" : "pointer-events-none opacity-0"
+        }`}
+      >
+        <div className="w-full max-w-xs rounded-3xl border border-[var(--site-line-strong)] bg-[var(--site-bg)] p-6 text-center shadow-2xl">
+          <div className="flex items-start justify-between gap-4">
+            <h2 className="font-heading text-start text-lg font-extrabold text-[var(--site-fg)]">{nav.qr.title}</h2>
+            <button
+              ref={qrCloseRef}
+              type="button"
+              onClick={closeQr}
+              aria-label={nav.qr.close}
+              className="flex size-9 shrink-0 items-center justify-center rounded-full border border-[var(--site-line-strong)] text-[var(--site-fg)] transition-colors hover:border-[var(--site-accent)] hover:text-[var(--site-accent)]"
+            >
+              <XIcon className="size-4" />
+            </button>
+          </div>
+          <p className="mt-2 text-start text-sm text-[var(--site-muted)]">{nav.qr.description}</p>
+          <div className="mt-5 flex items-center justify-center rounded-2xl bg-white p-4">
+            {/* Genere seulement une fois l'origine connue (cote client) :
+                un rendu serveur ne peut pas deviner le domaine du visiteur. */}
+            {qrUrl ? <QRCode value={qrUrl} size={176} /> : <div className="size-[176px]" />}
+          </div>
+        </div>
+      </div>
     </>
   );
 }

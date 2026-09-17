@@ -1,7 +1,7 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
-
+import { useDeviceOs } from "@/lib/use-device-os";
+import { APP_STORE_URL, PLAY_STORE_URL } from "@/lib/store-urls";
 import { cn } from "@/lib/utils";
 
 /**
@@ -14,30 +14,15 @@ import { cn } from "@/lib/utils";
  * lui — les deux restent visibles : c'est le seul etat honnete quand la
  * plateforme est inconnue, et c'est aussi ce que voit un moteur de recherche.
  *
- * La detection est **volontairement cliente**. La lire depuis l'en-tete
- * `user-agent` cote serveur serait sans scintillement, mais `headers()` rend
- * la page dynamique : la page d'accueil est pre-rendue pour les trois langues
- * (cf. `generateStaticParams` dans `app/[locale]/layout.tsx`) et elle ne le
- * resterait pas. Le rendu serveur montre donc les deux boutons, et le montage
- * en retire un — ce qui se voit d'autant moins que le bloc hote arrive
- * lui-meme en fondu (`Reveal`), et que sans JavaScript les deux doivent de
- * toute facon rester la.
+ * La detection (`useDeviceOs`, dans `lib/use-device-os.ts`) est **volontairement
+ * cliente**. La lire depuis l'en-tete `user-agent` cote serveur serait sans
+ * scintillement, mais `headers()` rend la page dynamique : la page d'accueil
+ * est pre-rendue pour les trois langues (cf. `generateStaticParams` dans
+ * `app/[locale]/layout.tsx`) et elle ne le resterait pas. Le rendu serveur
+ * montre donc les deux boutons, et le montage en retire un — ce qui se voit
+ * d'autant moins que le bloc hote arrive lui-meme en fondu (`Reveal`), et que
+ * sans JavaScript les deux doivent de toute facon rester la.
  */
-type Os = "inconnu" | "ios" | "android";
-
-function detecterOs(): Os {
-  const ua = navigator.userAgent;
-  if (/android/i.test(ua)) return "android";
-  if (/iphone|ipod|ipad/i.test(ua)) return "ios";
-  // Depuis iPadOS 13 un iPad se declare « Macintosh » et rien dans la chaine
-  // ne le distingue d'un Mac : seul le nombre de points de contact le fait.
-  if (/macintosh/i.test(ua) && navigator.maxTouchPoints > 1) return "ios";
-  return "inconnu";
-}
-
-/** L'UA ne bouge pas : il n'y a rien a observer, donc rien a desabonner. */
-const sAbonner = () => () => {};
-const snapshotServeur = (): Os => "inconnu";
 
 export type StoreButtonsProps = {
   appleStore: string;
@@ -63,20 +48,15 @@ export function StoreButtons({
   tone = "sombre",
   className,
 }: StoreButtonsProps) {
-  // `useSyncExternalStore` plutot qu'un `useState` pose dans un effet : le
-  // systeme d'exploitation est une donnee exterieure a React, elle ne change
-  // jamais pendant la visite (d'ou l'abonnement vide), et c'est l'API qui
-  // laisse le rendu serveur repondre autre chose que le client sans que
-  // l'hydratation le signale comme une divergence.
-  const os = useSyncExternalStore(sAbonner, detecterOs, snapshotServeur);
+  const os = useDeviceOs();
 
   return (
     <div className={cn("flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap", className)}>
       {os !== "android" ? (
-        <StoreButton store={appleStore} prefix={applePrefix} soon={soon} tone={tone} icon={<AppleMark />} />
+        <StoreButton store={appleStore} prefix={applePrefix} soon={soon} tone={tone} url={APP_STORE_URL} icon={<AppleMark />} />
       ) : null}
       {os !== "ios" ? (
-        <StoreButton store={googleStore} prefix={googlePrefix} soon={soon} tone={tone} icon={<PlayMark />} />
+        <StoreButton store={googleStore} prefix={googlePrefix} soon={soon} tone={tone} url={PLAY_STORE_URL} icon={<PlayMark />} />
       ) : null}
     </div>
   );
@@ -97,7 +77,7 @@ function AppleMark() {
 /**
  * Marque Google Play : quatre facettes, quatre couleurs. Elle garde ses
  * couleurs propres — c'est ainsi qu'elle est reconnaissable, et la charte
- * d'Ifriqiya Star ne s'applique pas a la marque d'un tiers.
+ * d'Ifriqiya Soccer Star ne s'applique pas a la marque d'un tiers.
  */
 function PlayMark() {
   return (
@@ -113,7 +93,9 @@ function PlayMark() {
 /**
  * Un bouton de store. Il ne pointe nulle part tant que les fiches ne sont pas
  * publiees : un lien mort vaut mieux qu'un lien qui promet un telechargement
- * inexistant, donc c'est un bouton desactive et il le dit.
+ * inexistant, donc c'est un bouton desactive et il le dit. Des que `url`
+ * existe (`lib/store-urls.ts`, renseigne le jour de la publication), il
+ * devient un vrai lien — sans autre changement ici.
  *
  * ⚠️ Les marques Apple et Google Play sont ici **redessinees**. Avant la mise
  * en ligne, Apple et Google exigent l'un et l'autre leurs **fichiers de badge
@@ -128,24 +110,17 @@ function StoreButton({
   icon,
   soon,
   tone,
+  url,
 }: {
   store: string;
   prefix: string;
   icon: React.ReactNode;
   soon: string;
   tone: "sombre" | "clair";
+  url: string | null;
 }) {
-  return (
-    <span
-      aria-disabled
-      title={soon}
-      className={cn(
-        "inline-flex w-full cursor-not-allowed items-center justify-center gap-3 rounded-xl px-5 py-3.5 text-(--site-fg) sm:w-auto sm:justify-start",
-        tone === "sombre"
-          ? "bg-(--site-ink)"
-          : "border border-white/30 bg-black/35 backdrop-blur-sm",
-      )}
-    >
+  const content = (
+    <>
       {icon}
       <span className="text-left leading-tight">
         {/* Deux corrections de lisibilite successives sur ces deux lignes.
@@ -160,6 +135,28 @@ function StoreButton({
           {store}
         </span>
       </span>
+    </>
+  );
+
+  const classes = cn(
+    "inline-flex w-full items-center justify-center gap-3 rounded-xl px-5 py-3.5 text-(--site-fg) sm:w-auto sm:justify-start",
+    tone === "sombre"
+      ? "bg-(--site-ink)"
+      : "border border-white/30 bg-black/35 backdrop-blur-sm",
+    url ? "transition-opacity hover:opacity-90" : "cursor-not-allowed",
+  );
+
+  if (url) {
+    return (
+      <a href={url} className={classes}>
+        {content}
+      </a>
+    );
+  }
+
+  return (
+    <span aria-disabled title={soon} className={classes}>
+      {content}
     </span>
   );
 }
