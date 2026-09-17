@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { ArrowUpRightIcon, CopyIcon, MailIcon } from "lucide-react";
+import { ArrowUpRightIcon, CopyIcon } from "lucide-react";
 
 import { useI18n } from "@/lib/i18n/client";
 
@@ -28,7 +28,7 @@ export function ContactForm() {
     }
 
     const body = `${message}\n\n—\nNom : ${name}\nE-mail : ${email}`;
-    const href = `mailto:contact@ifriqiyastar.com?subject=${encodeURIComponent(`[Contact Ifriqiya Star] ${subject}`)}&body=${encodeURIComponent(body)}`;
+    const href = `mailto:contact@ifriqiyastar.com?subject=${encodeURIComponent(`[Contact Ifriqiya Soccer Star] ${subject}`)}&body=${encodeURIComponent(body)}`;
     setError("");
     setCopyStatus("");
     setDraft({ body, href });
@@ -52,12 +52,9 @@ export function ContactForm() {
       aria-labelledby="contact-form-title"
       className="rounded-3xl border border-(--site-line-strong) bg-(--site-card) p-5 sm:p-8"
     >
-      <div className="mb-7 flex items-start justify-between gap-4">
-        <div>
-          <h2 id="contact-form-title" className="font-heading text-2xl font-extrabold">{t.formTitle}</h2>
-          <p className="mt-2 text-xs leading-relaxed text-(--site-muted)">{t.formRequired}</p>
-        </div>
-        <MailIcon className="mt-1 size-6 shrink-0 text-(--site-accent)" aria-hidden />
+      <div className="mb-7">
+        <h2 id="contact-form-title" className="font-heading text-2xl font-extrabold">{t.formTitle}</h2>
+        <p className="mt-2 text-xs leading-relaxed text-(--site-muted)">{t.formRequired}</p>
       </div>
 
       <div className="grid gap-5 sm:grid-cols-2">

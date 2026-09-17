@@ -3,7 +3,6 @@ import Link from "next/link";
 import { ArrowLeftIcon, ArrowUpRightIcon, MailIcon } from "lucide-react";
 
 import { ContactForm } from "@/components/site/contact-form";
-import { Pill } from "@/components/site/pieces";
 import { SiteFooter } from "@/components/site/site-footer";
 import { SiteNav } from "@/components/site/site-nav";
 import { getDictionary, getLocale } from "@/lib/i18n/dictionaries";
@@ -39,11 +38,7 @@ export default async function ContactPage() {
           </Link>
           <div className="mt-10 grid gap-12 lg:mt-14 lg:grid-cols-[0.9fr_1.1fr] lg:gap-20">
             <div>
-              <Pill>
-                <span className="size-1.5 rounded-full bg-(--site-accent)" />
-                {t.pill}
-              </Pill>
-              <h1 className="font-heading mt-6 text-4xl leading-[1.08] font-extrabold sm:text-5xl lg:text-6xl">
+              <h1 className="font-heading text-4xl leading-[1.08] font-extrabold sm:text-5xl lg:text-6xl">
                 {t.titleLine1}
                 <br />
                 {t.titleLine2pre} <span className="text-(--site-accent)">{t.titleAccent}</span>
