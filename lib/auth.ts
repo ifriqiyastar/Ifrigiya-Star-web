@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { cache } from "react";
 
 import type { AdminDictionary } from "@/lib/i18n/admin-shared";
 import { createClient } from "@/lib/supabase/server";
@@ -58,21 +59,33 @@ async function unseededPermissions(
  * vient sinon de `admin_roles.label`, ecrit en base et donc dans une seule
  * langue. Les appelants qui ne lisent que `permissions` — une page qui verifie
  * un droit avant d'afficher un bouton — s'en passent.
+ *
+ * `cache()` (React) plutot qu'un simple `async function` : le layout admin
+ * l'appelle une fois, puis plusieurs pages (moderation, scout days, la route
+ * du sondage de `AdminQueueProvider`...) le rappellent avec le meme
+ * `adminId` pour verifier leurs propres droits. Sans memoisation, chaque
+ * navigation relancait deux a quatre requetes Supabase en double pour un
+ * role qui ne change quasiment jamais. La memoisation est **par requete**
+ * (React reinitialise le cache a chaque rendu serveur), donc un changement
+ * de role pris entre deux navigations reste vu au prochain chargement.
  */
-export async function getAdminAccess(adminId: string, dict?: AdminDictionary) {
+export const getAdminAccess = cache(async function getAdminAccess(adminId: string, dict?: AdminDictionary) {
   const fallbackLabel = dict?.roles.fallback ?? "Administrateur";
   const unassignedLabel = dict?.roles.unassigned ?? "Role non attribue";
   const supabase = await createClient();
-  const assignment = await supabase
-    .from("admin_user_roles")
-    .select("role_id")
-    .eq("admin_id", adminId)
-    .maybeSingle();
+  // Les deux premieres lectures ne dependent pas l'une de l'autre : seule la
+  // seconde a besoin d'un `role_id`, que ni l'une ni l'autre ne fournit.
+  const [assignment, unseeded] = await Promise.all([
+    supabase
+      .from("admin_user_roles")
+      .select("role_id")
+      .eq("admin_id", adminId)
+      .maybeSingle(),
+    unseededPermissions(supabase),
+  ]);
   if (assignment.error) {
     return { roleLabel: fallbackLabel, permissions: ALL_ADMIN_PERMISSIONS };
   }
-
-  const unseeded = await unseededPermissions(supabase);
 
   if (!assignment.data) {
     return { roleLabel: unassignedLabel, permissions: unseeded };
@@ -92,7 +105,7 @@ export async function getAdminAccess(adminId: string, dict?: AdminDictionary) {
       : undefined) ?? role.data?.label ?? fallbackLabel,
     permissions: [...new Set([...granted, ...unseeded])],
   };
-}
+});
 
 /**
  * Garde d'acces du back-office. A appeler dans **chaque** page admin et
@@ -103,8 +116,14 @@ export async function getAdminAccess(adminId: string, dict?: AdminDictionary) {
  * La verification porte sur `profiles.role = 'admin'`, la meme colonne que
  * lit `public.is_admin()` cote Postgres : meme si ce controle applicatif etait
  * contourne, le RLS refuserait les ecritures.
+ *
+ * `cache()` (React) : le layout appelle cette fonction, puis chaque page
+ * l'appelle de nouveau via `requirePermission()` — sans arguments, donc la
+ * deuxieme lecture de session et de profil est un pur doublon a l'interieur
+ * de la meme requete. Memoisation par requete, comme pour `getAdminAccess()`
+ * ci-dessus.
  */
-export async function requireAdmin(): Promise<AdminSession> {
+export const requireAdmin = cache(async function requireAdmin(): Promise<AdminSession> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -135,7 +154,7 @@ export async function requireAdmin(): Promise<AdminSession> {
     email: profile.email ?? user.email ?? null,
     fullName: profile.full_name,
   };
-}
+});
 
 /** Controle fin des droits. Le RLS/RPC reste la source d'autorite. */
 export async function requirePermission(permission: AdminPermission): Promise<AdminSession> {
