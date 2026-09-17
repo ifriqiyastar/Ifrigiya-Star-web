@@ -1759,6 +1759,12 @@
     "invalid": "Incorrect email or password.",
     "errorAccessDenied": "This account exists but is not an administrator. The back-office is reserved for administrator accounts.",
     "errorNoProfile": "No profile record is attached to this session. The account has probably been deleted: sign in again.",
-    "errorDeactivated": "This administrator account is deactivated."
+    "errorDeactivated": "This administrator account is deactivated.",
+    "captchaLabel": "Bot protection check",
+    "captchaLoading": "Bot protection check…",
+    "captchaRequired": "Please confirm you are not a robot first.",
+    "captchaRejected": "The bot protection check was rejected. Try again.",
+    "captchaFailed": "The bot protection check could not load.",
+    "captchaRetry": "Try again"
   }
 }

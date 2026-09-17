@@ -32,6 +32,24 @@ les deux jeux de variables :
 | `PAYMENT_WEBHOOK_SECRET` | pour les paiements en ligne | Signature HMAC-SHA256 de `/api/webhooks/payment-provider` |
 | `NEXT_PUBLIC_APP_STORE_URL` | non — a renseigner le jour de la publication | Fiche App Store ; des qu'elle existe, le badge Apple du site devient un vrai lien et le QR de l'entete redirige un iPhone qui le scanne directement vers elle (`lib/store-urls.ts`) |
 | `NEXT_PUBLIC_PLAY_STORE_URL` | non — a renseigner le jour de la publication | Meme mecanique, cote Google Play / Android |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | oui tant que la protection anti-robot est active sur le projet Supabase | Cle **publique** du widget Cloudflare Turnstile, la meme que l'app mobile. Voir « Protection anti-robot » ci-dessous |
+
+**Protection anti-robot (Cloudflare Turnstile).** Activee le 2026-09-17 a la
+demande du client, c'est la fonctionnalite captcha de **Supabase Auth**
+(Authentication -> Attack Protection) et non un controle de cette application.
+⚠️ **C'est un reglage de projet** : il s'applique d'un coup a tous les points
+d'entree d'authentification du projet partage, donc l'ecran `/connexion` doit
+envoyer un jeton exactement comme l'app mobile — sans quoi Supabase repond
+`captcha protection: request disallowed (no captcha_token found)`. Le jeton ne
+prouve rien par lui-meme : c'est GoTrue qui l'echange contre la cle **secrete**,
+laquelle ne vit que dans le tableau de bord Supabase.
+
+⚠️ **Le nom d'hote doit etre declare sur la cle**, sinon le widget refuse de se
+charger (code `110200`), et cela ne se corrige pas dans le code : ajouter
+`localhost` et le domaine de production dans le tableau de bord Cloudflare
+(Turnstile -> le widget -> Hostname Management). L'origine reellement declaree
+est journalisee a cote du code dans la console, parce que c'est la seule
+question utile face a un `110200`.
 
 **Masquage d'un contenu.** Les migrations 0033 et 0035 ont retire le droit
 d'ecrire `is_hidden` aux sessions `authenticated` — session administrateur

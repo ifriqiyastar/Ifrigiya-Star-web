@@ -1759,6 +1759,12 @@
     "invalid": "Email ou mot de passe incorrect.",
     "errorAccessDenied": "Ce compte existe mais n'est pas administrateur. Le back-office est reserve aux comptes administrateur.",
     "errorNoProfile": "Aucune fiche profil n'est associee a cette session. Le compte a probablement ete supprime : reconnectez-vous.",
-    "errorDeactivated": "Ce compte administrateur est desactive."
+    "errorDeactivated": "Ce compte administrateur est desactive.",
+    "captchaLabel": "Vérification anti-robot",
+    "captchaLoading": "Vérification anti-robot…",
+    "captchaRequired": "Confirmez d'abord que vous n'êtes pas un robot.",
+    "captchaRejected": "La vérification anti-robot a été refusée. Réessayez.",
+    "captchaFailed": "La vérification anti-robot n'a pas pu se charger.",
+    "captchaRetry": "Réessayer"
   }
 }

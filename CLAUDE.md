@@ -150,6 +150,38 @@ place so the journal refills by itself if it ever comes back, and
 `logAdminAction()` now returns silently when the table or RPC is absent
 (`42P01` / `PGRST202`). It never fails the business action.
 
+### The sign-in screen must send a captcha token
+
+Supabase Auth's **CAPTCHA protection** (Authentication -> Attack Protection,
+Cloudflare Turnstile) was turned on for the shared project on 2026-09-17 at the
+client's request, for the mobile app. **That setting is project-wide**: it
+applies to every GoTrue entry point at once, so `/connexion` here must send
+`options.captchaToken` exactly like `~/ifriqiyastar/src/app/(auth)/sign-in.tsx`
+does -- without it Supabase answers `captcha protection: request disallowed (no
+captcha_token found)` and nobody can sign in to the back-office at all.
+
+`components/captcha.tsx` holds `CAPTCHA_ENABLED`, `useCaptcha()` and
+`<Captcha />`, mirroring the mobile component (web needs no WebView: the page
+has a real origin, so the script is loaded directly). Three things about it:
+
+- **The token proves nothing by itself.** GoTrue exchanges it against the
+  **secret** key, which lives only in the Supabase dashboard. Removing the
+  widget does not "unlock" anything -- it makes sign-in impossible.
+- **A token is single-use.** Cloudflare marks it consumed as soon as GoTrue has
+  verified it, so reusing one makes *every* later attempt fail -- which reads as
+  an app outage when the password was simply wrong the first time. Hence
+  `captcha.reset()` on **all** exit paths of a submit, refusals included.
+- **The hostname must be declared on the key** (Cloudflare -> Turnstile -> the
+  widget -> Hostname Management), or the widget refuses to load with `110200` --
+  `localhost` for development, plus the deployed domain. That is a dashboard
+  line, not a JS fix, which is why the console logs the origin the page actually
+  declared next to the code.
+
+`NEXT_PUBLIC_TURNSTILE_SITE_KEY` is the public key (the same one the mobile app
+uses). Its absence disables the widget client-side only, so a workstation
+without a full `.env` still builds -- but sign-in would then be refused by the
+server.
+
 ### Supabase clients
 
 - `lib/supabase/client.ts` — browser (sign-in / sign-out only).

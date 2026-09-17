@@ -91,6 +91,7 @@ export default async function ConnexionPage({
           <SignInForm
             initialError={message}
             adminHref={localePath(locale, "/admin")}
+            language={locale}
             labels={{
               email: d.email,
               password: d.password,
@@ -99,6 +100,14 @@ export default async function ConnexionPage({
               invalid: d.invalid,
               showPassword: d.showPassword,
               hidePassword: d.hidePassword,
+              captchaRequired: d.captchaRequired,
+              captchaRejected: d.captchaRejected,
+              captcha: {
+                label: d.captchaLabel,
+                loading: d.captchaLoading,
+                failed: d.captchaFailed,
+                retry: d.captchaRetry,
+              },
             }}
           />
 
