@@ -57,7 +57,7 @@ export default async function ConnexionPage({
           className="flex items-center gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-brand"
         >
           <Image src="/brand/ifriqiya-star.svg" alt="" width={44} height={44} />
-          <span className="font-heading text-lg font-extrabold tracking-wide text-white">IFRIQIYA STAR</span>
+          <span className="font-heading text-lg font-extrabold tracking-wide text-white">IFRIQIYA SOCCER STAR</span>
         </Link>
         <Link
           href={localePath(locale, "/")}
@@ -112,7 +112,7 @@ export default async function ConnexionPage({
         </section>
       </div>
       <footer className="mx-auto w-full max-w-[1440px] px-6 py-6 text-xs tracking-wide text-white/50 sm:px-10 lg:px-16">
-        IFRIQIYA STAR <span className="mx-2 text-brand" aria-hidden="true">/</span> {d.kicker}
+        IFRIQIYA SOCCER STAR <span className="mx-2 text-brand" aria-hidden="true">/</span> {d.kicker}
       </footer>
     </main>
   );

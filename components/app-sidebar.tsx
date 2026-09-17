@@ -74,7 +74,7 @@ export function AppSidebar({
                 </span>
                 <span className="flex min-w-0 flex-col">
                   <span className="font-heading truncate text-[0.8125rem] leading-tight font-extrabold tracking-wide">
-                    IFRIQIYA STAR
+                    IFRIQIYA SOCCER STAR
                   </span>
                   <span className="micro-label text-brand">{dict.nav.tagline}</span>
                 </span>
