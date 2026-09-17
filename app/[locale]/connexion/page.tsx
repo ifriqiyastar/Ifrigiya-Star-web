@@ -83,9 +83,6 @@ export default async function ConnexionPage({
 
         <section aria-labelledby="sign-in-title" className="mx-auto w-full max-w-[460px] rounded-3xl border border-white/12 bg-background/90 p-6 shadow-2xl shadow-black/30 backdrop-blur-xl sm:p-10">
           <div className="mb-8">
-            <div className="mb-7 flex size-12 items-center justify-center rounded-2xl border border-brand/20 bg-brand/10 text-brand">
-              <ShieldCheckIcon className="size-6" aria-hidden="true" />
-            </div>
             <p className="mb-3 text-xs font-semibold tracking-[0.16em] text-brand uppercase">{d.kicker}</p>
             <h1 id="sign-in-title" className="font-heading text-3xl font-extrabold tracking-tight sm:text-4xl">{d.title}</h1>
             <p className="mt-3 text-sm leading-relaxed text-white/60">{d.description}</p>
