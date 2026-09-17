@@ -11,13 +11,18 @@
     "openMenu": "Open menu",
     "closeMenu": "Close menu",
     "slogan": "Because no African talent should remain invisible.",
-    "drawerLabel": "Main navigation"
+    "drawerLabel": "Main navigation",
+    "qr": {
+      "title": "Scan to download",
+      "description": "Point your phone's camera at this code: it opens this same page, ready to show you the right store.",
+      "close": "Close this window"
+    }
   },
   "hero": {
     "titleLine1": "No African talent",
     "titleLine2": "should remain",
     "titleAccent": "invisible",
-    "lead": "Ifriqiya Star is an elite football academy devoted to training, technical development and the growth of young talent. A verified profile, match footage, scouting days and direct contact with recruiters — all from your phone.",
+    "lead": "Ifriqiya Soccer Star is an elite football academy devoted to training, technical development and the growth of young talent. A verified profile, match footage, scouting days and direct contact with recruiters — all from your phone.",
     "pillars": {
       "detection": {
         "title": "Scouting",
@@ -46,7 +51,7 @@
     "pill": "The journey",
     "title": "How it works",
     "lead": "Four steps, from signing up to being scouted. The same path for everyone, and a profile verified before it is shown to anyone.",
-    "phoneAlt": "A recruiter searching for players in the Ifriqiya Star app",
+    "phoneAlt": "A recruiter searching for players in the Ifriqiya Soccer Star app",
     "navAria": "The four steps of the journey",
     "prev": "Previous step",
     "next": "Next step",
@@ -75,8 +80,8 @@
     ]
   },
   "why": {
-    "title": "Why Ifriqiya Star",
-    "leadBefore": "Our mission is to make Ifriqiya Star a benchmark in sports training across Africa. We offer young athletes",
+    "title": "Why Ifriqiya Soccer Star",
+    "leadBefore": "Our mission is to make Ifriqiya Soccer Star a benchmark in sports training across Africa. We offer young athletes",
     "leadStrong": "a demanding and inspiring environment",
     "leadAfter": "where a passion for the game and the pursuit of excellence come together to reveal the stars of tomorrow.",
     "cta": "Join the academy",
@@ -112,7 +117,7 @@
   "values": {
     "pill": "Our vision",
     "title": "A continent where football helps you grow.",
-    "lead": "We dream of a continent where football is a powerful lever for social mobility, education and international standing. Ifriqiya Star is not only an academy: it is an incubator of talent.",
+    "lead": "We dream of a continent where football is a powerful lever for social mobility, education and international standing. Ifriqiya Soccer Star is not only an academy: it is an incubator of talent.",
     "signature": "“Because no African talent should remain invisible.”",
     "signatureLabel": "Our signature",
     "items": [
@@ -143,7 +148,7 @@
     "lead": "The essentials on signing up, profile verification and scouting days. A question that isn't here? Write to us.",
     "items": [
       {
-        "q": "Who is Ifriqiya Star for?",
+        "q": "Who is Ifriqiya Soccer Star for?",
         "a": "For young players who want to be seen, and for football professionals — recruiters, clubs, academies, agents — looking for talent. Both sign up from the same app, along separate paths."
       },
       {
@@ -170,7 +175,7 @@
   },
   "cta": {
     "titleLine1": "Start your journey",
-    "titleLine2": "with Ifriqiya Star.",
+    "titleLine2": "with Ifriqiya Soccer Star.",
     "lead": "Create your profile, add your videos and sign up for your first scouting day. The app is free for players.",
     "points": [
       "Sign up in a few minutes",
@@ -184,8 +189,8 @@
     "googlePrefix": "Get it on",
     "signInCaption": "Sign in",
     "signUpCaption": "Create an account",
-    "signInAlt": "Sign-in screen of the Ifriqiya Star app",
-    "signUpAlt": "Account creation screen of the Ifriqiya Star app",
+    "signInAlt": "Sign-in screen of the Ifriqiya Soccer Star app",
+    "signUpAlt": "Account creation screen of the Ifriqiya Soccer Star app",
     "storeSoon": "Available when the app launches"
   },
   "contactSection": {
@@ -235,13 +240,13 @@
   },
   "contactPage": {
     "metaTitle": "Contact us",
-    "metaDescription": "Contact the Ifriqiya Star team about the academy, Scout Days, the app or a partnership.",
+    "metaDescription": "Contact the Ifriqiya Soccer Star team about the academy, Scout Days, the app or a partnership.",
     "back": "Back to home",
     "pill": "Contact us",
     "titleLine1": "It all starts",
     "titleLine2pre": "with a",
     "titleAccent": "conversation.",
-    "lead": "Player, parent, club or partner: tell us about your project. The Ifriqiya Star team is listening.",
+    "lead": "Player, parent, club or partner: tell us about your project. The Ifriqiya Soccer Star team is listening.",
     "mailPrompt": "Would you rather write to us directly?",
     "faqTitle": "A question about the app?",
     "faqBody": "The first answers may already be in our FAQ.",
@@ -276,7 +281,8 @@
     "copyFailed": "Automatic copying is unavailable. You can select your message in the form."
   },
   "testimonials": {
-    "pill": "Testimonials · Fictional examples",
+    "pill": "Testimonials",
+    "disclaimer": "Illustrative portraits and testimonials, created to present the site.",
     "items": [
       {
         "name": "Yassine",
@@ -322,7 +328,7 @@
     "next": "Next videos"
   },
   "carousel": {
-    "regionAria": "Discover Ifriqiya Star",
+    "regionAria": "Discover Ifriqiya Soccer Star",
     "slidesAria": "Slides — use the arrow keys to navigate",
     "slideAria": "{n} of {total}: {tag}",
     "slides": [
@@ -339,7 +345,7 @@
         "action": "Explore the app"
       },
       {
-        "tag": "Ifriqiya Star",
+        "tag": "Ifriqiya Soccer Star",
         "title": "Football makes us grow.",
         "text": "Excellence, discipline and team spirit bring us together. Discover the values that support every talent on the way up.",
         "action": "Discover our values"
@@ -356,7 +362,7 @@
   },
   "notFound": {
     "metaTitle": "Page not found",
-    "metaDescription": "This page does not exist or has been moved. Head back to the Ifriqiya Star home page.",
+    "metaDescription": "This page does not exist or has been moved. Head back to the Ifriqiya Soccer Star home page.",
     "pill": "Page not found",
     "titleLine1": "This page is",
     "titleAccent": "offside",

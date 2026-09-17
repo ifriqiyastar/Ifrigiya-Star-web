@@ -7,17 +7,22 @@
     "faq": "FAQ",
     "contact": "Contact",
     "admin": "Espace administration",
-    "download": "Telecharger l'app",
+    "download": "Télécharger l'app",
     "openMenu": "Ouvrir le menu",
     "closeMenu": "Fermer le menu",
     "slogan": "Parce qu'aucun talent africain ne doit rester invisible.",
-    "drawerLabel": "Navigation principale"
+    "drawerLabel": "Navigation principale",
+    "qr": {
+      "title": "Scannez pour telecharger",
+      "description": "Visez ce code avec l'appareil photo de votre telephone : vous arriverez sur cette meme page, prete a vous montrer le bon store.",
+      "close": "Fermer la fenetre"
+    }
   },
   "hero": {
     "titleLine1": "Aucun talent africain",
     "titleLine2": "ne doit rester",
     "titleAccent": "invisible",
-    "lead": "Ifriqiya Star est une academie de football d'elite dediee a la formation, au developpement technique et a l'epanouissement des jeunes talents. Profil verifie, videos de match, journees de detection et contact direct avec les recruteurs — tout depuis votre telephone.",
+    "lead": "Ifriqiya Soccer Star est une academie de football d'elite dediee a la formation, au developpement technique et a l'epanouissement des jeunes talents. Profil verifie, videos de match, journees de detection et contact direct avec les recruteurs — tout depuis votre telephone.",
     "pillars": {
       "detection": {
         "title": "Detection",
@@ -46,7 +51,7 @@
     "pill": "Le parcours",
     "title": "Comment ca marche",
     "lead": "Quatre etapes, de l'inscription a la detection. Le meme chemin pour tous, et un profil verifie avant d'etre montre a qui que ce soit.",
-    "phoneAlt": "Recherche de joueurs par un recruteur dans l'application Ifriqiya Star",
+    "phoneAlt": "Recherche de joueurs par un recruteur dans l'application Ifriqiya Soccer Star",
     "navAria": "Les quatre etapes du parcours",
     "prev": "Etape precedente",
     "next": "Etape suivante",
@@ -75,8 +80,8 @@
     ]
   },
   "why": {
-    "title": "Pourquoi Ifriqiya Star",
-    "leadBefore": "Notre mission est de faire d'Ifriqiya Star un pole de reference dans la formation sportive en Afrique. Nous offrons aux jeunes athletes",
+    "title": "Pourquoi Ifriqiya Soccer Star",
+    "leadBefore": "Notre mission est de faire d'Ifriqiya Soccer Star un pole de reference dans la formation sportive en Afrique. Nous offrons aux jeunes athletes",
     "leadStrong": "un cadre rigoureux et inspirant",
     "leadAfter": "ou la passion du ballon rond et la quete d'excellence se rejoignent pour reveler les etoiles de demain.",
     "cta": "Rejoindre l'academie",
@@ -112,7 +117,7 @@
   "values": {
     "pill": "Notre vision",
     "title": "Un continent ou le football fait grandir.",
-    "lead": "Nous revons d'un continent ou le football est un puissant levier d'ascension sociale, d'education et de rayonnement international. Ifriqiya Star n'est pas seulement une academie : c'est un incubateur de talents.",
+    "lead": "Nous revons d'un continent ou le football est un puissant levier d'ascension sociale, d'education et de rayonnement international. Ifriqiya Soccer Star n'est pas seulement une academie : c'est un incubateur de talents.",
     "signature": "« Parce qu'aucun talent africain ne doit rester invisible. »",
     "signatureLabel": "Notre signature",
     "items": [
@@ -143,7 +148,7 @@
     "lead": "L'essentiel sur l'inscription, la verification des profils et les journees de detection. Une question qui n'est pas la ? Ecrivez-nous.",
     "items": [
       {
-        "q": "A qui s'adresse Ifriqiya Star ?",
+        "q": "A qui s'adresse Ifriqiya Soccer Star ?",
         "a": "Aux jeunes joueuses et joueurs qui veulent etre vus, et aux professionnels du football — recruteurs, clubs, academies, agents — qui cherchent des talents. Les deux profils s'inscrivent depuis la meme application, avec des parcours distincts."
       },
       {
@@ -170,7 +175,7 @@
   },
   "cta": {
     "titleLine1": "Commence ton parcours",
-    "titleLine2": "avec Ifriqiya Star.",
+    "titleLine2": "avec Ifriqiya Soccer Star.",
     "lead": "Cree ton profil, ajoute tes videos et inscris-toi a ta premiere journee de detection. L'application est gratuite pour les joueurs.",
     "points": [
       "Inscription en quelques minutes",
@@ -184,8 +189,8 @@
     "googlePrefix": "Disponible sur",
     "signInCaption": "Se connecter",
     "signUpCaption": "Creer un compte",
-    "signInAlt": "Ecran de connexion de l'application Ifriqiya Star",
-    "signUpAlt": "Ecran de creation de compte de l'application Ifriqiya Star",
+    "signInAlt": "Ecran de connexion de l'application Ifriqiya Soccer Star",
+    "signUpAlt": "Ecran de creation de compte de l'application Ifriqiya Soccer Star",
     "storeSoon": "Disponible au lancement de l'application"
   },
   "contactSection": {
@@ -235,13 +240,13 @@
   },
   "contactPage": {
     "metaTitle": "Contactez-nous",
-    "metaDescription": "Contactez l'équipe Ifriqiya Star pour une question sur l'académie, les Scout Days, l'application ou un partenariat.",
+    "metaDescription": "Contactez l'équipe Ifriqiya Soccer Star pour une question sur l'académie, les Scout Days, l'application ou un partenariat.",
     "back": "Retour à l'accueil",
     "pill": "Contactez-nous",
     "titleLine1": "Tout commence",
     "titleLine2pre": "par un",
     "titleAccent": "échange.",
-    "lead": "Joueur, parent, club ou partenaire : parlez-nous de votre projet. L'équipe Ifriqiya Star est à votre écoute.",
+    "lead": "Joueur, parent, club ou partenaire : parlez-nous de votre projet. L'équipe Ifriqiya Soccer Star est à votre écoute.",
     "mailPrompt": "Vous préférez nous écrire directement ?",
     "faqTitle": "Une question sur l'application ?",
     "faqBody": "Les premières réponses se trouvent peut-être dans notre FAQ.",
@@ -276,7 +281,8 @@
     "copyFailed": "La copie automatique est indisponible. Vous pouvez sélectionner votre message dans le formulaire."
   },
   "testimonials": {
-    "pill": "Témoignages · Exemples fictifs",
+    "pill": "Témoignages",
+    "disclaimer": "Portraits et témoignages illustratifs, conçus pour présenter le site.",
     "items": [
       {
         "name": "Yassine",
@@ -322,7 +328,7 @@
     "next": "Vidéos suivantes"
   },
   "carousel": {
-    "regionAria": "À découvrir avec Ifriqiya Star",
+    "regionAria": "À découvrir avec Ifriqiya Soccer Star",
     "slidesAria": "Diapositives — utilisez les flèches pour naviguer",
     "slideAria": "{n} sur {total} : {tag}",
     "slides": [
@@ -339,7 +345,7 @@
         "action": "Explorer l’application"
       },
       {
-        "tag": "Ifriqiya Star",
+        "tag": "Ifriqiya Soccer Star",
         "title": "Le football nous fait grandir.",
         "text": "L’excellence, la discipline et l’esprit d’équipe nous rassemblent. Découvre les valeurs qui accompagnent chaque talent dans son ascension.",
         "action": "Découvrir nos valeurs"
@@ -356,7 +362,7 @@
   },
   "notFound": {
     "metaTitle": "Page introuvable",
-    "metaDescription": "Cette page n’existe pas ou a été déplacée. Revenez à l’accueil d’Ifriqiya Star.",
+    "metaDescription": "Cette page n’existe pas ou a été déplacée. Revenez à l’accueil d’Ifriqiya Soccer Star.",
     "pill": "Page introuvable",
     "titleLine1": "Cette page est",
     "titleAccent": "hors-jeu",
