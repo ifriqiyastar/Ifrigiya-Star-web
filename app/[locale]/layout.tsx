@@ -21,11 +21,11 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
 export const metadata: Metadata = {
   ...(siteUrl ? { metadataBase: new URL(siteUrl) } : {}),
   title: {
-    default: "Back-office — Ifriqiya Star",
-    template: "%s — Ifriqiya Star",
+    default: "Back-office — Ifriqiya Soccer Star",
+    template: "%s — Ifriqiya Soccer Star",
   },
   description:
-    "Back-office administrateur d'Ifriqiya Star : validations, moderation, Scout Days, abonnements et paiements.",
+    "Back-office administrateur d'Ifriqiya Soccer Star : validations, moderation, Scout Days, abonnements et paiements.",
 };
 
 /**

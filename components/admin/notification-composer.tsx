@@ -350,7 +350,7 @@ export function NotificationComposer({
                 <span className="flex size-4 items-center justify-center rounded bg-brand text-[8px] font-bold text-brand-foreground">
                   IS
                 </span>
-                <span className="micro-label">Ifriqiya Star</span>
+                <span className="micro-label">Ifriqiya Soccer Star</span>
               </span>
               <span className="micro-label text-muted-foreground">{i18n.t("Maintenant")}</span>
             </div>

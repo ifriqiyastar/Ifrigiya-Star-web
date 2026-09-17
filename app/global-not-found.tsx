@@ -52,7 +52,7 @@ async function resolveLocale(): Promise<Locale> {
 export async function generateMetadata(): Promise<Metadata> {
   const dict = await getDictionaryFor(await resolveLocale());
   return {
-    title: `${dict.notFound.metaTitle} — Ifriqiya Star`,
+    title: `${dict.notFound.metaTitle} — Ifriqiya Soccer Star`,
     description: dict.notFound.metaDescription,
   };
 }

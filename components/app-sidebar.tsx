@@ -66,7 +66,7 @@ export function AppSidebar({
             <SidebarMenuItem>
               <SidebarMenuButton
                 className="h-10 rounded-lg p-1! hover:bg-secondary group-data-[collapsible=icon]:p-0!"
-                tooltip="Ifriqiya Star"
+                tooltip="Ifriqiya Soccer Star"
                 render={<Link href="/admin" />}
               >
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#84cc16] font-heading text-[10px] font-black text-[#0b0e12]">

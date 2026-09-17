@@ -86,7 +86,7 @@ export function HeroStar() {
 
       <div className="absolute right-4 bottom-2 left-4 flex min-h-9 items-center justify-between border-t border-(--site-line) pt-3 sm:right-6 sm:left-6">
         <span className="text-[9px] font-medium tracking-[0.22em] text-(--site-muted)/55 uppercase sm:text-[10px]">
-          Ifriqiya Star · Ascension
+          Ifriqiya Soccer Star · Ascension
         </span>
         {ready && (
           <button

@@ -9,7 +9,7 @@ import { getDictionary, getLocale } from "@/lib/i18n/dictionaries";
 /** Le logo, en vectoriel — voir `components/site/site-nav.tsx` pour le detail. */
 function Logo({ size = 32 }: { size?: number }) {
   return (
-    <Image src="/brand/ifriqiya-star.svg" alt="Ifriqiya Star" width={size} height={size} />
+    <Image src="/brand/ifriqiya-star.svg" alt="Ifriqiya Soccer Star" width={size} height={size} />
   );
 }
 
@@ -39,7 +39,7 @@ export async function SiteFooter({
         <div className="flex flex-col gap-4">
           <Link href={prefix || "/"} className="flex items-center gap-2.5">
             <Logo size={32} />
-            <span className="font-heading text-base font-extrabold">Ifriqiya Star</span>
+            <span className="font-heading text-base font-extrabold">Ifriqiya Soccer Star</span>
           </Link>
           <p className="max-w-xs text-sm leading-relaxed text-(--site-muted)">
             {t.tagline}
@@ -53,7 +53,7 @@ export async function SiteFooter({
             { href: `${prefix}/#comment`, label: t.how },
             { href: `${prefix}/#scout-days-videos`, label: t.scoutDaysVideo },
             { href: `${prefix}/#fonctionnalites`, label: t.app },
-            { href: `${prefix}/#valeurs`, label: t.values },
+            { href: `${prefix}/#vision`, label: t.values },
           ]}
         />
 
@@ -81,7 +81,7 @@ export async function SiteFooter({
       </div>
 
       <div className="mx-auto mt-12 flex max-w-7xl flex-col gap-2 border-t border-(--site-line) px-5 pt-6 text-xs text-(--site-muted) sm:flex-row sm:items-center sm:justify-between sm:px-8">
-        <p>© {new Date().getFullYear()} Ifriqiya Star. {t.rights}</p>
+        <p>© {new Date().getFullYear()} Ifriqiya Soccer Star. {t.rights}</p>
         <p>{t.motto}</p>
       </div>
     </footer>
