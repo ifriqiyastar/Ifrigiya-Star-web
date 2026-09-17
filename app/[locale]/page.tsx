@@ -1,7 +1,7 @@
 import Image from "next/image";
 import type { Metadata } from "next";
 
-import { Check, Phone, SectionHeading } from "@/components/site/pieces";
+import { Check, Phone, Pill, SectionHeading } from "@/components/site/pieces";
 import { SiteNav } from "@/components/site/site-nav";
 import { SiteFooter } from "@/components/site/site-footer";
 import { ContactSection } from "@/components/site/contact-section";
@@ -11,14 +11,19 @@ import { StepsTimeMachine } from "@/components/site/steps-time-machine";
 import { HeroVideo } from "@/components/site/hero-video";
 import { HighlightsCarousel } from "@/components/site/highlights-carousel";
 import { StoreButtons } from "@/components/site/store-buttons";
+import { QrStoreRedirect } from "@/components/site/qr-store-redirect";
+import { PLACEHOLDER_PARTNER_LOGOS } from "@/components/site/partner-logos";
+import { IconDetection, IconProgression, IconExcellence } from "@/components/site/pillar-icons";
+import { IconFeed, IconCalendar, IconMessage } from "@/components/site/feature-icons";
 import { Reveal } from "@/components/site/reveal";
 import { APP_SCREENS } from "@/lib/app-screens";
 import { getDictionary, getLocale } from "@/lib/i18n/dictionaries";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import { LOCALES, localePath } from "@/lib/i18n/config";
+import { cn } from "@/lib/utils";
 
 /**
- * Page publique d'Ifriqiya Star.
+ * Page publique d'Ifriqiya Soccer Star.
  *
  * Jusqu'ici la racine renvoyait vers `/admin` : ce depot ne servait que le
  * back-office. Elle sert desormais le site vitrine, et l'administration reste
@@ -45,7 +50,7 @@ import { LOCALES, localePath } from "@/lib/i18n/config";
 export async function generateMetadata(): Promise<Metadata> {
   const dict = await getDictionary();
   return {
-    title: { absolute: `Ifriqiya Star — ${dict.hero.titleLine1} ${dict.hero.titleLine2} ${dict.hero.titleAccent}` },
+    title: { absolute: `Ifriqiya Soccer Star — ${dict.hero.titleLine1} ${dict.hero.titleLine2} ${dict.hero.titleAccent}` },
     description: dict.hero.lead,
     alternates: {
       canonical: localePath(await getLocale(), "/"),
@@ -64,6 +69,9 @@ const FEATURE_SCREENS = [
   APP_SCREENS.eligibilite,
   APP_SCREENS.messages,
 ] as const;
+
+/** Pictogrammes des trois legendes, meme ordre que `FEATURE_SCREENS`. */
+const FEATURE_ICONS = [IconFeed, IconCalendar, IconMessage] as const;
 
 export default async function LandingPage() {
   const dict = await getDictionary();
@@ -84,16 +92,16 @@ export default async function LandingPage() {
 
       <main>
         <Hero dict={dict} />
-        <Piliers dict={dict} />
+        <Piliers />
         <HighlightsCarousel />
         <StepsTimeMachine />
         <Pourquoi dict={dict} />
         <ScoutDaysVideosSection />
         <Fonctionnalites dict={dict} />
-        <Valeurs dict={dict} />
+        <NotreVision dict={dict} />
         <TestimonialsSection />
-        <Faq dict={dict} />
         <AppelFinal dict={dict} />
+        <Faq dict={dict} />
         <ContactSection />
       </main>
 
@@ -162,18 +170,38 @@ function Hero({ dict }: { dict: Dictionary }) {
           </Reveal>
 
           {/* Trois piliers, pas trois chiffres d'audience : ce sont les
-              fondamentaux nommes par la charte, et ils sont verifiables. */}
+              fondamentaux nommes par la charte, et ils sont verifiables. Mise
+              en avant comme des statistiques (grand libelle colore, legende
+              en dessous) sans en inventer la donnee. */}
           {/* Trois colonnes de 100 px sur un ecran de 360 px coupaient les
-              libelles en trois lignes : on empile tant que la place manque. */}
-          <Reveal as="dl" delay={320} className="mt-4 grid w-full max-w-lg gap-4 border-t border-(--site-line) pt-6 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-(--site-line)">
-            {[t.pillars.detection, t.pillars.progression, t.pillars.excellence].map(
-              ({ title: titre, text: texte }) => (
-                <div key={titre} className="sm:px-4 sm:first:ps-0 sm:last:pe-0">
-                  <dt className="font-heading text-lg font-extrabold sm:text-xl">{titre}</dt>
-                  <dd className="mt-1 text-xs leading-snug text-(--site-muted)">{texte}</dd>
+              libelles en trois lignes : sur telephone, chaque pilier devient
+              une carte avec son pictogramme plutot qu'une liste nue empilee ;
+              a partir de `sm` on retrouve la rangee d'origine, sans carte ni
+              icone. */}
+          <Reveal as="dl" delay={320} className="mt-4 grid w-full max-w-xl gap-3 sm:gap-0 sm:grid-cols-3 sm:divide-x sm:divide-(--site-line) sm:border-t sm:border-(--site-line) sm:pt-6">
+            {[
+              { ...t.pillars.detection, Icon: IconDetection },
+              { ...t.pillars.progression, Icon: IconProgression },
+              { ...t.pillars.excellence, Icon: IconExcellence },
+            ].map(({ title: titre, text: texte, Icon }) => (
+              <div
+                key={titre}
+                className="flex items-start gap-4 rounded-2xl border border-(--site-line) bg-white/[0.03] p-4 sm:block sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0 sm:px-5 sm:first:ps-0 sm:last:pe-0"
+              >
+                <span
+                  aria-hidden
+                  className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-(--site-accent)/30 bg-(--site-accent)/10 text-(--site-accent) sm:hidden"
+                >
+                  <Icon className="size-5" />
+                </span>
+                <div>
+                  <dt className="font-heading text-xl leading-tight font-extrabold text-(--site-accent) sm:text-2xl">
+                    {titre}
+                  </dt>
+                  <dd className="mt-1 text-xs leading-snug text-(--site-fg)/80">{texte}</dd>
                 </div>
-              ),
-            )}
+              </div>
+            ))}
           </Reveal>
         </div>
 
@@ -184,27 +212,25 @@ function Hero({ dict }: { dict: Dictionary }) {
 
 /* ---------------------------------------------------------------- piliers */
 
-function Piliers({ dict }: { dict: Dictionary }) {
-  const mots = dict.services.items;
+function Piliers() {
+  const logos = PLACEHOLDER_PARTNER_LOGOS;
 
   return (
-    <section className="border-y border-(--site-line) py-6">
-      <div className="mx-auto max-w-7xl px-5 sm:px-8">
-        <p className="text-center text-xs tracking-[0.18em] text-(--site-muted) uppercase">
-          {dict.services.label}
-        </p>
-      </div>
-      {/* Bande defilante : la liste tient sur une ligne sur grand ecran et
-          defile sur mobile, plutot que de se casser en quatre lignes. */}
-      <div className="mt-4 overflow-hidden">
-        <div className="site-marquee flex w-max items-center gap-8 pe-8 sm:gap-10 sm:pe-10">
-          {[...mots, ...mots].map((mot, index) => (
+    <section className="border-y border-(--site-line) py-8">
+      {/* Bande de logos defilante, sur le modele fourni par le client pour la
+          presentation. Ce sont des marques generiques de demonstration — a
+          remplacer par les vrais logos des partenaires des qu'ils arrivent. */}
+      <div className="overflow-hidden">
+        <div className="site-marquee flex w-max items-center gap-12 pe-12 sm:gap-16 sm:pe-16">
+          {[...logos, ...logos].map(({ name, Icon }, index) => (
             <span
-              key={`${mot}-${index}`}
-              className="font-heading flex items-center gap-8 text-base font-bold whitespace-nowrap text-(--site-fg)/85 sm:gap-10 sm:text-xl"
+              key={`${name}-${index}`}
+              className="flex shrink-0 items-center gap-2.5 text-(--site-fg)/80"
             >
-              {mot}
-              <span className="size-1.5 rounded-full bg-(--site-accent)" aria-hidden />
+              <Icon className="size-6 sm:size-7" aria-hidden />
+              <span className="font-heading text-lg font-extrabold tracking-tight whitespace-nowrap italic sm:text-2xl">
+                {name}
+              </span>
             </span>
           ))}
         </div>
@@ -279,26 +305,54 @@ function Fonctionnalites({ dict }: { dict: Dictionary }) {
           lead={t.lead}
         />
 
-        <div className="mt-16 grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
-          {t.items.map((fonction, i) => (
-            <Reveal
-              key={fonction.title}
-              delay={(i % 3) * 110}
-              className="flex flex-col items-center gap-6 text-center"
-            >
-              <Phone
-                screen={FEATURE_SCREENS[i]}
-                alt={`${fonction.title} — Ifriqiya Star`}
-                width={244}
-              />
-              <div className="space-y-2">
-                <h3 className="font-heading text-xl font-extrabold">{fonction.title}</h3>
-                <p className="mx-auto max-w-xs text-sm leading-relaxed text-(--site-muted)">
-                  {fonction.text}
-                </p>
-              </div>
-            </Reveal>
-          ))}
+        {/* Grappe en eventail plutot que trois colonnes egales : le meme
+            traitement que le collage de la section Valeurs (telephones
+            legerement inclines, superposes), applique ici a trois captures
+            au lieu de deux. Le halo derriere reprend celui des autres
+            sections, pour que la grappe ne flotte pas sur un noir uni. */}
+        <Reveal className="relative mx-auto flex h-[26rem] max-w-3xl items-center justify-center sm:h-[31rem]">
+          <div aria-hidden className="site-glow-center absolute inset-0 opacity-70" />
+          <Phone
+            screen={FEATURE_SCREENS[0]}
+            alt={`${t.items[0].title} — Ifriqiya Soccer Star`}
+            width={190}
+            className="site-lift absolute start-0 top-12 -rotate-[8deg] shadow-2xl sm:start-[2%]"
+          />
+          <Phone
+            screen={FEATURE_SCREENS[2]}
+            alt={`${t.items[2].title} — Ifriqiya Soccer Star`}
+            width={190}
+            className="site-lift absolute end-0 top-12 rotate-[8deg] shadow-2xl sm:end-[2%]"
+          />
+          <Phone
+            screen={FEATURE_SCREENS[1]}
+            alt={`${t.items[1].title} — Ifriqiya Soccer Star`}
+            width={215}
+            className="site-lift relative z-10 shadow-2xl"
+          />
+        </Reveal>
+
+        <div className="mt-12 grid gap-10 sm:grid-cols-3 lg:mt-16">
+          {t.items.map((fonction, i) => {
+            const Icon = FEATURE_ICONS[i];
+            return (
+              <Reveal
+                key={fonction.title}
+                delay={(i % 3) * 110}
+                className="flex flex-col items-center gap-3 text-center"
+              >
+                <span className="flex size-10 items-center justify-center rounded-xl border border-(--site-accent)/30 bg-(--site-accent)/10 text-(--site-accent)">
+                  <Icon className="size-5" aria-hidden />
+                </span>
+                <div className="flex flex-col items-center gap-2">
+                  <h3 className="font-heading text-xl font-extrabold">{fonction.title}</h3>
+                  <p className="mx-auto max-w-xs text-sm leading-relaxed text-(--site-muted)">
+                    {fonction.text}
+                  </p>
+                </div>
+              </Reveal>
+            );
+          })}
         </div>
       </div>
     </section>
@@ -307,48 +361,107 @@ function Fonctionnalites({ dict }: { dict: Dictionary }) {
 
 /* ---------------------------------------------------------------- valeurs */
 
-function Valeurs({ dict }: { dict: Dictionary }) {
+/**
+ * Etiquette flottante du collage "vision par ordinateur" de la section
+ * Valeurs. `value` reprend toujours un mot deja affiche ailleurs sur la page
+ * (les trois piliers du heros, une des cinq valeurs) — jamais une mesure.
+ *
+ * `concept` marque au contraire une piste future, pas encore construite : le
+ * pointille et le mot "Concept" disent explicitement que rien derriere n'est
+ * mesure aujourd'hui, contrairement a un vrai pourcentage affiche comme un
+ * fait. C'est ce qui remplace une fausse statistique quand on veut montrer
+ * une ambition plutot qu'une donnee.
+ */
+function HudTag({
+  label, value, className, concept = false,
+}: { label: string; value: string; className?: string; concept?: boolean }) {
+  return (
+    <div
+      aria-hidden
+      className={cn(
+        "absolute flex-col items-start gap-0.5 rounded-lg border bg-black/50 px-3 py-2 backdrop-blur-sm",
+        concept ? "border-dashed border-white/35" : "border-(--site-accent)/40",
+        className,
+      )}
+    >
+      <span className={cn("font-mono text-[9px] tracking-[0.16em] uppercase", concept ? "text-white/50" : "text-(--site-accent)/80")}>
+        {label}
+      </span>
+      <span className={cn("font-heading text-xs font-extrabold uppercase", concept ? "text-white/70" : "text-white")}>
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function NotreVision({ dict }: { dict: Dictionary }) {
   const t = dict.values;
   return (
     <section
-      id="valeurs"
-      className="scroll-mt-20 relative overflow-hidden border-y border-(--site-line) py-16 sm:py-24 lg:py-28"
+      id="vision"
+      className="scroll-mt-20 relative overflow-hidden border-t border-(--site-line) py-16 sm:py-24 lg:py-28"
     >
       <div className="site-glow-center absolute inset-0 opacity-70" aria-hidden />
       <div className="relative mx-auto max-w-7xl px-5 sm:px-8">
-        <SectionHeading
-          pill={t.pill}
-          title={t.title}
-          lead={t.lead}
-        />
-
-        <ul className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {t.items.map((valeur, i) => (
-            <Reveal
-              key={valeur.title}
-              as="li"
-              delay={(i % 3) * 110}
-              className="site-lift rounded-2xl border border-(--site-line) bg-(--site-card) p-6 hover:border-(--site-accent)/50"
-            >
-              <h3 className="font-heading text-lg font-extrabold text-(--site-accent)">
-                {valeur.title}
-              </h3>
-              <p className="mt-2 text-sm leading-relaxed text-(--site-muted)">
-                {valeur.text}
+        {/* Le texte et la signature partagent maintenant la colonne de
+            gauche, et la photo (colonne de droite) s'etire sur toute leur
+            hauteur cumulee (`lg:items-stretch`, defaut de la grille) au lieu
+            de se limiter a la hauteur du seul bloc de texte — la signature
+            se retrouvait sinon seule sous une pleine largeur, laissant un
+            grand vide noir sous la photo, a droite. */}
+        <div className="grid gap-10 lg:grid-cols-2 lg:gap-14">
+          <div className="flex flex-col gap-10 sm:gap-14">
+            <Reveal variant="left" className="flex flex-col items-start gap-5">
+              <Pill>{t.pill}</Pill>
+              <h2 className="font-heading max-w-xl text-3xl leading-[1.1] font-extrabold text-balance sm:text-4xl">
+                {t.title}
+              </h2>
+              <p className="max-w-lg text-base leading-relaxed text-(--site-muted) italic sm:text-lg">
+                {t.lead}
               </p>
             </Reveal>
-          ))}
+
+            <Reveal delay={180} className="border-s-4 border-(--site-accent) ps-6 sm:ps-8">
+              <p className="font-heading max-w-2xl text-2xl leading-snug font-extrabold text-balance sm:text-3xl lg:text-4xl">
+                {t.signature}
+              </p>
+              <p className="mt-3 text-xs font-semibold tracking-[0.18em] text-(--site-muted) uppercase">
+                {t.signatureLabel}
+              </p>
+            </Reveal>
+          </div>
+
           <Reveal
-            as="li"
-            delay={220}
-            className="flex flex-col justify-center rounded-2xl border border-(--site-accent) bg-(--site-accent) p-6 text-(--site-ink)"
+            variant="right"
+            delay={100}
+            className="relative min-h-[20rem] overflow-hidden rounded-3xl border border-(--site-line) bg-(--site-card) sm:min-h-[24rem]"
           >
-            <p className="font-heading text-lg leading-tight font-extrabold text-balance">
-              {t.signature}
-            </p>
-            <p className="mt-2 text-xs font-medium opacity-70">{t.signatureLabel}</p>
+            <Image
+              src="/images/vision.jpg"
+              alt="Un entraineur encadre de jeunes joueurs lors d'un Scout Day"
+              fill
+              sizes="(min-width: 1024px) 50vw, 100vw"
+              className="object-cover"
+            />
+            <div aria-hidden className="absolute inset-0 bg-linear-to-t from-black/70 via-black/5 to-transparent" />
+
+            {/* Habillage "vision par ordinateur" : chaque etiquette reprend
+                un mot deja reel sur cette page (les trois piliers du heros)
+                ou dit explicitement qu'il s'agit d'une piste future — jamais
+                une mesure inventee. */}
+            <HudTag className="hidden sm:flex sm:top-[42%] sm:start-[28%]" label="Suivi" value="Detection" />
+            <HudTag className="hidden w-fit sm:top-[9%] sm:inset-x-0 sm:mx-auto sm:flex" label="Analyse de donnees" value="Concept — a venir" concept />
+            <HudTag className="hidden sm:flex sm:top-[44%] sm:end-[4%]" label="Objectif" value="Ascension" />
+            <HudTag className="hidden sm:flex sm:bottom-[27%] sm:start-[5%]" label="Exigence" value="Excellence" />
+
+            <div className="absolute inset-x-5 bottom-5 flex items-center gap-2">
+              <span aria-hidden className="size-2 shrink-0 animate-pulse rounded-full bg-(--site-accent)" />
+              <p className="font-heading text-xs font-bold tracking-[0.14em] text-white uppercase">
+                Scout Day — en observation
+              </p>
+            </div>
           </Reveal>
-        </ul>
+        </div>
       </div>
     </section>
   );
@@ -371,12 +484,6 @@ function Faq({ dict }: { dict: Dictionary }) {
           <p className="max-w-md text-sm leading-relaxed text-(--site-muted)">
             {t.lead}
           </p>
-          <a
-            href="mailto:contact@ifriqiyastar.com"
-            className="w-fit text-sm font-semibold text-(--site-accent) hover:underline"
-          >
-            contact@ifriqiyastar.com
-          </a>
         </Reveal>
 
         {/* `<details>` natif : l'accordeon fonctionne sans JavaScript, reste
@@ -410,7 +517,8 @@ function Faq({ dict }: { dict: Dictionary }) {
 function AppelFinal({ dict }: { dict: Dictionary }) {
   const t = dict.cta;
   return (
-    <section id="telecharger" className="scroll-mt-20 px-5 pb-16 sm:px-8 sm:pb-24 lg:pb-28">
+    <section id="telecharger" className="scroll-mt-20 px-5 pt-16 pb-16 sm:px-8 sm:pt-24 sm:pb-24 lg:pt-28 lg:pb-28">
+      <QrStoreRedirect />
       <div className="mx-auto max-w-7xl overflow-hidden rounded-3xl bg-(--site-accent) text-(--site-ink) sm:rounded-[2rem]">
         <div className="grid gap-10 p-6 sm:p-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:p-12">
           <Reveal variant="left" className="flex flex-col gap-6">

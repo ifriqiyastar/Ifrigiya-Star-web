@@ -121,7 +121,7 @@ export function StepsTimeMachine() {
   return (
     <section
       id="comment"
-      className="scroll-mt-20 relative overflow-hidden py-16 sm:py-24 lg:py-28"
+      className="scroll-mt-20 relative overflow-hidden py-12 sm:py-24 lg:py-28"
     >
       {/* Pas de `.site-glow` ici : la section suivante en porte un, au meme
           coin, et deux halos identiques a la suite se lisent comme une tache.
@@ -145,13 +145,15 @@ export function StepsTimeMachine() {
             200 px contre 616 px pour la pile, et centre, il flottait. Aligne,
             son sommet et celui de la carte de devant tracent la meme ligne —
             d'ou le `pt` identique de part et d'autre. */}
-        <div className="mt-12 flex flex-col items-center gap-12 lg:mx-auto lg:mt-20 lg:grid lg:max-w-6xl lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start lg:gap-14">
+        <div className="mt-8 flex flex-col items-center gap-8 lg:mx-auto lg:mt-20 lg:grid lg:max-w-6xl lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start lg:gap-14">
           {/* Le `pt` reserve la hauteur des tranches qui depassent au-dessus
               de la carte de devant. Elles sont dessinees *hors* du cadre qui
               donne sa hauteur a la pile, donc la mise en page ne les compte
               pas : sans cette reserve, elles montaient dans le chapeau de la
-              section et le recouvraient. */}
-          <div className="order-2 flex items-center justify-center gap-2 pt-16 sm:gap-3">
+              section et le recouvraient. En dessous de `sm`, la pile est plus
+              petite (`clamp` du `Stack`) donc le debord aussi : la reserve
+              d'origine y laissait un vide qui allongeait la section pour rien. */}
+          <div className="order-2 flex items-center justify-center gap-2 pt-10 sm:gap-3 sm:pt-16">
             <Stack
               steps={steps}
               active={active}
@@ -170,7 +172,13 @@ export function StepsTimeMachine() {
             />
           </div>
 
-          <div className="order-1 w-full max-w-xl lg:pt-16">
+          {/* `lg:self-stretch` + `lg:justify-center` : le texte fait a peine
+              200 px contre 616 px pour la pile, et laissait tout ce vide en
+              dessous des fleches. Plutot que de re-ouvrir l'alignement des
+              sommets (voir le commentaire plus haut sur `items-start`), ce
+              bloc s'etire seul sur la hauteur de sa cellule et centre son
+              propre contenu dedans — la pile garde son alignement d'origine. */}
+          <div className="order-1 w-full max-w-xl lg:flex lg:h-full lg:flex-col lg:justify-center lg:self-stretch">
             <div
               // La cle force le remontage a chaque changement d'etape : c'est
               // ce qui rejoue les animations d'entree, une animation CSS ne
@@ -184,16 +192,18 @@ export function StepsTimeMachine() {
               tabIndex={-1}
               className="flex flex-col items-start gap-4"
             >
-              <span
-                className={`font-heading flex size-12 items-center justify-center rounded-full bg-(--site-accent) text-sm font-extrabold text-(--site-ink) ${revealed ? "site-step-in" : ""}`}
-                style={{ "--step-delay": "0" } as React.CSSProperties}
-              >
-                {step.number}
-              </span>
+              <div className="flex items-center gap-3">
+                <span
+                  className={`font-heading flex size-12 shrink-0 items-center justify-center rounded-full bg-(--site-accent) text-sm font-extrabold text-(--site-ink) ${revealed ? "site-step-in" : ""}`}
+                  style={{ "--step-delay": "0" } as React.CSSProperties}
+                >
+                  {step.number}
+                </span>
 
-              <h3 className="font-heading text-2xl leading-tight font-extrabold text-balance sm:text-3xl">
-                <Words text={step.title} from={90} revealed={revealed} />
-              </h3>
+                <h3 className="font-heading text-2xl leading-tight font-extrabold text-balance sm:text-3xl">
+                  <Words text={step.title} from={90} revealed={revealed} />
+                </h3>
+              </div>
 
               <p
                 className={`text-sm leading-relaxed text-(--site-muted) sm:text-base ${revealed ? "site-step-in" : ""}`}

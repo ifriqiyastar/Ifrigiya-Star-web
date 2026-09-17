@@ -2,6 +2,7 @@ import Image from "next/image";
 import { QuoteIcon } from "lucide-react";
 
 import { Pill } from "@/components/site/pieces";
+import { Reveal } from "@/components/site/reveal";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 
 /**
@@ -27,7 +28,7 @@ export async function TestimonialsSection() {
       className="scroll-mt-20 border-y border-(--site-line) bg-(--site-card) py-16 sm:py-24 lg:py-28"
     >
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between lg:gap-12">
+        <Reveal className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between lg:gap-12">
           <div className="max-w-2xl">
             <Pill>{t.pill}</Pill>
             <h2 id="testimonials-heading" className="font-heading mt-5 text-3xl leading-[1.1] font-extrabold text-balance sm:text-4xl md:text-5xl">
@@ -36,11 +37,15 @@ export async function TestimonialsSection() {
               {t.titleLine2} <span className="text-(--site-accent)">{t.titleAccent}</span>
             </h2>
           </div>
-        </div>
+        </Reveal>
 
         <div className="mt-10 grid gap-6 md:grid-cols-3 lg:mt-14">
           {t.items.map((testimonial, index) => (
-            <figure key={testimonial.name} className="flex min-w-0 flex-col overflow-hidden rounded-3xl border border-(--site-line-strong) bg-black">
+            <Reveal
+              key={testimonial.name}
+              as="figure"
+              delay={index * 90}
+              className="flex min-w-0 flex-col overflow-hidden rounded-3xl border border-(--site-line-strong) bg-black">
               <div className="relative aspect-[4/3] overflow-hidden">
                 <Image
                   src={TESTIMONIAL_IMAGES[index]}
@@ -71,9 +76,14 @@ export async function TestimonialsSection() {
                 <p className="font-heading text-base font-extrabold">{testimonial.name}</p>
                 <p className="mt-1 text-xs text-(--site-muted)">{testimonial.role}</p>
               </figcaption>
-            </figure>
+            </Reveal>
           ))}
         </div>
+
+        {/* Seule mention restante que ces portraits et recits sont illustratifs
+            (generes pour la presentation), depuis que le badge du pill ne le
+            dit plus explicitement — voir le commentaire en tete de fichier. */}
+        <p className="mt-6 text-xs text-(--site-muted)">{t.disclaimer}</p>
       </div>
     </section>
   );

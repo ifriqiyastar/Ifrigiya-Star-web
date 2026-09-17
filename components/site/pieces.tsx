@@ -1,6 +1,7 @@
 import Image from "next/image";
 
 import type { AppScreen } from "@/lib/app-screens";
+import { Reveal } from "@/components/site/reveal";
 import { cn } from "@/lib/utils";
 
 /**
@@ -104,7 +105,7 @@ export function SectionHeading({
   className?: string;
 }) {
   return (
-    <div className={cn("flex flex-col items-center gap-4 text-center", className)}>
+    <Reveal className={cn("flex flex-col items-center gap-4 text-center", className)}>
       {pill ? <Pill>{pill}</Pill> : null}
       <h2 className="font-heading max-w-3xl text-3xl leading-[1.1] font-extrabold text-balance sm:text-4xl md:text-5xl">
         {title}
@@ -114,6 +115,6 @@ export function SectionHeading({
           {lead}
         </p>
       ) : null}
-    </div>
+    </Reveal>
   );
 }

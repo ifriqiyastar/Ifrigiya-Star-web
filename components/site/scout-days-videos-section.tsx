@@ -5,13 +5,18 @@ import { useRef, useState } from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 
 import { ScoutDaysVideoPlayer } from "@/components/site/scout-days-video-player";
+import { Reveal } from "@/components/site/reveal";
 
-// The existing football clip fills all three slots until event footage is supplied.
+// Trois clips distincts de demonstration (licence Pexels, gratuite et sans
+// attribution requise) — a remplacer par de vraies captures de Scout Days
+// des qu'elles seront fournies. Les trois montraient auparavant le meme clip
+// du hero derriere des posters differents ; l'affichage sautait donc d'une
+// image a une autre des que la lecture demarrait.
 const VIDEOS = [
-  { id: "01", poster: "/videos/scout-days-preview-01.webp", position: "45% center" },
-  { id: "02", poster: "/videos/scout-days-preview-02.webp", position: "50% center" },
-  { id: "03", poster: "/videos/scout-days-preview-03.webp", position: "30% center" },
-].map((video) => ({ ...video, src: "/videos/football-hero-720p.mp4" }));
+  { id: "01", poster: "/videos/scout-days-poster-01.jpg", position: "50% center", src: "/videos/scout-days-clip-01.mp4" },
+  { id: "02", poster: "/videos/scout-days-poster-02.jpg", position: "50% center", src: "/videos/scout-days-clip-02.mp4" },
+  { id: "03", poster: "/videos/scout-days-poster-03.jpg", position: "35% center", src: "/videos/scout-days-clip-03.mp4" },
+];
 
 export function ScoutDaysVideosSection() {
   const { dict } = useI18n();
@@ -34,7 +39,7 @@ export function ScoutDaysVideosSection() {
   return (
     <section id="scout-days-videos" aria-labelledby="scout-days-videos-heading" className="scroll-mt-20 border-y border-(--site-line) bg-black py-14 sm:py-16 lg:py-20">
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
-        <div className="flex items-center justify-between gap-5">
+        <Reveal className="flex items-center justify-between gap-5">
           <h2 id="scout-days-videos-heading" className="font-heading text-2xl leading-tight font-extrabold tracking-tight uppercase sm:text-3xl lg:text-4xl">
             {t.heading}
           </h2>
@@ -46,7 +51,7 @@ export function ScoutDaysVideosSection() {
               <ChevronRightIcon className="size-4 rtl:-scale-x-100" aria-hidden />
             </button>
           </div>
-        </div>
+        </Reveal>
 
         <div
           ref={railRef}
@@ -62,13 +67,18 @@ export function ScoutDaysVideosSection() {
           }}
           className="mt-9 flex snap-x snap-mandatory gap-5 overflow-x-auto overscroll-x-contain pb-2 [scrollbar-width:none] sm:mt-10 [&::-webkit-scrollbar]:hidden"
         >
-          {orderedVideos.map((video) => (
-            <figure key={video.id} className="relative w-[min(78vw,260px)] shrink-0 snap-start overflow-hidden rounded-[20px] border border-white/15 bg-(--site-card) sm:w-[260px]">
+          {orderedVideos.map((video, i) => (
+            <Reveal
+              key={video.id}
+              as="figure"
+              delay={i * 90}
+              className="relative w-[min(78vw,260px)] shrink-0 snap-start overflow-hidden rounded-[20px] border border-white/15 bg-(--site-card) sm:w-[260px]"
+            >
               <ScoutDaysVideoPlayer {...video} />
               <figcaption id={`scout-days-video-caption-${video.id}`} className="sr-only">
                 Aperçu football {video.id} — vidéo de démonstration sans son.
               </figcaption>
-            </figure>
+            </Reveal>
           ))}
         </div>
         <p aria-live="polite" aria-atomic="true" className="sr-only">{announcement}</p>

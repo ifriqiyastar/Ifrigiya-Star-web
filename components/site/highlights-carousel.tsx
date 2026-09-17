@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useI18n } from "@/lib/i18n/client";
+import { Reveal } from "@/components/site/reveal";
 
 /**
  * Ce qui ne se traduit pas : l'image et l'ancre de destination. Les ancres
@@ -12,9 +13,9 @@ import { useI18n } from "@/lib/i18n/client";
  * les dictionnaires.
  */
 const SLIDE_MEDIA = [
-  { href: "#comment", image: "/videos/football-hero-cover.webp" },
-  { href: "#fonctionnalites", image: "/images/carousel-training.jpg" },
-  { href: "#valeurs", image: "/images/carousel-football.jpg" },
+  { href: "#comment", image: "/images/carousel-scouting.jpg" },
+  { href: "#fonctionnalites", image: "/images/carousel-dribble.jpg" },
+  { href: "#vision", image: "/images/carousel-values.jpg" },
 ] as const;
 
 export function HighlightsCarousel() {
@@ -86,7 +87,11 @@ export function HighlightsCarousel() {
         else if (event.relatedTarget instanceof Element && !event.relatedTarget.matches(":focus-visible")) setFocused(false);
       }}
     >
-      <div className="overflow-hidden rounded-3xl border border-white/15 bg-[#101010]">
+      {/* `Reveal` habille le cadre plutot que la `<section>` : celle-ci porte
+          deja son propre `sectionRef` (pause de la rotation hors champ), et
+          `Reveal` gere son propre ref en interne — les deux ne peuvent pas
+          partager le meme noeud. */}
+      <Reveal variant="zoom" className="overflow-hidden rounded-3xl border border-white/15 bg-[#101010]">
         <div
           ref={trackRef}
           id="highlights-track"
@@ -162,7 +167,7 @@ export function HighlightsCarousel() {
             ))}
           </div>
         </div>
-      </div>
+      </Reveal>
     </section>
   );
 }

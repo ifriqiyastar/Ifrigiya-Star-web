@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowUpRightIcon } from "lucide-react";
 
 import { Pill } from "@/components/site/pieces";
+import { Reveal } from "@/components/site/reveal";
 import { getDictionary, getLocale } from "@/lib/i18n/dictionaries";
 
 export async function ContactSection() {
@@ -33,7 +34,7 @@ export async function ContactSection() {
             ne tient pas dans 36 rem et le titre repassait sur trois lignes
             malgre son <br />. Le paragraphe garde sa propre largeur, plus
             etroite, pour ne pas s'etendre sur toute la colonne. */}
-        <div className="max-w-2xl">
+        <Reveal variant="left" className="max-w-2xl">
           <Pill className="border-white/25 bg-black/30">{t.pill}</Pill>
           <h2 id="contact-heading" className="font-heading mt-6 text-4xl leading-[1.1] font-extrabold text-balance sm:text-5xl lg:text-6xl">
             {t.titleLine1}
@@ -50,7 +51,7 @@ export async function ContactSection() {
             {t.cta}
             <ArrowUpRightIcon className="size-5 rtl:-scale-x-100" aria-hidden />
           </Link>
-        </div>
+        </Reveal>
       </div>
     </section>
   );
