@@ -121,6 +121,17 @@
     "signature": "«لأنّ لا موهبة أفريقية يجب أن تبقى خفية.»",
     "signatureLabel": "شعارنا",
     "imageAlt": "مدرب يشرف على لاعبين شباب خلال يوم كشف المواهب",
+    "hud": {
+      "trackingLabel": "تتبع",
+      "trackingValue": "كشف",
+      "dataLabel": "تحليل البيانات",
+      "dataValue": "فكرة — قريبا",
+      "goalLabel": "الهدف",
+      "goalValue": "ارتقاء",
+      "standardLabel": "المعيار",
+      "standardValue": "تميز",
+      "caption": "يوم اكتشاف المواهب — قيد المراقبة"
+    },
     "items": [
       {
         "title": "التميّز",

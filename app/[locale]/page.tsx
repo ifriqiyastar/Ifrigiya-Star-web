@@ -449,15 +449,15 @@ function NotreVision({ dict }: { dict: Dictionary }) {
                 un mot deja reel sur cette page (les trois piliers du heros)
                 ou dit explicitement qu'il s'agit d'une piste future — jamais
                 une mesure inventee. */}
-            <HudTag className="hidden sm:flex sm:top-[42%] sm:start-[28%]" label="Suivi" value="Detection" />
-            <HudTag className="hidden w-fit sm:top-[9%] sm:inset-x-0 sm:mx-auto sm:flex" label="Analyse de donnees" value="Concept — a venir" concept />
-            <HudTag className="hidden sm:flex sm:top-[44%] sm:end-[4%]" label="Objectif" value="Ascension" />
-            <HudTag className="hidden sm:flex sm:bottom-[27%] sm:start-[5%]" label="Exigence" value="Excellence" />
+            <HudTag className="hidden sm:flex sm:top-[42%] sm:start-[28%]" label={t.hud.trackingLabel} value={t.hud.trackingValue} />
+            <HudTag className="hidden w-fit sm:top-[9%] sm:inset-x-0 sm:mx-auto sm:flex" label={t.hud.dataLabel} value={t.hud.dataValue} concept />
+            <HudTag className="hidden sm:flex sm:top-[44%] sm:end-[4%]" label={t.hud.goalLabel} value={t.hud.goalValue} />
+            <HudTag className="hidden sm:flex sm:bottom-[27%] sm:start-[5%]" label={t.hud.standardLabel} value={t.hud.standardValue} />
 
             <div className="absolute inset-x-5 bottom-5 flex items-center gap-2">
               <span aria-hidden className="size-2 shrink-0 animate-pulse rounded-full bg-(--site-accent)" />
               <p className="font-heading text-xs font-bold tracking-[0.14em] text-white uppercase">
-                Scout Day — en observation
+                {t.hud.caption}
               </p>
             </div>
           </Reveal>

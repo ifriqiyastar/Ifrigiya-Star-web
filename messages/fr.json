@@ -121,6 +121,17 @@
     "signature": "« Parce qu'aucun talent africain ne doit rester invisible. »",
     "signatureLabel": "Notre signature",
     "imageAlt": "Un entraineur encadre de jeunes joueurs lors d'un Scout Day",
+    "hud": {
+      "trackingLabel": "Suivi",
+      "trackingValue": "Detection",
+      "dataLabel": "Analyse de donnees",
+      "dataValue": "Concept — a venir",
+      "goalLabel": "Objectif",
+      "goalValue": "Ascension",
+      "standardLabel": "Exigence",
+      "standardValue": "Excellence",
+      "caption": "Scout Day — en observation"
+    },
     "items": [
       {
         "title": "Excellence",
