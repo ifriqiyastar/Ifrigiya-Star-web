@@ -296,6 +296,7 @@ export default async function UserDetailPage({
           <AccountActions
             profileId={profile.id}
             role={profile.role}
+            email={profile.email}
             isActive={profile.is_active}
             businessStatus={businessStatus}
             isVisible={(player?.is_visible as boolean | undefined) ?? null}

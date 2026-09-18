@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { cache } from "react";
 
+import { isMissingRpc } from "@/lib/actions/result";
 import type { AdminDictionary } from "@/lib/i18n/admin-shared";
 import { createClient } from "@/lib/supabase/server";
 
@@ -205,6 +206,42 @@ async function permissionExists(
   if (error) return false;
   return Boolean(data);
 }
+
+/**
+ * Le compte courant est-il **super administrateur** ?
+ *
+ * C'est `public.is_super_admin()` qui repond — la meme fonction que lisent les
+ * triggers Postgres (publication d'un Scout Day, confirmation d'un retrait de
+ * contenu), et non une lecture des tables RBAC : celles-ci sont fermees au
+ * role `authenticated` depuis la migration mobile 0059, et deux facons de
+ * repondre a la meme question finissent toujours par diverger.
+ *
+ * ⚠️ **Ce controle-la n'a pas de filet Postgres derriere lui.** Partout
+ * ailleurs, masquer un bouton n'est qu'une courtesy : le trigger ou la policy
+ * refuserait de toute facon. Le geste qu'il garde — l'envoi d'un code de
+ * reinitialisation, qui passe par la cle `service_role` pour etre dispense du
+ * defi anti-robot — court-circuite justement toute arbitrage Postgres. Il est
+ * donc **refuse par defaut** des que la reponse n'est pas franchement oui.
+ *
+ * La seule exception est un projet ou la fonction n'existe pas (migration
+ * mobile 0040 non appliquee) : le code applicatif est alors en avance sur la
+ * base, exactement comme pour une permission non semee, et tout administrateur
+ * passe — ce qui etait de toute facon le comportement de `is_super_admin()`
+ * elle-meme avant 0059, ou elle repondait vrai a tout admin.
+ */
+export const isSuperAdmin = cache(async function isSuperAdmin(): Promise<boolean> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("is_super_admin");
+  if (error) {
+    if (isMissingRpc(error)) return true;
+    // Un `42501` ici signifie que l'execution a ete revoquee au role
+    // `authenticated` : la question devient insoluble depuis une session
+    // administrateur, et on refuse plutot que de deviner.
+    console.error("is_super_admin:", error.message);
+    return false;
+  }
+  return data === true;
+});
 
 /** Trace une action admin dans `admin_audit_log` via le helper SQL dedie. */
 export async function logAdminAction(

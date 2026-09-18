@@ -28,7 +28,7 @@ les deux jeux de variables :
 |---|---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | oui | URL du projet Supabase |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | oui | Cle publique (le RLS fait le reste) |
-| `SUPABASE_SERVICE_ROLE_KEY` | non (voir ci-dessous) | Suppression definitive d'un compte, webhook de paiement, et **repli** du masquage si la migration 0042 n'est pas appliquee |
+| `SUPABASE_SERVICE_ROLE_KEY` | non (voir ci-dessous) | Suppression definitive d'un compte, webhook de paiement, envoi d'un code de reinitialisation de mot de passe depuis une fiche, et **repli** du masquage si la migration 0042 n'est pas appliquee |
 | `PAYMENT_WEBHOOK_SECRET` | pour les paiements en ligne | Signature HMAC-SHA256 de `/api/webhooks/payment-provider` |
 | `NEXT_PUBLIC_APP_STORE_URL` | non — a renseigner le jour de la publication | Fiche App Store ; des qu'elle existe, le badge Apple du site devient un vrai lien et le QR de l'entete redirige un iPhone qui le scanne directement vers elle (`lib/store-urls.ts`) |
 | `NEXT_PUBLIC_PLAY_STORE_URL` | non — a renseigner le jour de la publication | Meme mecanique, cote Google Play / Android |
@@ -50,6 +50,31 @@ charger (code `110200`), et cela ne se corrige pas dans le code : ajouter
 (Turnstile -> le widget -> Hostname Management). L'origine reellement declaree
 est journalisee a cote du code dans la console, parce que c'est la seule
 question utile face a un `110200`.
+
+**Reinitialisation du mot de passe (§4.1).** Elle se fait **par code a six
+chiffres**, jamais par lien : le gabarit d'e-mail est commun a l'app mobile et
+a ce back-office (un seul projet Supabase), et l'app mobile n'a pas de site
+vers lequel un lien reviendrait. Deux portes y menent :
+
+- `/connexion/mot-de-passe-oublie`, ouvert a qui connait son adresse — adresse,
+  puis code, puis nouveau mot de passe, sur un seul ecran. Le code est consomme
+  a la verification, d'ou l'absence de retour arriere possible ; la session
+  ouverte par le code est **fermee** apres l'ecriture, pour que l'entree dans le
+  back-office reste `/connexion` et sa garde `requireAdmin()` ;
+- le bouton « Reinitialiser le mot de passe » d'une fiche `/admin/utilisateurs/[id]`,
+  reserve au **super administrateur** (`is_super_admin()`). Il declenche le meme
+  e-mail vers l'adresse du compte : l'administrateur ne choisit aucun mot de
+  passe et n'en apprend aucun. ⚠️ Cet envoi-la exige
+  `SUPABASE_SERVICE_ROLE_KEY` — la protection anti-robot couvre `/recover`, un
+  serveur n'a pas de defi a resoudre, et GoTrue n'en dispense que les appels
+  porteurs d'identifiants d'administration.
+
+⚠️ **Deux reglages du tableau de bord conditionnent tout cela**, et aucun ne se
+detecte depuis le code : *Authentication -> Emails -> Reset Password* doit
+contenir `{{ .Token }}` (le gabarit livre par defaut ne porte que le lien, et
+l'e-mail arrive alors sans code), et *Authentication -> SMTP Settings* doit
+porter un fournisseur a nous (le serveur integre de Supabase ne delivre qu'aux
+membres du projet, ce que l'ecran nomme au lieu de l'afficher comme une panne).
 
 **Masquage d'un contenu.** Les migrations 0033 et 0035 ont retire le droit
 d'ecrire `is_hidden` aux sessions `authenticated` — session administrateur
@@ -108,6 +133,7 @@ la fiche compte du back-office (le trigger est alors satisfait).
 |---|---|---|
 | — | `/` | **Site public** : page vitrine d'Ifriqiya Star (charte graphique Wii Studio — noir `#000000`, vert neon `#aff70f`, Nunito Sans / Poppins), captures reelles de l'application mobile. La racine ne redirige plus vers `/admin`. |
 | — | Page 404 | **Page introuvable** aux couleurs du site public, dans la langue du visiteur (prefixe d'URL, puis cookie, puis `Accept-Language`). Servie par `app/global-not-found.tsx` — voir « Choix d'implementation notables ». Une adresse `/admin` erronee reste, elle, dans le chassis d'administration. |
+| §4.1 | `/connexion/mot-de-passe-oublie` | **Mot de passe oublie** : envoi d'un code a six chiffres a l'adresse du compte, verification, puis nouveau mot de passe. Meme mecanisme que l'app mobile, meme gabarit d'e-mail. |
 | §12.1 | `/admin/validations` | Files d'attente : profils joueurs, comptes professionnels, justificatifs pro, pieces d'identite. Validation / refus motive. |
 | §12.1 | `/admin/utilisateurs` + `/admin/utilisateurs/[id]` | Annuaire filtrable (type, statut, actif, demande de suppression) ; consultation et **modification** (fiche compte, profil sportif, fiche pro) ; suspension, reactivation, suppression ; suivi du statut de verification ; visibilite du profil joueur. |
 | §12.2 | `/admin/moderation` | Signalements : un moderateur propose un retrait motive, un **super administrateur** le valide ou le refuse. Publications, commentaires, medias joueurs (videos, photos), **comptes et messages**. Masquage, suppression, suspension d'un utilisateur. |

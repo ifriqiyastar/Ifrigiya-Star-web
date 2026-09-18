@@ -182,6 +182,36 @@ uses). Its absence disables the widget client-side only, so a workstation
 without a full `.env` still builds -- but sign-in would then be refused by the
 server.
 
+### Resetting a password
+
+Same mechanism as the mobile app (`~/ifriqiyastar/src/lib/password-reset.ts`),
+ported to `lib/password-reset.ts`: **a six-digit code, never a link** — the
+e-mail template is shared by both apps (one Supabase project, one template) and
+the mobile app has no site a link could return to. The module takes the
+Supabase client as an argument precisely because it has two callers with two
+different clients.
+
+`/connexion/mot-de-passe-oublie` is one screen in three steps (address, code,
+new password) and a **sub-route of `/connexion`** on purpose: `isAdminPath()`
+already covers `/connexion/...`, so it inherits the back-office language rule
+without touching the proxy. `AuthShell` is the decor both screens share. Three
+things not to undo: the code is *consumed* by `verifyOtp`, so a step that has
+been passed cannot be replayed (hence local state, not three routes); the
+session `verifyOtp` opens is **signed out** after the write, because it never
+passed `requireAdmin()`; and a captcha token is single-use, so `captcha.reset()`
+runs on every exit path of a send, refusals included.
+
+The super-admin gesture on `/admin/utilisateurs/[id]` (`sendPasswordReset()`)
+triggers the *same* e-mail to the account's address — it never chooses or
+reveals a password. **It goes through `service_role`, which is the whole point
+of the action**: the project's captcha protection covers `/recover`, a server
+has no challenge to solve, and GoTrue only exempts calls carrying admin
+credentials (verified against the shared project: publishable key -> `400
+captcha_failed`, `service_role` -> `200`). That is the one gate in this
+back-office with **no Postgres behind it**, which is why `isSuperAdmin()`
+refuses by default and only degrades open when `is_super_admin()` itself is
+missing from the project.
+
 ### Supabase clients
 
 - `lib/supabase/client.ts` — browser (sign-in / sign-out only).

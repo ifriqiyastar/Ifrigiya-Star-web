@@ -1,6 +1,6 @@
 "use server";
 
-import { getRequestAdminI18n } from "@/lib/i18n/admin";
+import { getRequestAdminDict, getRequestAdminI18n } from "@/lib/i18n/admin";
 import type { AdminTranslations } from "@/lib/i18n/admin-shared";
 
 
@@ -8,9 +8,10 @@ import { ACCOUNT_STATUS, IDENTITY_STATUS } from "@/lib/labels";
 
 import { revalidatePath } from "next/cache";
 
-import { logAdminAction, requirePermission } from "@/lib/auth";
+import { isSuperAdmin, logAdminAction, requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { requestPasswordReset } from "@/lib/password-reset";
 import { makeErrors, fail, ok, type ActionResult } from "@/lib/actions/result";
 import type {
   DocumentStatus,
@@ -423,6 +424,82 @@ export async function deleteAccount(profileId: string): Promise<ActionResult> {
   await logAdminAction("delete_account", "profile", profileId);
   REFRESH();
   return ok(i18n.t("Compte supprime definitivement."));
+}
+
+/**
+ * §12.1 — **envoyer a un compte un code de reinitialisation de mot de passe**,
+ * reserve au super administrateur.
+ *
+ * Le geste ne choisit pas de mot de passe et n'en revele aucun : il declenche
+ * exactement l'e-mail que declencherait « Mot de passe oublie ? », et c'est la
+ * personne concernee qui choisit le nouveau mot de passe, dans l'application
+ * mobile ou sur `/connexion/mot-de-passe-oublie`. Un administrateur qui
+ * poserait lui-meme un mot de passe provisoire le connaitrait, et devrait
+ * ensuite le transmettre par un canal qui n'existe pas.
+ *
+ * ⚠️ **L'envoi passe par la cle `service_role`, et c'est la raison d'etre de
+ * cette action.** La protection anti-robot du projet couvre `/recover` : un
+ * appel fait avec la cle publique est refuse — `captcha protection: request
+ * disallowed` — et un serveur n'a pas de defi a resoudre. GoTrue dispense du
+ * defi les appels porteurs d'identifiants d'administration ; c'est le seul
+ * chemin par lequel le back-office peut declencher cet envoi. (Verifie sur le
+ * projet partage : cle publique -> 400 `captcha_failed`, `service_role` ->
+ * 200.)
+ *
+ * ⚠️ **Un succes ne dit pas qu'un compte a recu quelque chose** : GoTrue
+ * repond de la meme facon pour une adresse sans compte (anti-enumeration).
+ * Ici l'adresse vient de la fiche, donc le compte existe — mais le message
+ * reste prudent sur la reception, qui depend du service d'envoi.
+ */
+export async function sendPasswordReset(profileId: string): Promise<ActionResult> {
+  const i18n = await getRequestAdminI18n();
+
+  await requirePermission("users.write");
+  // Voir `isSuperAdmin()` : ce controle-la est la seule barriere, puisque le
+  // geste contourne Postgres par construction.
+  if (!(await isSuperAdmin())) {
+    return fail(
+      i18n.t("Reserve au super administrateur : l'envoi d'un code de reinitialisation touche au moyen de connexion d'un compte."),
+    );
+  }
+
+  const supabase = await createClient();
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select("email")
+    .eq("id", profileId)
+    .maybeSingle();
+  if (error) return fail(makeErrors(i18n.locale).describeError(error));
+  if (!profile) return fail(i18n.t("Compte introuvable."));
+
+  const email = (profile.email as string | null)?.trim();
+  if (!email) {
+    return fail(i18n.t("Ce compte n'a pas d'adresse email : aucun code ne peut lui etre envoye."));
+  }
+
+  const service = createServiceClient();
+  if (!service) {
+    return fail(
+      i18n.t("Envoi impossible : SUPABASE_SERVICE_ROLE_KEY n'est pas configuree dans .env, et la protection anti-robot du projet refuse cet envoi sans elle."),
+    );
+  }
+
+  const failed = await requestPasswordReset(service, email);
+  if (failed) {
+    // Le detail Supabase part dans les journaux du serveur : il nomme la cause
+    // reelle (service d'envoi absent, quota atteint) sans etre une phrase a
+    // montrer. L'ecran, lui, recoit la phrase du motif — la meme que celle que
+    // lit l'utilisateur sur « Mot de passe oublie ? ».
+    console.error("sendPasswordReset:", failed.reason, failed.detail);
+    const dict = await getRequestAdminDict();
+    return fail(dict.passwordReset.failures[failed.reason] ?? dict.passwordReset.failures.unknown);
+  }
+
+  await logAdminAction("send_password_reset", "profile", profileId);
+  REFRESH();
+  return ok(
+    i18n.t("Un code de reinitialisation a ete envoye a {0}. Le compte le saisit sur « Mot de passe oublie ? », dans l'application mobile ou sur l'ecran de connexion du back-office. Vous ne connaissez pas le nouveau mot de passe.", { "0": email }),
+  );
 }
 
 /** §12.1 — modification de la fiche compte selon les droits administrateur. */

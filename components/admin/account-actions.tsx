@@ -1,5 +1,5 @@
 import { getAdminI18n } from "@/lib/i18n/admin";
-import { BanIcon, CheckIcon, EyeIcon, EyeOffIcon, Trash2Icon, Undo2Icon, XIcon } from "lucide-react";
+import { BanIcon, CheckIcon, EyeIcon, EyeOffIcon, KeyRoundIcon, Trash2Icon, Undo2Icon, XIcon } from "lucide-react";
 
 import { ActionButton } from "@/components/admin/action-button";
 import { ReasonDialog } from "@/components/admin/reason-dialog";
@@ -9,11 +9,13 @@ import { suspendUser } from "@/lib/actions/moderation";
 import {
   deleteAccount,
   liftSuspension,
+  sendPasswordReset,
   setAccountActive,
   setPlayerStatus,
   setPlayerVisibility,
   setProfessionalStatus,
 } from "@/lib/actions/users";
+import { isSuperAdmin } from "@/lib/auth";
 import { hasServiceRole } from "@/lib/supabase/service";
 
 /**
@@ -34,6 +36,7 @@ import { hasServiceRole } from "@/lib/supabase/service";
 export async function AccountActions({
   profileId,
   role,
+  email,
   isActive,
   businessStatus,
   isVisible,
@@ -41,13 +44,15 @@ export async function AccountActions({
 }: {
   profileId: string;
   role: string;
+  /** L'adresse du compte : sans elle, aucun code ne peut etre envoye. */
+  email: string | null;
   isActive: boolean;
   businessStatus: string | null;
   isVisible: boolean | null;
   /** L'administrateur consulte sa propre fiche. */
   self: boolean;
 }) {
-  const i18n = await getAdminI18n();
+  const [i18n, superAdmin] = await Promise.all([getAdminI18n(), isSuperAdmin()]);
 
   const isPlayer = role === "player";
   const isProfessional = role === "professional";
@@ -150,6 +155,30 @@ export async function AccountActions({
           <Undo2Icon />
           {i18n.t("Reactiver")}</ActionButton>
       )}
+
+      {/* Reinitialisation du mot de passe — **super administrateur
+          uniquement**, et le bouton disparait pour les autres plutot que de
+          les envoyer sur un refus. Le geste n'existe que pour une adresse
+          connue : c'est elle qui recoit le code.
+
+          Il vaut aussi pour sa propre fiche : un administrateur qui veut
+          changer son mot de passe sans attendre d'etre enferme dehors a le
+          droit de se l'envoyer. */}
+      {superAdmin && email ? (
+        <ActionButton
+          action={sendPasswordReset.bind(null, profileId)}
+          size="sm"
+          confirm={{
+            title: i18n.t("Envoyer un code de reinitialisation"),
+            description: hasServiceRole()
+              ? i18n.t("Le compte recoit par email un code a six chiffres et choisit lui-meme son nouveau mot de passe : vous ne le connaitrez pas. Son mot de passe actuel reste valable tant qu'il n'en a pas choisi un autre, et ses sessions ouvertes ne sont pas fermees.")
+              : i18n.t("SUPABASE_SERVICE_ROLE_KEY n'est pas configuree : la protection anti-robot du projet refusera cet envoi. Renseignez la cle dans .env pour rendre ce geste possible."),
+            actionLabel: i18n.t("Envoyer le code"),
+          }}
+        >
+          <KeyRoundIcon />
+          {i18n.t("Reinitialiser le mot de passe")}</ActionButton>
+      ) : null}
 
       {/* Un administrateur ne peut pas supprimer son propre compte : il se
           couperait l'acces au back-office, sans personne pour le retablir. */}

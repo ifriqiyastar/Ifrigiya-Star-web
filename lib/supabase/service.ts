@@ -4,7 +4,7 @@ import { SUPABASE_URL } from "./config";
 
 /**
  * Client `service_role`, qui contourne le RLS **et les privileges de colonne**,
- * et donne acces a l'API Auth Admin. Trois usages, et trois seulement :
+ * et donne acces a l'API Auth Admin. Quatre usages, et quatre seulement :
  *
  * 1. **Suppression definitive d'un compte** (§12.1) : supprimer la ligne
  *    `auth.users`, ce que la cle publishable ne peut pas faire — et supprimer
@@ -17,6 +17,12 @@ import { SUPABASE_URL } from "./config";
  *    administrateur est refusee elle aussi : les deux migrations disent
  *    explicitement que le masquage passe par `service_role`.
  * 3. **Webhook de paiement**, qui n'a aucune session utilisateur.
+ * 4. **Envoi d'un code de reinitialisation de mot de passe** (§12.1, geste du
+ *    super administrateur) : la protection anti-robot du projet couvre
+ *    `/recover`, et un serveur n'a pas de defi a resoudre. GoTrue dispense du
+ *    defi les appels porteurs d'identifiants d'administration — c'est le seul
+ *    chemin par lequel le back-office peut declencher cet envoi. Voir
+ *    `sendPasswordReset()` dans `lib/actions/users.ts`.
  *
  * ⚠️ Ne **jamais** l'utiliser pour un geste que Postgres doit arbitrer sur
  * l'identite de l'appelant : `is_deleted`, la publication d'un Scout Day, la

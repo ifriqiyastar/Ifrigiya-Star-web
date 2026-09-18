@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowRightIcon,
@@ -21,6 +22,7 @@ import { createClient } from "@/lib/supabase/client";
 export type SignInLabels = {
   email: string;
   password: string;
+  forgot: string;
   submit: string;
   pending: string;
   invalid: string;
@@ -45,12 +47,15 @@ function isCaptchaFailure(message: string): boolean {
 export function SignInForm({
   initialError,
   adminHref,
+  forgotHref,
   language,
   labels,
 }: {
   initialError?: string;
   /** Destination apres connexion, deja prefixee de la langue. */
   adminHref: string;
+  /** L'ecran « mot de passe oublie », deja prefixe de la langue. */
+  forgotHref: string;
   /** Langue du widget anti-robot : celle du back-office, `fr` ou `en`. */
   language: string;
   labels: SignInLabels;
@@ -141,7 +146,18 @@ export function SignInForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="password">{labels.password}</Label>
+        {/* Le lien vit a cote de l'etiquette du champ, la ou l'on se rend
+            compte qu'on a oublie le mot de passe — et non sous le bouton,
+            apres l'echec. */}
+        <div className="flex items-baseline justify-between gap-3">
+          <Label htmlFor="password">{labels.password}</Label>
+          <Link
+            href={forgotHref}
+            className="text-xs text-white/60 underline-offset-4 transition-colors hover:text-brand hover:underline focus-visible:outline-2 focus-visible:outline-brand"
+          >
+            {labels.forgot}
+          </Link>
+        </div>
         <div className="relative">
           <LockKeyholeIcon className="pointer-events-none absolute start-4 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
           <Input
