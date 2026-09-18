@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { CheckIcon, ChevronDownIcon, GlobeIcon } from "lucide-react";
+import { CheckIcon, ChevronDownIcon, GlobeIcon, Loader2Icon } from "lucide-react";
 
 import {
   LOCALE_LABEL,
@@ -50,6 +50,10 @@ export function LanguageSwitcher({ className }: { className?: string }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  // Changer de langue rejoue la mise en page racine (`router.refresh()`) : le
+  // globe se change en sablier le temps que la page se rende dans l'autre
+  // langue, plutot que de laisser le menu se refermer sans rien dire.
+  const [pending, startTransition] = useTransition();
 
   // Fermeture au clic exterieur et a Echap. `pointerdown` plutot que `click` :
   // un clic sur un lien de l'entete doit fermer le menu avant que la
@@ -86,11 +90,13 @@ export function LanguageSwitcher({ className }: { className?: string }) {
   function choose(next: Locale) {
     setOpen(false);
     if (next === current) return;
-    writeLocaleCookie(next);
-    router.push(localePath(next, stripLocale(pathname)));
-    // La langue vit dans la mise en page racine : sans rafraichissement, le
-    // segment deja rendu resterait affiche dans l'ancienne langue.
-    router.refresh();
+    startTransition(() => {
+      writeLocaleCookie(next);
+      router.push(localePath(next, stripLocale(pathname)));
+      // La langue vit dans la mise en page racine : sans rafraichissement, le
+      // segment deja rendu resterait affiche dans l'ancienne langue.
+      router.refresh();
+    });
   }
 
   /** Deplacement au clavier dans le menu, comme un vrai menu ARIA. */
@@ -115,6 +121,7 @@ export function LanguageSwitcher({ className }: { className?: string }) {
       <button
         ref={triggerRef}
         type="button"
+        disabled={pending}
         onClick={() => setOpen((value) => !value)}
         aria-haspopup="menu"
         aria-expanded={open}
@@ -122,12 +129,17 @@ export function LanguageSwitcher({ className }: { className?: string }) {
         className={cn(
           "flex h-10 items-center gap-1.5 rounded-full border ps-3 pe-2.5 transition-colors",
           "text-[var(--site-muted)] hover:text-[var(--site-fg)]",
+          "disabled:pointer-events-none disabled:opacity-60",
           open
             ? "border-[var(--site-accent)] text-[var(--site-fg)]"
             : "border-[var(--site-line-strong)] hover:border-[var(--site-accent)]",
         )}
       >
-        <GlobeIcon className="size-4 shrink-0" aria-hidden />
+        {pending ? (
+          <Loader2Icon className="size-4 shrink-0 animate-spin" aria-hidden />
+        ) : (
+          <GlobeIcon className="size-4 shrink-0" aria-hidden />
+        )}
         <span className="text-xs font-semibold tracking-wide">{LOCALE_SHORT[current]}</span>
         <ChevronDownIcon
           className={cn("size-3 shrink-0 transition-transform", open && "rotate-180")}

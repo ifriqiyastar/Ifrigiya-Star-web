@@ -1,7 +1,8 @@
 "use client";
 
+import { useTransition } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { CheckIcon, ChevronDownIcon, GlobeIcon } from "lucide-react";
+import { CheckIcon, ChevronDownIcon, GlobeIcon, Loader2Icon } from "lucide-react";
 
 import {
   DropdownMenu,
@@ -54,30 +55,44 @@ export function LanguageMenu() {
   const { locale, dict } = useAdminI18n();
   const pathname = usePathname();
   const router = useRouter();
+  // Changer de langue rejoue toute la mise en page (`router.refresh()`), donc
+  // les donnees de la page courante sont relues avant que quoi que ce soit ne
+  // change a l'ecran — visible, pas instantane. `isPending` habille cette
+  // attente au lieu de laisser le menu simplement se refermer sur du vieux
+  // contenu.
+  const [pending, startTransition] = useTransition();
 
   function choose(next: AdminLocale) {
     if (next === locale) return;
-    writeLocaleCookie(next);
-    // Le cookie seul ne suffit pas : l'adresse porte la langue, et c'est elle
-    // qui gagne sur le cookie dans `proxy.ts` — sans quoi un lien partage
-    // s'ouvrirait dans la langue du destinataire.
-    router.push(localePath(next, stripLocale(pathname)));
-    // La langue vit dans la mise en page racine : sans rafraichissement, le
-    // segment deja rendu resterait affiche dans l'ancienne langue.
-    router.refresh();
+    startTransition(() => {
+      writeLocaleCookie(next);
+      // Le cookie seul ne suffit pas : l'adresse porte la langue, et c'est elle
+      // qui gagne sur le cookie dans `proxy.ts` — sans quoi un lien partage
+      // s'ouvrirait dans la langue du destinataire.
+      router.push(localePath(next, stripLocale(pathname)));
+      // La langue vit dans la mise en page racine : sans rafraichissement, le
+      // segment deja rendu resterait affiche dans l'ancienne langue.
+      router.refresh();
+    });
   }
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
+        disabled={pending}
         aria-label={`${dict.language.choose} — ${LOCALE_LABEL[locale]}`}
         className={cn(
           "flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-border bg-card px-2.5",
           "text-muted-foreground transition-colors hover:text-foreground",
           "hover:border-brand/50 aria-expanded:border-brand/50 aria-expanded:text-foreground",
+          "disabled:pointer-events-none disabled:opacity-60",
         )}
       >
-        <GlobeIcon className="size-3.5 shrink-0" aria-hidden />
+        {pending ? (
+          <Loader2Icon className="size-3.5 shrink-0 animate-spin" aria-hidden />
+        ) : (
+          <GlobeIcon className="size-3.5 shrink-0" aria-hidden />
+        )}
         <span className="text-[0.6875rem] font-semibold tracking-wide">
           {LOCALE_SHORT[locale]}
         </span>
