@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { LinkPendingIcon } from "@/components/admin/link-pending-icon";
 import { cn } from "@/lib/utils";
 
 export type Segment = {
@@ -78,6 +79,7 @@ export function SegmentedNav({
                 {segment.count}
               </span>
             ) : null}
+            <LinkPendingIcon />
           </Link>
         );
       })}
