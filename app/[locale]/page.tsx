@@ -438,7 +438,7 @@ function NotreVision({ dict }: { dict: Dictionary }) {
           >
             <Image
               src="/images/vision.jpg"
-              alt="Un entraineur encadre de jeunes joueurs lors d'un Scout Day"
+              alt={t.imageAlt}
               fill
               sizes="(min-width: 1024px) 50vw, 100vw"
               className="object-cover"
