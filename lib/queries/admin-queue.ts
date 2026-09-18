@@ -34,14 +34,6 @@ export type AdminTask = {
   count: number;
 };
 
-export type NextAdminEvent = {
-  id: string;
-  title: string;
-  event_date: string;
-  start_time: string | null;
-  location: string | null;
-};
-
 /**
  * Definition d'une file : son compte, sa destination, et le droit qui la
  * revele.
@@ -183,28 +175,4 @@ export async function fetchAdminQueue(
       scoutDays: counts.scoutDays,
     },
   };
-}
-
-/**
- * Prochain rendez-vous utile au rail. La lecture est evitee pour les roles qui
- * n'ont pas acces aux Scout Days : le raccourci ne doit jamais pointer vers un
- * ecran que l'administrateur ne peut pas ouvrir.
- */
-export async function fetchNextAdminEvent(
-  permissions: AdminPermission[],
-): Promise<NextAdminEvent | null> {
-  if (!permissions.includes("events.manage")) return null;
-
-  const supabase = await createClient();
-  const today = new Date().toISOString().slice(0, 10);
-  const { data } = await supabase
-    .from("scout_days")
-    .select("id, title, event_date, start_time, location")
-    .eq("status", "publie")
-    .gte("event_date", today)
-    .order("event_date", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-
-  return (data as NextAdminEvent | null) ?? null;
 }

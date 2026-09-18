@@ -6,10 +6,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { getAdminAccess, requireAdmin } from "@/lib/auth";
 import { AdminI18nProvider } from "@/lib/i18n/admin-client";
 import { getAdminDict, getAdminLocale } from "@/lib/i18n/admin";
-import {
-  fetchAdminQueue,
-  fetchNextAdminEvent,
-} from "@/lib/queries/admin-queue";
+import { fetchAdminQueue } from "@/lib/queries/admin-queue";
 import { fetchDiagnostics } from "@/lib/queries/diagnostics";
 
 /**
@@ -32,10 +29,9 @@ export default async function AdminLayout({
   // pastilles de la navigation et la cloche du bandeau, qui ne peuvent donc
   // plus annoncer deux chiffres differents. Elle est filtree par les
   // permissions de l'administrateur connecte.
-  const [{ tasks, badges }, diagnostics, nextEvent] = await Promise.all([
+  const [{ tasks, badges }, diagnostics] = await Promise.all([
     fetchAdminQueue(access.permissions, dict),
     fetchDiagnostics(access.permissions, dict),
-    fetchNextAdminEvent(access.permissions),
   ]);
 
   return (
@@ -62,7 +58,6 @@ export default async function AdminLayout({
             }}
             permissions={access.permissions}
             diagnostics={diagnostics}
-            nextEvent={nextEvent}
           />
           <SidebarInset>
             <SiteHeader

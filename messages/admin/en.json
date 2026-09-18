@@ -100,17 +100,6 @@
       "detail": "Permanently deleting an account requires a server key that is not configured. The action will fail at the moment it is applied."
     }
   },
-  "today": {
-    "title": "Today",
-    "pending": "{count} to handle",
-    "clear": "All clear",
-    "validations": "Validations",
-    "reports": "Reports",
-    "nextEvent": "Next Scout Day",
-    "noEvent": "No published event coming up.",
-    "seeTasks": "See the tasks",
-    "openDashboard": "Open the dashboard"
-  },
   "railDiagnostics": {
     "label": "Configuration status",
     "title": "To check"

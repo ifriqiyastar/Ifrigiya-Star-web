@@ -6,7 +6,6 @@ import * as React from "react"
 import { NAV_ITEMS, navLabel } from "@/components/admin/nav-items"
 import { useAdminQueue } from "@/components/admin/queue-live"
 import { RailDiagnostics } from "@/components/admin/rail-diagnostics"
-import { TodayCard } from "@/components/admin/today-card"
 import { NavMain } from "@/components/nav-main"
 import { NavUser } from "@/components/nav-user"
 import {
@@ -21,7 +20,6 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import type { AdminPermission } from "@/lib/auth"
-import type { NextAdminEvent } from "@/lib/queries/admin-queue"
 import type { Diagnostic } from "@/lib/queries/diagnostics"
 import { useAdminI18n } from "@/lib/i18n/admin-client"
 
@@ -29,18 +27,16 @@ export function AppSidebar({
   user,
   permissions,
   diagnostics = [],
-  nextEvent = null,
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
   user: { name: string; email: string; roleLabel?: string; avatar?: string }
   permissions: AdminPermission[]
   /** Defauts de configuration a signaler. Liste vide = rien ne s'affiche. */
   diagnostics?: Diagnostic[]
-  nextEvent?: NextAdminEvent | null
 }) {
   // Memes chiffres que la cloche, et vivants comme elle : les deux lisent le
   // meme instantane.
-  const { tasks, badges } = useAdminQueue()
+  const { badges } = useAdminQueue()
   const { dict } = useAdminI18n()
   const items = NAV_ITEMS.filter((item) => permissions.includes(item.permission)).map((item) => ({
     title: navLabel(dict, item.key),
@@ -94,8 +90,7 @@ export function AppSidebar({
             qui n'est nulle part ailleurs : les defauts d'installation, qui
             degradent l'application en silence. Rien a signaler = rien a
             afficher. */}
-        <div className="mt-auto space-y-3 pt-4 group-data-[collapsible=icon]:hidden">
-          <TodayCard tasks={tasks} nextEvent={nextEvent} />
+        <div className="mt-auto pt-4 group-data-[collapsible=icon]:hidden">
           <RailDiagnostics issues={diagnostics} />
         </div>
       </SidebarContent>

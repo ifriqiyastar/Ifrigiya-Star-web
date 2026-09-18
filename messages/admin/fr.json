@@ -100,17 +100,6 @@
       "detail": "Supprimer definitivement un compte demande une cle serveur qui n'est pas configuree. Le geste echouera au moment de l'appliquer."
     }
   },
-  "today": {
-    "title": "Aujourd’hui",
-    "pending": "{count} à traiter",
-    "clear": "À jour",
-    "validations": "Validations",
-    "reports": "Signalements",
-    "nextEvent": "Prochain Scout Day",
-    "noEvent": "Aucun événement publié à venir.",
-    "seeTasks": "Voir les tâches",
-    "openDashboard": "Ouvrir le tableau de bord"
-  },
   "railDiagnostics": {
     "label": "Etat de la configuration",
     "title": "A verifier"
