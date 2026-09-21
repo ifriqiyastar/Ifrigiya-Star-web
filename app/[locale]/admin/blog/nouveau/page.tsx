@@ -13,7 +13,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function NewBlogPostPage() {
   const i18n = await getAdminI18n();
-  const admin = await requirePermission("blog.manage");
+  await requirePermission("blog.manage");
 
   return (
     <>
@@ -25,7 +25,10 @@ export default async function NewBlogPostPage() {
         title={i18n.t("Nouvel article")}
         description={i18n.t("Redigez l'article, puis enregistrez-le en brouillon ou publiez-le directement.")}
       />
-      <PostEditor defaultAuthorName={admin.fullName ?? admin.email ?? DEFAULT_BLOG_AUTHOR_NAME} />
+      {/* Repli fixe, pas l'identite de l'administrateur connecte : le
+          client veut "Administrateur Ifriqiya Soccer Star" par defaut,
+          modifiable si un article doit vraiment porter un nom propre. */}
+      <PostEditor defaultAuthorName={DEFAULT_BLOG_AUTHOR_NAME} />
     </>
   );
 }

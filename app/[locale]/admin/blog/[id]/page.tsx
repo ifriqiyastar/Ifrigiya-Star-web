@@ -21,7 +21,7 @@ export default async function EditBlogPostPage({
   params,
 }: PageProps<"/[locale]/admin/blog/[id]">) {
   const i18n = await getAdminI18n();
-  const admin = await requirePermission("blog.manage");
+  await requirePermission("blog.manage");
   const { id } = await params;
 
   const post = await getBlogPostById(id);
@@ -54,10 +54,12 @@ export default async function EditBlogPostPage({
           author_name: post.author_name,
         }}
         // Repli pour les articles crees avant l'ajout de ce champ
-        // (`author_name` reste `null` en base pour eux) : sans lui, un
-        // article plus ancien rouvert pour modification affichait un champ
-        // Auteur vide plutot que de proposer l'administrateur qui le rouvre.
-        defaultAuthorName={admin.fullName ?? admin.email ?? DEFAULT_BLOG_AUTHOR_NAME}
+        // (`author_name` reste `null` ou vide en base pour eux) : sans lui,
+        // un article plus ancien rouvert pour modification affichait un
+        // champ Auteur vide. Fixe, pas l'identite de l'administrateur qui
+        // rouvre l'article — le client veut "Administrateur Ifriqiya Soccer
+        // Star" par defaut, modifiable au besoin.
+        defaultAuthorName={DEFAULT_BLOG_AUTHOR_NAME}
       />
     </>
   );

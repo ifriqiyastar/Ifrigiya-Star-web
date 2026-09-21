@@ -64,12 +64,11 @@ export async function saveBlogPost(formData: FormData): Promise<ActionResult> {
     slug,
     excerpt: text(formData, "excerpt"),
     cover_image_path: text(formData, "cover_image_path"),
-    // Pre-rempli avec l'administrateur connecte (`requireAdmin()`, deja lu,
-    // pas de requete de plus), mais reellement modifiable dans le
-    // formulaire : la personne qui saisit l'article n'est pas toujours celle
-    // a qui il doit etre attribue. `profiles.full_name` et meme l'e-mail
-    // peuvent manquer sur un compte promu en SQL, d'ou le repli final.
-    author_name: text(formData, "author_name") ?? admin.fullName ?? admin.email ?? DEFAULT_BLOG_AUTHOR_NAME,
+    // Repli fixe a la demande du client, pas l'identite de l'administrateur
+    // connecte (`profiles.full_name` et l'e-mail restent modifiables dans le
+    // champ pour qui veut vraiment signer sous son nom) : un champ laisse
+    // vide publie sous "Administrateur Ifriqiya Soccer Star".
+    author_name: text(formData, "author_name") || DEFAULT_BLOG_AUTHOR_NAME,
     content,
     status: intent,
     updated_at: new Date().toISOString(),

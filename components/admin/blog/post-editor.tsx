@@ -74,7 +74,10 @@ export function PostEditor({
   // champ se faisait effacer entre le rendu serveur (verifiable, la valeur
   // etait bien dans le HTML initial) et ce que l'administrateur voyait a
   // l'ecran une fois l'hydratation passee.
-  const [authorName, setAuthorName] = React.useState(post?.author_name ?? defaultAuthorName ?? "");
+  // `||`, pas `??` : un article enregistre avant le repli cote serveur peut
+  // avoir `author_name = ""` en base (chaine vide, pas `null`), auquel cas
+  // `??` ne serait jamais declenche et le champ resterait visible-vide.
+  const [authorName, setAuthorName] = React.useState(post?.author_name || defaultAuthorName || "");
   const [contentJson, setContentJson] = React.useState(() => JSON.stringify(post?.content ?? {}));
 
   const editor = useEditor({
