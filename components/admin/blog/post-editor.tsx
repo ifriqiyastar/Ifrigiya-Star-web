@@ -41,6 +41,7 @@ export type EditablePost = {
   cover_image_path: string | null;
   content: object;
   status: BlogPostStatus;
+  author_name: string | null;
 };
 
 /**
@@ -50,8 +51,19 @@ export type EditablePost = {
  * `name="intent"` et des valeurs differentes, lues par `saveBlogPost()`
  * cote serveur pour decider du statut ecrit, exactement comme
  * `saveScoutDay()` gere creation et modification via la presence de `id`.
+ *
+ * `defaultAuthorName` (creation uniquement) pre-remplit le champ Auteur avec
+ * le nom de l'administrateur connecte — un point de depart, pas une valeur
+ * figee : le champ reste modifiable, la personne qui redige n'est pas
+ * toujours celle a qui l'article doit etre attribue.
  */
-export function PostEditor({ post }: { post?: EditablePost }) {
+export function PostEditor({
+  post,
+  defaultAuthorName,
+}: {
+  post?: EditablePost;
+  defaultAuthorName?: string | null;
+}) {
   const i18n = useAdminTranslations();
   const router = useRouter();
 
@@ -158,6 +170,18 @@ export function PostEditor({ post }: { post?: EditablePost }) {
           <ImageUploadButton
             label={coverUrl ? i18n.t("Changer l'image") : i18n.t("Choisir une image")}
             onUploaded={(_url, path) => setCoverPath(path)}
+          />
+        </div>
+
+        <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
+          <label htmlFor="blog-author" className="mb-1.5 block text-xs font-medium text-muted-foreground">
+            {i18n.t("Auteur")}
+          </label>
+          <Input
+            id="blog-author"
+            name="author_name"
+            defaultValue={post?.author_name ?? defaultAuthorName ?? ""}
+            placeholder={i18n.t("Nom affiche sur l'article")}
           />
         </div>
 

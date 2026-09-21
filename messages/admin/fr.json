@@ -1620,7 +1620,8 @@
     "Supprimer cet article": "Supprimer cet article",
     "Titre de l'article": "Titre de l'article",
     "Titre de section": "Titre de section",
-    "Redige par {0}": "Redige par {0}"
+    "Redige par {0}": "Redige par {0}",
+    "Nom affiche sur l'article": "Nom affiche sur l'article"
   },
   "validations": {
     "metaTitle": "Validations",

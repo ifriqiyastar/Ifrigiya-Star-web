@@ -12,7 +12,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function NewBlogPostPage() {
   const i18n = await getAdminI18n();
-  await requirePermission("blog.manage");
+  const admin = await requirePermission("blog.manage");
 
   return (
     <>
@@ -24,7 +24,7 @@ export default async function NewBlogPostPage() {
         title={i18n.t("Nouvel article")}
         description={i18n.t("Redigez l'article, puis enregistrez-le en brouillon ou publiez-le directement.")}
       />
-      <PostEditor />
+      <PostEditor defaultAuthorName={admin.fullName} />
     </>
   );
 }

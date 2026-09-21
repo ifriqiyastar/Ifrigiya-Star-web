@@ -1620,7 +1620,8 @@
     "Supprimer cet article": "Delete this article",
     "Titre de l'article": "Article title",
     "Titre de section": "Section heading",
-    "Redige par {0}": "Written by {0}"
+    "Redige par {0}": "Written by {0}",
+    "Nom affiche sur l'article": "Name shown on the article"
   },
   "validations": {
     "metaTitle": "Validations",

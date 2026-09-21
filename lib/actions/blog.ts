@@ -63,6 +63,11 @@ export async function saveBlogPost(formData: FormData): Promise<ActionResult> {
     slug,
     excerpt: text(formData, "excerpt"),
     cover_image_path: text(formData, "cover_image_path"),
+    // Pre-rempli avec l'administrateur connecte (`requireAdmin()`, deja lu,
+    // pas de requete de plus), mais reellement modifiable dans le
+    // formulaire : la personne qui saisit l'article n'est pas toujours celle
+    // a qui il doit etre attribue.
+    author_name: text(formData, "author_name") ?? admin.fullName,
     content,
     status: intent,
     updated_at: new Date().toISOString(),
@@ -107,10 +112,6 @@ export async function saveBlogPost(formData: FormData): Promise<ActionResult> {
     .insert({
       ...payload,
       author_id: admin.userId,
-      // Copie figee au moment de la creation (migration 202609230001) :
-      // `requireAdmin()` l'a deja lu, pas besoin d'une requete de plus, et le
-      // site public peut l'afficher sans jamais avoir a lire `profiles`.
-      author_name: admin.fullName,
       published_at: intent === "publie" ? new Date().toISOString() : null,
     })
     .select("id")

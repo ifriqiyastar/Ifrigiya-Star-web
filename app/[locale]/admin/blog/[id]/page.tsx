@@ -51,6 +51,7 @@ export default async function EditBlogPostPage({
           cover_image_path: post.cover_image_path,
           content: post.content,
           status: post.status,
+          author_name: post.author_name,
         }}
       />
     </>
