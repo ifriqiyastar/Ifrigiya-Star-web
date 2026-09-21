@@ -24,7 +24,10 @@ export default async function NewBlogPostPage() {
         title={i18n.t("Nouvel article")}
         description={i18n.t("Redigez l'article, puis enregistrez-le en brouillon ou publiez-le directement.")}
       />
-      <PostEditor defaultAuthorName={admin.fullName} />
+      {/* `profiles.full_name` est souvent vide sur un compte admin promu en
+          SQL (cf. README) : sans repli, le champ Auteur se serait presente
+          vide, sans dire a qui l'article allait etre attribue. */}
+      <PostEditor defaultAuthorName={admin.fullName ?? admin.email} />
     </>
   );
 }

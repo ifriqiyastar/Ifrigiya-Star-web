@@ -66,8 +66,9 @@ export async function saveBlogPost(formData: FormData): Promise<ActionResult> {
     // Pre-rempli avec l'administrateur connecte (`requireAdmin()`, deja lu,
     // pas de requete de plus), mais reellement modifiable dans le
     // formulaire : la personne qui saisit l'article n'est pas toujours celle
-    // a qui il doit etre attribue.
-    author_name: text(formData, "author_name") ?? admin.fullName,
+    // a qui il doit etre attribue. `profiles.full_name` est souvent vide sur
+    // un compte promu en SQL, d'ou le second repli sur l'e-mail.
+    author_name: text(formData, "author_name") ?? admin.fullName ?? admin.email,
     content,
     status: intent,
     updated_at: new Date().toISOString(),
