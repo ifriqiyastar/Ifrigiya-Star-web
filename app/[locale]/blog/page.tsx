@@ -1,9 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { ArrowUpRightIcon, NewspaperIcon } from "lucide-react";
+import { NewspaperIcon } from "lucide-react";
 
-import { Pill, SectionHeading } from "@/components/site/pieces";
+import { SectionHeading } from "@/components/site/pieces";
 import { Reveal } from "@/components/site/reveal";
 import { SiteFooter } from "@/components/site/site-footer";
 import { SiteNav } from "@/components/site/site-nav";
@@ -62,22 +62,10 @@ export default async function BlogIndexPage() {
               Aucun article publie pour le moment.
             </p>
           ) : (
-            <div className="mt-14 space-y-10">
-              {/* L'article le plus recent en grand format : avec un seul
-                  article publie, une grille a trois colonnes le laissait
-                  seul dans un coin et la page paraissait a moitie vide. En
-                  vedette, ce meme article remplit intentionnellement la
-                  largeur, et l'effet tient tout autant une fois qu'il y en a
-                  plusieurs. */}
-              <FeaturedPost post={posts[0]} prefix={prefix} />
-
-              {posts.length > 1 ? (
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                  {posts.slice(1).map((post, index) => (
-                    <PostCard key={post.id} post={post} prefix={prefix} delay={Math.min(index, 5) * 80} />
-                  ))}
-                </div>
-              ) : null}
+            <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {posts.map((post, index) => (
+                <PostCard key={post.id} post={post} prefix={prefix} delay={Math.min(index, 5) * 80} />
+              ))}
             </div>
           )}
         </div>
@@ -87,57 +75,7 @@ export default async function BlogIndexPage() {
   );
 }
 
-/** Le dernier article publie, en grand format au-dessus de la grille. */
-function FeaturedPost({ post, prefix }: { post: PublicBlogPostSummary; prefix: string }) {
-  const cover = publicStorageUrl("blog-media", post.cover_image_path);
-
-  return (
-    <Reveal as="article">
-      <Link
-        href={`${prefix}/blog/${post.slug}`}
-        className="group block overflow-hidden rounded-3xl border border-(--site-line-strong) bg-(--site-card) transition-colors hover:border-(--site-accent)/50"
-      >
-        <div className="relative aspect-[16/9] overflow-hidden bg-black/40 sm:aspect-[21/9]">
-          {cover ? (
-            <Image
-              src={cover}
-              alt=""
-              fill
-              sizes="(min-width: 1024px) 1152px, 100vw"
-              priority
-              className="object-cover transition-transform duration-500 group-hover:scale-[1.02]"
-            />
-          ) : null}
-          <div aria-hidden className="absolute inset-0 bg-linear-to-t from-black/80 via-black/10 to-transparent" />
-        </div>
-        <div className="flex flex-col gap-3 p-6 sm:p-10">
-          <div className="flex flex-wrap items-center gap-3">
-            <Pill>A la une</Pill>
-            <span className="text-xs font-medium tracking-wide text-(--site-muted) uppercase">
-              {[post.author_name, post.published_at ? formatPostDate(post.published_at) : null]
-                .filter(Boolean)
-                .join(" · ")}
-            </span>
-          </div>
-          <h2 className="font-heading max-w-3xl text-2xl leading-[1.1] font-extrabold text-balance group-hover:text-(--site-accent) sm:text-3xl lg:text-4xl">
-            {post.title}
-          </h2>
-          {post.excerpt ? (
-            <p className="line-clamp-2 max-w-2xl text-sm leading-relaxed text-(--site-muted) sm:text-base">
-              {post.excerpt}
-            </p>
-          ) : null}
-          <span className="mt-2 inline-flex w-fit items-center gap-2 text-sm font-semibold text-(--site-accent)">
-            Lire l&apos;article
-            <ArrowUpRightIcon className="size-4 rtl:-scale-x-100" aria-hidden />
-          </span>
-        </div>
-      </Link>
-    </Reveal>
-  );
-}
-
-/** Une vignette d'article, dans la grille sous l'article vedette. */
+/** Une vignette d'article, dans la grille. */
 function PostCard({
   post,
   prefix,
@@ -162,6 +100,7 @@ function PostCard({
               alt=""
               fill
               sizes="(min-width: 1024px) 380px, (min-width: 640px) 45vw, 100vw"
+              priority={delay === 0}
               className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
             />
           ) : null}
