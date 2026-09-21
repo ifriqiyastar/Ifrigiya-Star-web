@@ -1,6 +1,41 @@
 import type { NextConfig } from "next";
 
+// Hote du projet Supabase, pour les images publiques du blog
+// (`publicStorageUrl()`, bucket `blog-media`) passees a `next/image`. Deduit
+// de la variable d'environnement plutot qu'ecrit en dur : chaque
+// environnement (local, preview, production) peut pointer sur un projet
+// Supabase different.
+//
+// ⚠️ Partout ailleurs dans ce depot, une image Supabase passe par un `<img>`
+// natif plutot que par `next/image` (`components/admin/blog/post-editor.tsx`
+// pour l'apercu de couverture, `utilisateurs/[id]/page.tsx`,
+// `moderation/page.tsx`) : c'etait jusqu'ici la seule facon d'afficher une
+// URL Supabase sans configurer cette liste. Les deux pages publiques du blog
+// (`app/[locale]/blog/`) en ont besoin pour de vrai — optimisation d'image et
+// mise en page reelle sur une page marketing — d'ou cette entree.
+const supabaseHostname = (() => {
+  try {
+    return new URL(
+      process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.EXPO_PUBLIC_SUPABASE_URL ?? "",
+    ).hostname;
+  } catch {
+    return undefined;
+  }
+})();
+
 const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: supabaseHostname
+      ? [
+          {
+            protocol: "https",
+            hostname: supabaseHostname,
+            pathname: "/storage/v1/object/public/**",
+          },
+        ]
+      : [],
+  },
+
   // Sans cette ligne, Turbopack remonte jusqu'a ~/package-lock.json (hors du
   // depot git) pour deviner la racine du projet et emet un avertissement a
   // chaque build.
