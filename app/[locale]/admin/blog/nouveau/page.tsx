@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { PageHeader } from "@/components/admin/page-header";
 import { PostEditor } from "@/components/admin/blog/post-editor";
 import { requirePermission } from "@/lib/auth";
+import { DEFAULT_BLOG_AUTHOR_NAME } from "@/lib/queries/blog";
 
 export async function generateMetadata(): Promise<Metadata> {
   const i18n = await getAdminI18n();
@@ -24,10 +25,7 @@ export default async function NewBlogPostPage() {
         title={i18n.t("Nouvel article")}
         description={i18n.t("Redigez l'article, puis enregistrez-le en brouillon ou publiez-le directement.")}
       />
-      {/* `profiles.full_name` est souvent vide sur un compte admin promu en
-          SQL (cf. README) : sans repli, le champ Auteur se serait presente
-          vide, sans dire a qui l'article allait etre attribue. */}
-      <PostEditor defaultAuthorName={admin.fullName ?? admin.email} />
+      <PostEditor defaultAuthorName={admin.fullName ?? admin.email ?? DEFAULT_BLOG_AUTHOR_NAME} />
     </>
   );
 }

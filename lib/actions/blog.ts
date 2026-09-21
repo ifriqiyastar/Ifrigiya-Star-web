@@ -6,6 +6,7 @@ import { logAdminAction, requirePermission } from "@/lib/auth";
 import { getRequestAdminI18n } from "@/lib/i18n/admin";
 import { createClient } from "@/lib/supabase/server";
 import { makeErrors, fail, ok, type ActionResult } from "@/lib/actions/result";
+import { DEFAULT_BLOG_AUTHOR_NAME } from "@/lib/queries/blog";
 import { slugify } from "@/lib/slugify";
 
 const REFRESH = () => {
@@ -66,9 +67,9 @@ export async function saveBlogPost(formData: FormData): Promise<ActionResult> {
     // Pre-rempli avec l'administrateur connecte (`requireAdmin()`, deja lu,
     // pas de requete de plus), mais reellement modifiable dans le
     // formulaire : la personne qui saisit l'article n'est pas toujours celle
-    // a qui il doit etre attribue. `profiles.full_name` est souvent vide sur
-    // un compte promu en SQL, d'ou le second repli sur l'e-mail.
-    author_name: text(formData, "author_name") ?? admin.fullName ?? admin.email,
+    // a qui il doit etre attribue. `profiles.full_name` et meme l'e-mail
+    // peuvent manquer sur un compte promu en SQL, d'ou le repli final.
+    author_name: text(formData, "author_name") ?? admin.fullName ?? admin.email ?? DEFAULT_BLOG_AUTHOR_NAME,
     content,
     status: intent,
     updated_at: new Date().toISOString(),

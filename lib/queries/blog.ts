@@ -3,6 +3,15 @@ import type { BlogPostStatus } from "@/lib/labels";
 
 export const BLOG_PAGE_SIZE = 20;
 
+/**
+ * Repli final du champ Auteur. `requireAdmin()` renvoie normalement un nom
+ * ou, a defaut, un e-mail — mais certains comptes admin (promus a la main en
+ * SQL, cf. README) n'ont ni l'un ni l'autre de renseigne de facon lisible.
+ * Plutot que de laisser le champ vide sans explication, on propose ce nom
+ * generique : l'administrateur reste libre de le remplacer par le sien.
+ */
+export const DEFAULT_BLOG_AUTHOR_NAME = "Administrateur Ifriqiya Soccer Star";
+
 export type BlogPostListRow = {
   id: string;
   title: string;

@@ -7,7 +7,7 @@ import { PostEditor } from "@/components/admin/blog/post-editor";
 import { StatusPill } from "@/components/admin/status-pill";
 import { requirePermission } from "@/lib/auth";
 import { BLOG_STATUS } from "@/lib/labels";
-import { getBlogPostById } from "@/lib/queries/blog";
+import { DEFAULT_BLOG_AUTHOR_NAME, getBlogPostById } from "@/lib/queries/blog";
 
 export async function generateMetadata({
   params,
@@ -57,7 +57,7 @@ export default async function EditBlogPostPage({
         // (`author_name` reste `null` en base pour eux) : sans lui, un
         // article plus ancien rouvert pour modification affichait un champ
         // Auteur vide plutot que de proposer l'administrateur qui le rouvre.
-        defaultAuthorName={admin.fullName ?? admin.email}
+        defaultAuthorName={admin.fullName ?? admin.email ?? DEFAULT_BLOG_AUTHOR_NAME}
       />
     </>
   );
