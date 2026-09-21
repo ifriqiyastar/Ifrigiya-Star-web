@@ -120,16 +120,8 @@
     "lead": "We dream of a continent where football is a powerful lever for social mobility, education and international standing. Ifriqiya Soccer Star is not only an academy: it is an incubator of talent.",
     "signature": "“Because no African talent should remain invisible.”",
     "signatureLabel": "Our signature",
-    "imageAlt": "A coach guiding young players during a Scout Day",
+    "imageAlt": "A scout watches a youth match, tablet in hand, during a Scout Day",
     "hud": {
-      "trackingLabel": "Tracking",
-      "trackingValue": "Detection",
-      "dataLabel": "Data analysis",
-      "dataValue": "Concept — coming soon",
-      "goalLabel": "Goal",
-      "goalValue": "Ascension",
-      "standardLabel": "Standard",
-      "standardValue": "Excellence",
       "caption": "Scout Day — under observation"
     },
     "items": [
@@ -294,7 +286,6 @@
   },
   "testimonials": {
     "pill": "Testimonials",
-    "disclaimer": "Illustrative portraits and testimonials, created to present the site.",
     "items": [
       {
         "name": "Yassine",
