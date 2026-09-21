@@ -79,11 +79,6 @@ export async function TestimonialsSection() {
             </Reveal>
           ))}
         </div>
-
-        {/* Seule mention restante que ces portraits et recits sont illustratifs
-            (generes pour la presentation), depuis que le badge du pill ne le
-            dit plus explicitement — voir le commentaire en tete de fichier. */}
-        <p className="mt-6 text-xs text-(--site-muted)">{t.disclaimer}</p>
       </div>
     </section>
   );
