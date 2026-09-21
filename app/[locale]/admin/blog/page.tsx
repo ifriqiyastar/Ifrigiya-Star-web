@@ -89,6 +89,7 @@ export default async function BlogPage({ searchParams }: PageProps<"/[locale]/ad
               <TableRow>
                 <TableHead>{i18n.t("Article")}</TableHead>
                 <TableHead>{i18n.t("Statut")}</TableHead>
+                <TableHead>{i18n.t("Auteur")}</TableHead>
                 <TableHead>{i18n.t("Derniere modification")}</TableHead>
                 <TableHead className="text-right">{i18n.t("Actions")}</TableHead>
               </TableRow>
@@ -118,6 +119,9 @@ export default async function BlogPage({ searchParams }: PageProps<"/[locale]/ad
                       <StatusPill tone={i18n.labels.entry(BLOG_STATUS, row.status).tone}>
                         {i18n.labels.label(BLOG_STATUS, row.status)}
                       </StatusPill>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {row.author_name ?? "—"}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
                       {i18n.format.formatDateTime(row.updated_at)}

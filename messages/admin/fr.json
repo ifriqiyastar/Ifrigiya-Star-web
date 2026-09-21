@@ -1619,7 +1619,8 @@
     "Retablir": "Retablir",
     "Supprimer cet article": "Supprimer cet article",
     "Titre de l'article": "Titre de l'article",
-    "Titre de section": "Titre de section"
+    "Titre de section": "Titre de section",
+    "Redige par {0}": "Redige par {0}"
   },
   "validations": {
     "metaTitle": "Validations",

@@ -54,9 +54,16 @@ export default async function BlogPostPage({ params }: PageProps<"/[locale]/blog
             Retour au blog
           </Link>
 
-          {post.published_at ? (
+          {post.author_name || post.published_at ? (
             <p className="mt-8 text-xs font-medium tracking-wide text-(--site-muted) uppercase">
-              {new Intl.DateTimeFormat("fr-FR", { dateStyle: "long" }).format(new Date(post.published_at))}
+              {[
+                post.author_name ? `Par ${post.author_name}` : null,
+                post.published_at
+                  ? new Intl.DateTimeFormat("fr-FR", { dateStyle: "long" }).format(new Date(post.published_at))
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
             </p>
           ) : null}
           <h1 className="font-heading mt-3 text-3xl leading-[1.1] font-extrabold text-balance sm:text-4xl lg:text-5xl">

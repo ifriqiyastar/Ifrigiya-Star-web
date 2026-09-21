@@ -40,6 +40,7 @@ export default async function EditBlogPostPage({
             {i18n.labels.label(BLOG_STATUS, post.status)}
           </StatusPill>
         }
+        description={post.author_name ? i18n.t("Redige par {0}", { "0": post.author_name }) : undefined}
       />
       <PostEditor
         post={{

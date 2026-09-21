@@ -11,6 +11,7 @@ export type BlogPostListRow = {
   cover_image_path: string | null;
   published_at: string | null;
   updated_at: string;
+  author_name: string | null;
 };
 
 /** Liste des articles pour l'ecran d'administration, avec recherche, filtre de statut et pagination. */
@@ -20,7 +21,7 @@ export async function listBlogPosts(params: { q?: string; statut?: string; page?
 
   let query = supabase
     .from("blog_posts")
-    .select("id, title, slug, status, cover_image_path, published_at, updated_at", {
+    .select("id, title, slug, status, cover_image_path, published_at, updated_at, author_name", {
       count: "exact",
     })
     .order("updated_at", { ascending: false });
@@ -46,6 +47,7 @@ export type BlogPostRecord = {
   content: object;
   status: BlogPostStatus;
   author_id: string | null;
+  author_name: string | null;
   published_at: string | null;
   created_at: string;
   updated_at: string;

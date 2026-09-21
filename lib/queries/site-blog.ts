@@ -17,13 +17,15 @@ export type PublicBlogPostSummary = {
   excerpt: string | null;
   cover_image_path: string | null;
   published_at: string | null;
+  /** Copie figee au moment de la creation (migration 202609230001) — jamais lue depuis `profiles`, inaccessible a une session anonyme. */
+  author_name: string | null;
 };
 
 export async function listPublishedBlogPosts(): Promise<PublicBlogPostSummary[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("blog_posts")
-    .select("id, title, slug, excerpt, cover_image_path, published_at")
+    .select("id, title, slug, excerpt, cover_image_path, published_at, author_name")
     .eq("status", "publie")
     .order("published_at", { ascending: false })
     .limit(60);
@@ -36,7 +38,7 @@ export async function getPublishedBlogPostBySlug(slug: string): Promise<PublicBl
   const supabase = await createClient();
   const { data } = await supabase
     .from("blog_posts")
-    .select("id, title, slug, excerpt, cover_image_path, published_at, content")
+    .select("id, title, slug, excerpt, cover_image_path, published_at, author_name, content")
     .eq("slug", slug)
     .eq("status", "publie")
     .maybeSingle();

@@ -107,6 +107,10 @@ export async function saveBlogPost(formData: FormData): Promise<ActionResult> {
     .insert({
       ...payload,
       author_id: admin.userId,
+      // Copie figee au moment de la creation (migration 202609230001) :
+      // `requireAdmin()` l'a deja lu, pas besoin d'une requete de plus, et le
+      // site public peut l'afficher sans jamais avoir a lire `profiles`.
+      author_name: admin.fullName,
       published_at: intent === "publie" ? new Date().toISOString() : null,
     })
     .select("id")

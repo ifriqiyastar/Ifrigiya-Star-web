@@ -113,11 +113,11 @@ function FeaturedPost({ post, prefix }: { post: PublicBlogPostSummary; prefix: s
         <div className="flex flex-col gap-3 p-6 sm:p-10">
           <div className="flex flex-wrap items-center gap-3">
             <Pill>A la une</Pill>
-            {post.published_at ? (
-              <span className="text-xs font-medium tracking-wide text-(--site-muted) uppercase">
-                {formatPostDate(post.published_at)}
-              </span>
-            ) : null}
+            <span className="text-xs font-medium tracking-wide text-(--site-muted) uppercase">
+              {[post.author_name, post.published_at ? formatPostDate(post.published_at) : null]
+                .filter(Boolean)
+                .join(" · ")}
+            </span>
           </div>
           <h2 className="font-heading max-w-3xl text-2xl leading-[1.1] font-extrabold text-balance group-hover:text-(--site-accent) sm:text-3xl lg:text-4xl">
             {post.title}
@@ -167,9 +167,11 @@ function PostCard({
           ) : null}
         </div>
         <div className="flex flex-1 flex-col gap-2 p-6">
-          {post.published_at ? (
+          {post.author_name || post.published_at ? (
             <span className="text-xs font-medium tracking-wide text-(--site-muted) uppercase">
-              {formatPostDate(post.published_at)}
+              {[post.author_name, post.published_at ? formatPostDate(post.published_at) : null]
+                .filter(Boolean)
+                .join(" · ")}
             </span>
           ) : null}
           <h2 className="font-heading text-lg leading-snug font-extrabold text-balance group-hover:text-(--site-accent)">
