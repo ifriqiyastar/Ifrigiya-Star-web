@@ -70,6 +70,11 @@ export function PostEditor({
   const [slug, setSlug] = React.useState(post?.slug ?? "");
   const [slugTouched, setSlugTouched] = React.useState(Boolean(post));
   const [coverPath, setCoverPath] = React.useState<string | null>(post?.cover_image_path ?? null);
+  // Controle (comme `slug`), pas `defaultValue` : un `defaultValue` sur ce
+  // champ se faisait effacer entre le rendu serveur (verifiable, la valeur
+  // etait bien dans le HTML initial) et ce que l'administrateur voyait a
+  // l'ecran une fois l'hydratation passee.
+  const [authorName, setAuthorName] = React.useState(post?.author_name ?? defaultAuthorName ?? "");
   const [contentJson, setContentJson] = React.useState(() => JSON.stringify(post?.content ?? {}));
 
   const editor = useEditor({
@@ -180,7 +185,8 @@ export function PostEditor({
           <Input
             id="blog-author"
             name="author_name"
-            defaultValue={post?.author_name ?? defaultAuthorName ?? ""}
+            value={authorName}
+            onChange={(event) => setAuthorName(event.target.value)}
             placeholder={i18n.t("Nom affiche sur l'article")}
           />
         </div>
