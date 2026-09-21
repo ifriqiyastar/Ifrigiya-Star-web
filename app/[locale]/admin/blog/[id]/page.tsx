@@ -21,7 +21,7 @@ export default async function EditBlogPostPage({
   params,
 }: PageProps<"/[locale]/admin/blog/[id]">) {
   const i18n = await getAdminI18n();
-  await requirePermission("blog.manage");
+  const admin = await requirePermission("blog.manage");
   const { id } = await params;
 
   const post = await getBlogPostById(id);
@@ -53,6 +53,11 @@ export default async function EditBlogPostPage({
           status: post.status,
           author_name: post.author_name,
         }}
+        // Repli pour les articles crees avant l'ajout de ce champ
+        // (`author_name` reste `null` en base pour eux) : sans lui, un
+        // article plus ancien rouvert pour modification affichait un champ
+        // Auteur vide plutot que de proposer l'administrateur qui le rouvre.
+        defaultAuthorName={admin.fullName ?? admin.email}
       />
     </>
   );
