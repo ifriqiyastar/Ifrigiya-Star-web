@@ -13,14 +13,12 @@ import { HighlightsCarousel } from "@/components/site/highlights-carousel";
 import { StoreButtons } from "@/components/site/store-buttons";
 import { QrStoreRedirect } from "@/components/site/qr-store-redirect";
 import { PLACEHOLDER_PARTNER_LOGOS } from "@/components/site/partner-logos";
-import { IconDetection, IconProgression, IconExcellence } from "@/components/site/pillar-icons";
 import { IconFeed, IconCalendar, IconMessage } from "@/components/site/feature-icons";
 import { Reveal } from "@/components/site/reveal";
 import { APP_SCREENS } from "@/lib/app-screens";
 import { getDictionary, getLocale } from "@/lib/i18n/dictionaries";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import { LOCALES, localePath } from "@/lib/i18n/config";
-import { cn } from "@/lib/utils";
 
 /**
  * Page publique d'Ifriqiya Soccer Star.
@@ -131,12 +129,12 @@ function Hero({ dict }: { dict: Dictionary }) {
 
               Une fois le retour a la ligne autorise, la taille ne sert plus a
               faire tenir le texte : elle sert a lui donner sa presence. Le
-              `clamp` monte donc a 36-48 px — quatre lignes sur un telephone,
+              `clamp` monte donc a 28-36 px — quatre lignes sur un telephone,
               et les deux appels a l'action toujours visibles sans defiler. Sa
-              borne haute (3 rem) rejoint exactement le `sm:text-5xl` qui prend
-              le relais a 640 px, pour qu'aucune marche ne se voie au passage
-              du palier. */}
-          <Reveal as="h1" delay={80} className="font-heading text-[clamp(2.25rem,11.5vw,3rem)] leading-[1.04] font-extrabold drop-shadow-sm sm:text-5xl sm:leading-[1.08] lg:text-7xl">
+              borne haute (2.25 rem) rejoint exactement le `sm:text-4xl` qui
+              prend le relais a 640 px, pour qu'aucune marche ne se voie au
+              passage du palier. */}
+          <Reveal as="h1" delay={80} className="font-heading text-[clamp(1.75rem,8.75vw,2.25rem)] leading-[1.04] font-extrabold drop-shadow-sm sm:text-4xl sm:leading-[1.08] lg:text-6xl">
             <span className="block sm:whitespace-nowrap">{t.titleLine1}</span>
             <span className="block sm:whitespace-nowrap">
               {t.titleLine2}{" "}
@@ -173,33 +171,17 @@ function Hero({ dict }: { dict: Dictionary }) {
               fondamentaux nommes par la charte, et ils sont verifiables. Mise
               en avant comme des statistiques (grand libelle colore, legende
               en dessous) sans en inventer la donnee. */}
-          {/* Trois colonnes de 100 px sur un ecran de 360 px coupaient les
-              libelles en trois lignes : sur telephone, chaque pilier devient
-              une carte avec son pictogramme plutot qu'une liste nue empilee ;
-              a partir de `sm` on retrouve la rangee d'origine, sans carte ni
-              icone. */}
-          <Reveal as="dl" delay={320} className="mt-4 grid w-full max-w-xl gap-3 sm:gap-0 sm:grid-cols-3 sm:divide-x sm:divide-(--site-line) sm:border-t sm:border-(--site-line) sm:pt-6">
-            {[
-              { ...t.pillars.detection, Icon: IconDetection },
-              { ...t.pillars.progression, Icon: IconProgression },
-              { ...t.pillars.excellence, Icon: IconExcellence },
-            ].map(({ title: titre, text: texte, Icon }) => (
-              <div
-                key={titre}
-                className="flex items-start gap-4 rounded-2xl border border-(--site-line) bg-white/[0.03] p-4 sm:block sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0 sm:px-5 sm:first:ps-0 sm:last:pe-0"
-              >
-                <span
-                  aria-hidden
-                  className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-(--site-accent)/30 bg-(--site-accent)/10 text-(--site-accent) sm:hidden"
-                >
-                  <Icon className="size-5" />
-                </span>
-                <div>
-                  <dt className="font-heading text-xl leading-tight font-extrabold text-(--site-accent) sm:text-2xl">
-                    {titre}
-                  </dt>
-                  <dd className="mt-1 text-xs leading-snug text-(--site-fg)/80">{texte}</dd>
-                </div>
+          {/* Absents sur telephone, a la demande du client : le bloc y
+              rivalisait avec le titre et les boutons de store pour la place
+              au-dessus de la ligne de flottaison. Ils reapparaissent a partir
+              de `sm`, ou l'ecran a la place pour la rangee complete. */}
+          <Reveal as="dl" delay={320} className="mt-4 hidden w-full max-w-xl gap-0 divide-x divide-(--site-line) border-t border-(--site-line) pt-6 sm:grid sm:grid-cols-3">
+            {[t.pillars.detection, t.pillars.progression, t.pillars.excellence].map(({ title: titre, text: texte }) => (
+              <div key={titre} className="px-5 first:ps-0 last:pe-0">
+                <dt className="font-heading text-2xl leading-tight font-extrabold text-(--site-accent)">
+                  {titre}
+                </dt>
+                <dd className="mt-1 text-xs leading-snug text-(--site-fg)/80">{texte}</dd>
               </div>
             ))}
           </Reveal>
@@ -361,39 +343,6 @@ function Fonctionnalites({ dict }: { dict: Dictionary }) {
 
 /* ---------------------------------------------------------------- valeurs */
 
-/**
- * Etiquette flottante du collage "vision par ordinateur" de la section
- * Valeurs. `value` reprend toujours un mot deja affiche ailleurs sur la page
- * (les trois piliers du heros, une des cinq valeurs) — jamais une mesure.
- *
- * `concept` marque au contraire une piste future, pas encore construite : le
- * pointille et le mot "Concept" disent explicitement que rien derriere n'est
- * mesure aujourd'hui, contrairement a un vrai pourcentage affiche comme un
- * fait. C'est ce qui remplace une fausse statistique quand on veut montrer
- * une ambition plutot qu'une donnee.
- */
-function HudTag({
-  label, value, className, concept = false,
-}: { label: string; value: string; className?: string; concept?: boolean }) {
-  return (
-    <div
-      aria-hidden
-      className={cn(
-        "absolute flex-col items-start gap-0.5 rounded-lg border bg-black/50 px-3 py-2 backdrop-blur-sm",
-        concept ? "border-dashed border-white/35" : "border-(--site-accent)/40",
-        className,
-      )}
-    >
-      <span className={cn("font-mono text-[9px] tracking-[0.16em] uppercase", concept ? "text-white/50" : "text-(--site-accent)/80")}>
-        {label}
-      </span>
-      <span className={cn("font-heading text-xs font-extrabold uppercase", concept ? "text-white/70" : "text-white")}>
-        {value}
-      </span>
-    </div>
-  );
-}
-
 function NotreVision({ dict }: { dict: Dictionary }) {
   const t = dict.values;
   return (
@@ -437,22 +386,13 @@ function NotreVision({ dict }: { dict: Dictionary }) {
             className="relative min-h-[20rem] overflow-hidden rounded-3xl border border-(--site-line) bg-(--site-card) sm:min-h-[24rem]"
           >
             <Image
-              src="/images/vision.jpg"
+              src="/images/Noble_Scouting_70_.webp"
               alt={t.imageAlt}
               fill
               sizes="(min-width: 1024px) 50vw, 100vw"
               className="object-cover"
             />
             <div aria-hidden className="absolute inset-0 bg-linear-to-t from-black/70 via-black/5 to-transparent" />
-
-            {/* Habillage "vision par ordinateur" : chaque etiquette reprend
-                un mot deja reel sur cette page (les trois piliers du heros)
-                ou dit explicitement qu'il s'agit d'une piste future — jamais
-                une mesure inventee. */}
-            <HudTag className="hidden sm:flex sm:top-[42%] sm:start-[28%]" label={t.hud.trackingLabel} value={t.hud.trackingValue} />
-            <HudTag className="hidden w-fit sm:top-[9%] sm:inset-x-0 sm:mx-auto sm:flex" label={t.hud.dataLabel} value={t.hud.dataValue} concept />
-            <HudTag className="hidden sm:flex sm:top-[44%] sm:end-[4%]" label={t.hud.goalLabel} value={t.hud.goalValue} />
-            <HudTag className="hidden sm:flex sm:bottom-[27%] sm:start-[5%]" label={t.hud.standardLabel} value={t.hud.standardValue} />
 
             <div className="absolute inset-x-5 bottom-5 flex items-center gap-2">
               <span aria-hidden className="size-2 shrink-0 animate-pulse rounded-full bg-(--site-accent)" />
@@ -567,7 +507,12 @@ function AppelFinal({ dict }: { dict: Dictionary }) {
 
               Chaque maquette porte son intitule : cet ecran-la est
               volontairement sobre — un titre, deux champs, un bouton — et sans
-              legende, une vignette sombre ne dit pas ce qu'elle montre. */}
+              legende, une vignette sombre ne dit pas ce qu'elle montre. La
+              legende reste du texte plat (pas de fond, pas de coins
+              arrondis) : en pastille pleine elle se lisait comme un vrai
+              bouton — juste au-dessus du bouton « Se connecter » reellement
+              cliquable dans l'ecran de connexion — et rien ici n'est
+              cliquable, la carte entiere ne menant qu'au telechargement. */}
           <Reveal
             variant="right"
             delay={120}
@@ -580,7 +525,7 @@ function AppelFinal({ dict }: { dict: Dictionary }) {
                 width={230}
                 className="-rotate-2"
               />
-              <figcaption className="rounded-full bg-(--site-ink) px-3.5 py-1.5 text-[0.6875rem] font-semibold text-(--site-accent)">
+              <figcaption className="text-xs font-bold tracking-wide text-(--site-ink) uppercase">
                 {t.signInCaption}
               </figcaption>
             </figure>
@@ -592,7 +537,7 @@ function AppelFinal({ dict }: { dict: Dictionary }) {
                 width={252}
                 className="rotate-2"
               />
-              <figcaption className="rounded-full bg-(--site-ink) px-3.5 py-1.5 text-[0.6875rem] font-semibold text-(--site-accent)">
+              <figcaption className="text-xs font-bold tracking-wide text-(--site-ink) uppercase">
                 {t.signUpCaption}
               </figcaption>
             </figure>
