@@ -11,7 +11,6 @@ import {
   ClockIcon,
   DownloadIcon,
   CreditCardIcon,
-  EyeIcon,
   FilterIcon,
   FlagIcon,
   ShieldCheckIcon,
@@ -67,8 +66,6 @@ export default async function DashboardPage({ searchParams }: PageProps<"/[local
 
   const users = payload?.users ?? [];
   const totalUsers = users.reduce((acc, row) => acc + Number(row.total), 0);
-  const activeUsers = users.reduce((acc, row) => acc + Number(row.actifs), 0);
-  const newUsers30d = users.reduce((acc, row) => acc + Number(row.nouveaux_30j), 0);
 
   const players = payload?.players ?? [];
   const validatedPlayers = Number(
@@ -201,23 +198,8 @@ export default async function DashboardPage({ searchParams }: PageProps<"/[local
         </p>
       ) : null}
 
-      {/* Huit indicateurs, dans l'ordre de la maquette. */}
+      {/* Six indicateurs, dans l'ordre de la maquette. */}
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          label={d.totalAccounts}
-          value={formatNumber(totalUsers)}
-          icon={UsersIcon}
-          delta={
-            newUsers30d ? fill(d.newThisMonth, { count: formatNumber(newUsers30d) }) : undefined
-          }
-          hint={fill(d.activeProfiles, { count: formatNumber(activeUsers) })}
-          footNote={
-            totalUsers
-              ? fill(d.activeShare, { percent: Math.round((activeUsers / totalUsers) * 100) })
-              : undefined
-          }
-          href={href("/admin/utilisateurs")}
-        />
         <StatCard
           label={d.validatedPlayers}
           value={formatNumber(validatedPlayers)}
@@ -251,17 +233,6 @@ export default async function DashboardPage({ searchParams }: PageProps<"/[local
           href={href("/admin/finances")}
         />
 
-        <StatCard
-          label={fill(d.logins, { days: period })}
-          value={formatNumber(data.activePeriod)}
-          icon={EyeIcon}
-          accent="neutral"
-          hint={fill(d.loginsHint, {
-            week: formatNumber(data.active7d),
-            month: formatNumber(data.active30d),
-          })}
-          footNote={d.loginsFoot}
-        />
         <StatCard
           label={d.scoutDays}
           value={formatNumber(scoutDays?.total_evenements ?? 0)}
