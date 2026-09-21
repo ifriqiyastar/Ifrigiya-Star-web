@@ -49,8 +49,13 @@ export function ImageUploadButton({
 
       const url = publicStorageUrl("blog-media", path);
       if (url) onUploaded(url, path);
-    } catch {
-      toast.error(i18n.t("Le depot de l'image a echoue."));
+    } catch (error) {
+      // Le detail brut est garde, meme sans traduction : c'est lui qui nomme
+      // la vraie cause (bucket absent, RLS de stockage, reseau…), et un
+      // message generique aurait fallu revenir ici pour comprendre pourquoi —
+      // meme logique que `describeError()` pour les Server Actions.
+      const detail = error instanceof Error ? error.message : String(error);
+      toast.error(`${i18n.t("Le depot de l'image a echoue.")} ${detail}`);
     } finally {
       setPending(false);
     }
