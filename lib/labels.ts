@@ -83,6 +83,7 @@ export type SubscriptionPlanCode =
   | "pro_gratuit"
   | "pro_premium_mensuel"
   | "pro_premium_annuel";
+export type BlogPostStatus = "brouillon" | "publie";
 
 export type Entry = { label: string; tone: Tone };
 type SpecEntry = { fr: string; en: string; tone: Tone };
@@ -136,6 +137,11 @@ export const FOOT_PREFERENCE: Spec<FootPreference> = {
   gauche: { fr: "Gauche", en: "Left", tone: "neutral" },
   droit: { fr: "Droit", en: "Right", tone: "neutral" },
   ambidextre: { fr: "Ambidextre", en: "Both feet", tone: "neutral" },
+};
+
+export const BLOG_STATUS: Spec<BlogPostStatus> = {
+  brouillon: { fr: "Brouillon", en: "Draft", tone: "neutral" },
+  publie: { fr: "Publie", en: "Published", tone: "success" },
 };
 
 export const SCOUT_DAY_STATUS: Spec<ScoutDayStatus> = {

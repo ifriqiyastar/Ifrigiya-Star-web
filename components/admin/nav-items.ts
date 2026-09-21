@@ -4,6 +4,7 @@ import {
   ClipboardCheckIcon,
   FlagIcon,
   LayoutDashboardIcon,
+  NewspaperIcon,
   ShieldCheckIcon,
   UsersIcon,
   WalletIcon,
@@ -78,6 +79,14 @@ export const NAV_ITEMS = [
     icon: BellIcon,
     badge: null,
     permission: "notifications.manage" as AdminPermission,
+    section: "communication",
+  },
+  {
+    href: "/admin/blog",
+    key: "blog",
+    icon: NewspaperIcon,
+    badge: null,
+    permission: "blog.manage" as AdminPermission,
     section: "communication",
   },
   {

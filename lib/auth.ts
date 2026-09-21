@@ -23,13 +23,14 @@ export type AdminPermission =
   | "evaluations.manage"
   | "finance.manage"
   | "notifications.manage"
-  | "audit.read";
+  | "audit.read"
+  | "blog.manage";
 
 export const ALL_ADMIN_PERMISSIONS: AdminPermission[] = [
   "dashboard.read", "users.read", "users.write", "verifications.review",
   "moderation.manage", "moderation.validate", "events.manage", "events.validate",
   "evaluations.manage", "finance.manage",
-  "notifications.manage", "audit.read",
+  "notifications.manage", "audit.read", "blog.manage",
 ];
 
 /**
