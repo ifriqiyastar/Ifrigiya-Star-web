@@ -86,7 +86,10 @@ export function ActionButton({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={pending}>{dict.common.cancel}</AlertDialogCancel>
-            <AlertDialogAction variant="destructive" disabled={pending} onClick={run}>
+            {/* Vert/lime de la marque plutot que rouge : choix explicite du
+                client — le rouge classique d'alerte pour une action
+                irreversible n'est pas garde ici. */}
+            <AlertDialogAction disabled={pending} onClick={run}>
               {pending ? <Loader2Icon className="animate-spin" /> : null}
               {confirm.actionLabel ?? dict.common.confirm}
             </AlertDialogAction>
