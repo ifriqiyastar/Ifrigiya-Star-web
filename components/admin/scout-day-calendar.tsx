@@ -280,9 +280,10 @@ export async function ScoutDayCalendar({
           })}
         </div>
 
-        {/* Agenda : seul affichage sous `sm`, et complement lisible du mois
-            au-dela — il montre les evenements que la grille tronque. */}
-        <div className="sm:mt-5">
+        {/* Agenda : seul affichage sous `sm`, relais de la grille masquee a
+            cette largeur (cf. commentaire au-dessus). Retire des `sm:` pour
+            ne pas repeter en liste ce que la grille montre deja. */}
+        <div className="sm:hidden">
           <p className="mb-2 text-xs font-medium text-muted-foreground">
             {i18n.t("Agenda du mois")}</p>
           {!sorted.length ? (
