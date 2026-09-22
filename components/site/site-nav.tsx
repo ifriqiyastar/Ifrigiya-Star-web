@@ -4,7 +4,18 @@ import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import QRCode from "react-qr-code";
-import { ArrowUpRightIcon, MenuIcon, XIcon } from "lucide-react";
+import {
+  ArrowRightIcon,
+  ArrowUpRightIcon,
+  CircleHelpIcon,
+  CompassIcon,
+  MenuIcon,
+  NewspaperIcon,
+  QuoteIcon,
+  RouteIcon,
+  SmartphoneIcon,
+  XIcon,
+} from "lucide-react";
 
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { useI18n } from "@/lib/i18n/client";
@@ -52,10 +63,27 @@ import { QR_REDIRECT_PARAM } from "@/lib/store-urls";
 export function SiteNav() {
   const { dict, locale } = useI18n();
   const nav = dict.nav;
+  const foot = dict.footer;
   // Le prefixe de langue : `/` en francais, `/en` et `/ar` sinon. Les liens
   // internes de l'entete doivent le porter, sinon un clic depuis `/ar`
   // renverrait le visiteur en francais.
   const prefix = locale === "fr" ? "" : `/${locale}`;
+
+  // Les memes liens que le pied de page (`site-footer.tsx`), pour que le
+  // tiroir mobile serve aussi de menu de navigation — jusqu'ici il ne
+  // proposait que le telechargement et le contact, aucune section de la
+  // page. `contact` et `download` restent hors de cette liste : ils ont deja
+  // leur propre bloc, en bas du tiroir. Une seule liste plate, pas les deux
+  // colonnes du pied de page : la maquette demandee par le client est une
+  // pile de cartes, sans titres de groupe.
+  const drawerLinks = [
+    { href: `${prefix}/#comment`, label: foot.how, Icon: RouteIcon },
+    { href: `${prefix}/#fonctionnalites`, label: foot.app, Icon: SmartphoneIcon },
+    { href: `${prefix}/#vision`, label: foot.values, Icon: CompassIcon },
+    { href: `${prefix}/#faq`, label: foot.faq, Icon: CircleHelpIcon },
+    { href: `${prefix}/#temoignages`, label: foot.testimonials, Icon: QuoteIcon },
+    { href: `${prefix}/blog`, label: foot.blog, Icon: NewspaperIcon },
+  ];
 
   const [open, setOpen] = React.useState(false);
   const closeRef = React.useRef<HTMLButtonElement>(null);
@@ -134,24 +162,34 @@ export function SiteNav() {
   return (
     <>
       <header className="sticky top-0 z-50 border-b border-[var(--site-line)] bg-black/80 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-5 sm:px-8">
-          <Link href="/" className="flex shrink-0 items-center gap-2.5" onClick={close}>
+        <div className="mx-auto flex h-16 max-w-7xl items-center gap-2 px-4 sm:gap-4 sm:px-8">
+          <Link href="/" className="flex shrink-0 items-center gap-2 sm:gap-2.5" onClick={close}>
             <Image src="/brand/ifriqiya-star.svg" alt="Ifriqiya Soccer Star" width={34} height={34} priority />
-            <span className="font-heading text-[0.9375rem] font-extrabold tracking-tight sm:text-base">
-              Ifriqiya Soccer Star
+            {/* "Star" sur sa propre ligne en dessous de "Ifriqiya Soccer" sur
+                telephone : le nom complet ne tenait plus sur une ligne une
+                fois le bouton de telechargement revenu dans l'entete. A
+                partir de `sm`, la place suffit et le nom reste sur une seule
+                ligne comme avant. */}
+            <span className="font-heading text-[0.9375rem] leading-tight font-extrabold tracking-tight sm:text-base sm:leading-normal">
+              <span className="block sm:hidden">
+                Ifriqiya Soccer
+                <br />
+                Star
+              </span>
+              <span className="hidden sm:inline">Ifriqiya Soccer Star</span>
             </span>
           </Link>
 
-          <div className="ms-auto flex items-center gap-4">
-            {/* Le selecteur de langue, en haut de page comme demande. Il est
-                visible des le mobile — c'est le premier reglage qu'un
-                visiteur arabophone cherche, et l'enfouir dans le tiroir le
-                rendrait introuvable. */}
-            <LanguageSwitcher />
+          <div className="ms-auto flex items-center gap-2 sm:gap-4">
+            {/* Le selecteur de langue passe dans le tiroir sur telephone, a la
+                demande du client : c'est le bouton de telechargement qui
+                prend sa place dans l'entete la ou la place manque. Il reste
+                visible directement des `sm`, comme avant. */}
+            <LanguageSwitcher className="hidden sm:block" />
             {os === "ios" || os === "android" ? (
               <Link
                 href={`${prefix}/#telecharger`}
-                className="hidden rounded-full border border-[var(--site-accent)] bg-[var(--site-accent)] px-5 py-2 text-sm font-semibold whitespace-nowrap text-[var(--site-ink)] transition-colors hover:bg-transparent hover:text-[var(--site-accent)] sm:inline-flex"
+                className="inline-flex items-center rounded-full border border-[var(--site-accent)] bg-[var(--site-accent)] px-2 py-2 text-xs font-semibold whitespace-nowrap text-[var(--site-ink)] transition-colors hover:bg-transparent hover:text-[var(--site-accent)] sm:px-5 sm:text-sm"
               >
                 {nav.download}
               </Link>
@@ -160,7 +198,7 @@ export function SiteNav() {
                 ref={qrTriggerRef}
                 type="button"
                 onClick={openQr}
-                className="hidden rounded-full border border-[var(--site-accent)] bg-[var(--site-accent)] px-5 py-2 text-sm font-semibold whitespace-nowrap text-[var(--site-ink)] transition-colors hover:bg-transparent hover:text-[var(--site-accent)] sm:inline-flex"
+                className="inline-flex items-center rounded-full border border-[var(--site-accent)] bg-[var(--site-accent)] px-2 py-2 text-xs font-semibold whitespace-nowrap text-[var(--site-ink)] transition-colors hover:bg-transparent hover:text-[var(--site-accent)] sm:px-5 sm:text-sm"
               >
                 {nav.download}
               </button>
@@ -179,7 +217,7 @@ export function SiteNav() {
               aria-expanded={open}
               aria-controls="tiroir-navigation"
               aria-label={nav.openMenu}
-              className="flex size-10 items-center justify-center rounded-full border border-[var(--site-line-strong)] text-[var(--site-fg)] transition-colors hover:border-[var(--site-accent)] hover:text-[var(--site-accent)] lg:hidden"
+              className="flex size-9 shrink-0 items-center justify-center rounded-full border border-[var(--site-line-strong)] text-[var(--site-fg)] transition-colors hover:border-[var(--site-accent)] hover:text-[var(--site-accent)] sm:size-10 lg:hidden"
             >
               <MenuIcon className="size-5" />
             </button>
@@ -224,7 +262,35 @@ export function SiteNav() {
           </button>
         </div>
 
-        <div className="flex-1" />
+        <div className="shrink-0 border-b border-[var(--site-line)] px-5 py-4">
+          <LanguageSwitcher />
+        </div>
+
+        {/* Les sections de la page, reprises du pied de page : jusqu'ici le
+            tiroir n'offrait que le telechargement et le contact, rien pour
+            atteindre le reste de la page depuis le menu. Une carte par lien
+            (pictogramme, intitule, fleche), sur le modele fourni par le
+            client. `overflow-y-auto` au cas ou une langue plus verbeuse
+            (l'arabe, notamment) ferait depasser la liste de la hauteur
+            disponible sur un petit ecran. */}
+        <nav className="flex-1 space-y-2.5 overflow-y-auto px-4 py-5">
+          {drawerLinks.map(({ href, label, Icon }) => (
+            <Link
+              key={href}
+              href={href}
+              onClick={close}
+              className="group/link flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-2.5 transition-colors hover:border-[var(--site-accent)]/40 hover:bg-white/[0.06]"
+            >
+              <span className="flex size-11 shrink-0 items-center justify-center rounded-full border border-white/10 bg-[var(--site-bg)] text-[var(--site-accent)]">
+                <Icon className="size-5" aria-hidden />
+              </span>
+              <span className="font-heading flex-1 text-sm font-extrabold tracking-wide text-[var(--site-fg)] uppercase">
+                {label}
+              </span>
+              <ArrowRightIcon className="size-4 shrink-0 text-[var(--site-muted)] transition-transform group-hover/link:translate-x-0.5 rtl:-scale-x-100" aria-hidden />
+            </Link>
+          ))}
+        </nav>
 
         <div className="shrink-0 space-y-3 border-t border-[var(--site-line)] px-4 py-5">
           <Link
@@ -242,7 +308,6 @@ export function SiteNav() {
             {nav.contact}
             <ArrowUpRightIcon className="size-4 text-[var(--site-muted)] rtl:-scale-x-100" />
           </Link>
-          <p className="pt-1 text-center text-xs text-[var(--site-muted)]">{nav.slogan}</p>
         </div>
       </aside>
 
