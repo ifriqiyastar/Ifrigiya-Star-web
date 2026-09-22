@@ -145,7 +145,7 @@ export function StepsTimeMachine() {
             200 px contre 616 px pour la pile, et centre, il flottait. Aligne,
             son sommet et celui de la carte de devant tracent la meme ligne —
             d'ou le `pt` identique de part et d'autre. */}
-        <div className="mt-12 flex flex-col items-center gap-8 lg:mx-auto lg:mt-20 lg:grid lg:max-w-6xl lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start lg:gap-14">
+        <div className="mt-16 flex flex-col items-center gap-8 lg:mx-auto lg:mt-20 lg:grid lg:max-w-6xl lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start lg:gap-14">
           {/* Le `pt` reserve la hauteur des tranches qui depassent au-dessus
               de la carte de devant. Elles sont dessinees *hors* du cadre qui
               donne sa hauteur a la pile, donc la mise en page ne les compte
@@ -216,7 +216,7 @@ export function StepsTimeMachine() {
             {/* Le compteur « 01 / 04 » a saute : entre la pastille verte qui
                 porte deja le numero et la reglette qui montre la position,
                 c'etait le troisieme reperage pour une seule information. */}
-            <div className="mt-8 flex items-center gap-3">
+            <div className="mt-3 flex items-center justify-end gap-3">
               <Arrow label={t.prev} onClick={() => goTo(active - 1)}>
                 <ChevronLeftIcon className="size-4 rtl:-scale-x-100" aria-hidden />
               </Arrow>
