@@ -117,7 +117,7 @@ function Hero({ dict }: { dict: Dictionary }) {
       <HeroVideo />
 
       <div className="relative z-10 mx-auto flex min-h-[calc(100svh-4rem)] max-w-7xl items-center px-5 pt-10 pb-16 sm:px-8 sm:pt-20 sm:pb-28 lg:min-h-[max(720px,calc(100svh-4rem))] lg:pt-24 lg:pb-32">
-        <div className="flex w-full max-w-4xl flex-col items-start gap-5 sm:gap-6">
+        <div className="flex w-full max-w-4xl flex-col items-start gap-7 sm:gap-6">
           {/* Le titre tenait sur deux lignes insecables a toutes les tailles,
               et c'est ce qui le cassait sur telephone : pour que « ne doit
               rester (invisible) » tienne sur 360 px sans se couper, la borne
@@ -292,7 +292,7 @@ function Fonctionnalites({ dict }: { dict: Dictionary }) {
             legerement inclines, superposes), applique ici a trois captures
             au lieu de deux. Le halo derriere reprend celui des autres
             sections, pour que la grappe ne flotte pas sur un noir uni. */}
-        <Reveal className="relative mx-auto flex h-[26rem] max-w-3xl items-center justify-center sm:h-[31rem]">
+        <Reveal className="relative mx-auto mt-10 flex h-[26rem] max-w-3xl items-center justify-center sm:mt-0 sm:h-[31rem]">
           <div aria-hidden className="site-glow-center absolute inset-0 opacity-70" />
           <Phone
             screen={FEATURE_SCREENS[0]}
