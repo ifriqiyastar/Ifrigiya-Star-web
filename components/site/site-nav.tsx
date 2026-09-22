@@ -151,7 +151,7 @@ export function SiteNav() {
             {os === "ios" || os === "android" ? (
               <Link
                 href={`${prefix}/#telecharger`}
-                className="hidden rounded-full border border-[var(--site-accent)] px-5 py-2 text-sm font-semibold whitespace-nowrap text-[var(--site-accent)] transition-colors hover:bg-[var(--site-accent)] hover:text-[var(--site-ink)] sm:inline-flex"
+                className="hidden rounded-full border border-[var(--site-accent)] bg-[var(--site-accent)] px-5 py-2 text-sm font-semibold whitespace-nowrap text-[var(--site-ink)] transition-colors hover:bg-transparent hover:text-[var(--site-accent)] sm:inline-flex"
               >
                 {nav.download}
               </Link>
@@ -160,7 +160,7 @@ export function SiteNav() {
                 ref={qrTriggerRef}
                 type="button"
                 onClick={openQr}
-                className="hidden rounded-full border border-[var(--site-accent)] px-5 py-2 text-sm font-semibold whitespace-nowrap text-[var(--site-accent)] transition-colors hover:bg-[var(--site-accent)] hover:text-[var(--site-ink)] sm:inline-flex"
+                className="hidden rounded-full border border-[var(--site-accent)] bg-[var(--site-accent)] px-5 py-2 text-sm font-semibold whitespace-nowrap text-[var(--site-ink)] transition-colors hover:bg-transparent hover:text-[var(--site-accent)] sm:inline-flex"
               >
                 {nav.download}
               </button>
