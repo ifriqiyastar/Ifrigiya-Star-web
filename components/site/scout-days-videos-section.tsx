@@ -1,7 +1,7 @@
 "use client";
 
 import { useI18n } from "@/lib/i18n/client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 
 import { ScoutDaysVideoPlayer } from "@/components/site/scout-days-video-player";
@@ -33,8 +33,15 @@ export function ScoutDaysVideosSection() {
     setAnnouncement(
       t.announce.replace("{id}", VIDEOS[nextIndex].id).replace("{total}", String(VIDEOS.length)),
     );
-    railRef.current?.scrollTo({ left: 0, behavior: "instant" });
   }
+
+  // Le rail doit revenir a gauche une fois les cartes reordonnees, pas avant :
+  // appeler `scrollTo` depuis `rotate()` agissait encore sur l'ancien ordre
+  // (React n'avait pas encore reordonne le DOM), et l'ancrage de defilement du
+  // navigateur deplacait alors le rail n'importe ou pendant le reordonnancement.
+  useEffect(() => {
+    railRef.current?.scrollTo({ left: 0, behavior: "instant" });
+  }, [firstIndex]);
 
   return (
     <section id="scout-days-videos" aria-labelledby="scout-days-videos-heading" className="scroll-mt-20 border-y border-(--site-line) bg-black py-14 sm:py-16 lg:py-20">
