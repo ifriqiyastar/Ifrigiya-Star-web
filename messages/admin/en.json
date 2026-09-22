@@ -1621,7 +1621,18 @@
     "Titre de l'article": "Article title",
     "Titre de section": "Section heading",
     "Redige par {0}": "Written by {0}",
-    "Nom affiche sur l'article": "Name shown on the article"
+    "Nom affiche sur l'article": "Name shown on the article",
+    "Article programme.": "Article scheduled.",
+    "Le {0}": "On {0}",
+    "Referencement (SEO)": "SEO",
+    "Titre meta": "Meta title",
+    "Repli : le titre de l'article": "Falls back to the article title",
+    "Description meta": "Meta description",
+    "Repli : le resume ci-dessus": "Falls back to the summary above",
+    "Utilises par les moteurs de recherche et les apercus partages. Laisses vides, le titre et le resume de l'article ci-dessus s'appliquent.": "Used by search engines and shared link previews. Left empty, the article's title and summary above apply instead.",
+    "Publication programmee": "Scheduled publication",
+    "Laissez vide pour publier immediatement. Une date future rend l'article visible sur le site tout seul a l'heure choisie — inutile de revenir cliquer Publier ce jour-la.": "Leave empty to publish immediately. A future date makes the article go live on its own at the chosen time — no need to come back and click Publish that day.",
+    "Programmer la publication": "Schedule publication"
   },
   "validations": {
     "metaTitle": "Validations",

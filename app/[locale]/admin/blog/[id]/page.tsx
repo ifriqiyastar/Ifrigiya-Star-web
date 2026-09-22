@@ -7,7 +7,7 @@ import { PostEditor } from "@/components/admin/blog/post-editor";
 import { StatusPill } from "@/components/admin/status-pill";
 import { requirePermission } from "@/lib/auth";
 import { BLOG_STATUS } from "@/lib/labels";
-import { DEFAULT_BLOG_AUTHOR_NAME, getBlogPostById } from "@/lib/queries/blog";
+import { DEFAULT_BLOG_AUTHOR_NAME, effectiveBlogStatus, getBlogPostById } from "@/lib/queries/blog";
 
 export async function generateMetadata({
   params,
@@ -36,8 +36,8 @@ export default async function EditBlogPostPage({
         ]}
         title={post.title}
         meta={
-          <StatusPill tone={i18n.labels.entry(BLOG_STATUS, post.status).tone}>
-            {i18n.labels.label(BLOG_STATUS, post.status)}
+          <StatusPill tone={i18n.labels.entry(BLOG_STATUS, effectiveBlogStatus(post)).tone}>
+            {i18n.labels.label(BLOG_STATUS, effectiveBlogStatus(post))}
           </StatusPill>
         }
         description={post.author_name ? i18n.t("Redige par {0}", { "0": post.author_name }) : undefined}
@@ -48,10 +48,13 @@ export default async function EditBlogPostPage({
           title: post.title,
           slug: post.slug,
           excerpt: post.excerpt,
+          meta_title: post.meta_title,
+          meta_description: post.meta_description,
           cover_image_path: post.cover_image_path,
           content: post.content,
           status: post.status,
           author_name: post.author_name,
+          scheduled_at: post.scheduled_at,
         }}
         // Repli pour les articles crees avant l'ajout de ce champ
         // (`author_name` reste `null` ou vide en base pour eux) : sans lui,

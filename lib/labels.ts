@@ -83,7 +83,7 @@ export type SubscriptionPlanCode =
   | "pro_gratuit"
   | "pro_premium_mensuel"
   | "pro_premium_annuel";
-export type BlogPostStatus = "brouillon" | "publie";
+export type BlogPostStatus = "brouillon" | "publie" | "programme";
 
 export type Entry = { label: string; tone: Tone };
 type SpecEntry = { fr: string; en: string; tone: Tone };
@@ -141,6 +141,7 @@ export const FOOT_PREFERENCE: Spec<FootPreference> = {
 
 export const BLOG_STATUS: Spec<BlogPostStatus> = {
   brouillon: { fr: "Brouillon", en: "Draft", tone: "neutral" },
+  programme: { fr: "Programme", en: "Scheduled", tone: "info" },
   publie: { fr: "Publie", en: "Published", tone: "success" },
 };
 

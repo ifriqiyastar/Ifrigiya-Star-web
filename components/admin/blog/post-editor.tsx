@@ -33,15 +33,32 @@ const EXTENSIONS = [
 ];
 const INITIAL: ActionResult = { ok: true, message: "" };
 
+/**
+ * ISO 8601 -> valeur d'un `<input type="datetime-local">` ("AAAA-MM-JJTHH:mm"),
+ * dans le fuseau du navigateur. L'aller-retour se fait entierement cote
+ * client (voir `scheduledAtIso` plus bas) : le serveur ne connait jamais que
+ * le fuseau de l'administrateur qui l'a saisi, jamais le sien.
+ */
+function toDatetimeLocalValue(iso: string | null): string {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 export type EditablePost = {
   id: string;
   title: string;
   slug: string;
   excerpt: string | null;
+  meta_title: string | null;
+  meta_description: string | null;
   cover_image_path: string | null;
   content: object;
   status: BlogPostStatus;
   author_name: string | null;
+  scheduled_at: string | null;
 };
 
 /**
@@ -79,6 +96,8 @@ export function PostEditor({
   // `??` ne serait jamais declenche et le champ resterait visible-vide.
   const [authorName, setAuthorName] = React.useState(post?.author_name || defaultAuthorName || "");
   const [contentJson, setContentJson] = React.useState(() => JSON.stringify(post?.content ?? {}));
+  const [scheduledAtLocal, setScheduledAtLocal] = React.useState(() => toDatetimeLocalValue(post?.scheduled_at ?? null));
+  const nowLocal = React.useMemo(() => toDatetimeLocalValue(new Date().toISOString()), []);
 
   const editor = useEditor({
     extensions: EXTENSIONS,
@@ -124,6 +143,12 @@ export function PostEditor({
       <input type="hidden" name="content" value={contentJson} />
       <input type="hidden" name="cover_image_path" value={coverPath ?? ""} />
       <input type="hidden" name="slug" value={slug} />
+      {/* Converti en ISO ici, cote navigateur : voir `toDatetimeLocalValue()`. */}
+      <input
+        type="hidden"
+        name="scheduled_at"
+        value={scheduledAtLocal && !Number.isNaN(new Date(scheduledAtLocal).getTime()) ? new Date(scheduledAtLocal).toISOString() : ""}
+      />
 
       <div className="min-w-0 space-y-5">
         <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
@@ -208,10 +233,54 @@ export function PostEditor({
           />
         </div>
 
+        <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
+          <p className="mb-3 text-xs font-medium text-muted-foreground">{i18n.t("Referencement (SEO)")}</p>
+
+          <label htmlFor="blog-meta-title" className="mb-1.5 block text-xs font-medium text-muted-foreground">
+            {i18n.t("Titre meta")}
+          </label>
+          <Input
+            id="blog-meta-title"
+            name="meta_title"
+            defaultValue={post?.meta_title ?? ""}
+            placeholder={i18n.t("Repli : le titre de l'article")}
+          />
+
+          <label htmlFor="blog-meta-description" className="mt-4 mb-1.5 block text-xs font-medium text-muted-foreground">
+            {i18n.t("Description meta")}
+          </label>
+          <textarea
+            id="blog-meta-description"
+            name="meta_description"
+            defaultValue={post?.meta_description ?? ""}
+            rows={3}
+            placeholder={i18n.t("Repli : le resume ci-dessus")}
+            className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm outline-none focus:border-brand"
+          />
+          <p className="mt-2 text-xs text-muted-foreground">
+            {i18n.t("Utilises par les moteurs de recherche et les apercus partages. Laisses vides, le titre et le resume de l'article ci-dessus s'appliquent.")}
+          </p>
+        </div>
+
         <div className="flex flex-col gap-2 rounded-xl border border-border bg-card p-4 sm:p-5">
+          <label htmlFor="blog-scheduled-at" className="mb-1.5 block text-xs font-medium text-muted-foreground">
+            {i18n.t("Publication programmee")}
+          </label>
+          <Input
+            id="blog-scheduled-at"
+            type="datetime-local"
+            min={nowLocal}
+            value={scheduledAtLocal}
+            onChange={(event) => setScheduledAtLocal(event.target.value)}
+            className="mb-1"
+          />
+          <p className="mb-3 text-xs text-muted-foreground">
+            {i18n.t("Laissez vide pour publier immediatement. Une date future rend l'article visible sur le site tout seul a l'heure choisie — inutile de revenir cliquer Publier ce jour-la.")}
+          </p>
+
           <Button type="submit" name="intent" value="publie" disabled={pending}>
             {pending ? <Loader2Icon className="animate-spin" /> : null}
-            {i18n.t("Publier")}
+            {scheduledAtLocal && scheduledAtLocal > nowLocal ? i18n.t("Programmer la publication") : i18n.t("Publier")}
           </Button>
           <Button type="submit" name="intent" value="brouillon" variant="outline" disabled={pending}>
             {pending ? <Loader2Icon className="animate-spin" /> : null}

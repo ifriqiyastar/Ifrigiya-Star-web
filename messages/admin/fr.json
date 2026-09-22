@@ -1621,7 +1621,18 @@
     "Titre de l'article": "Titre de l'article",
     "Titre de section": "Titre de section",
     "Redige par {0}": "Redige par {0}",
-    "Nom affiche sur l'article": "Nom affiche sur l'article"
+    "Nom affiche sur l'article": "Nom affiche sur l'article",
+    "Article programme.": "Article programme.",
+    "Le {0}": "Le {0}",
+    "Referencement (SEO)": "Referencement (SEO)",
+    "Titre meta": "Titre meta",
+    "Repli : le titre de l'article": "Repli : le titre de l'article",
+    "Description meta": "Description meta",
+    "Repli : le resume ci-dessus": "Repli : le resume ci-dessus",
+    "Utilises par les moteurs de recherche et les apercus partages. Laisses vides, le titre et le resume de l'article ci-dessus s'appliquent.": "Utilises par les moteurs de recherche et les apercus partages. Laisses vides, le titre et le resume de l'article ci-dessus s'appliquent.",
+    "Publication programmee": "Publication programmee",
+    "Laissez vide pour publier immediatement. Une date future rend l'article visible sur le site tout seul a l'heure choisie — inutile de revenir cliquer Publier ce jour-la.": "Laissez vide pour publier immediatement. Une date future rend l'article visible sur le site tout seul a l'heure choisie — inutile de revenir cliquer Publier ce jour-la.",
+    "Programmer la publication": "Programmer la publication"
   },
   "validations": {
     "metaTitle": "Validations",

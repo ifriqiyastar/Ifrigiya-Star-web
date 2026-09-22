@@ -59,10 +59,21 @@ export async function saveBlogPost(formData: FormData): Promise<ActionResult> {
   slug = slugify(slug);
   if (!slug) return fail(i18n.t("Impossible de generer une adresse pour ce titre."));
 
+  // Convertie cote client (voir `PostEditor`) : le `<input type="datetime-local">`
+  // n'a pas de fuseau, et le resoudre ici prendrait le fuseau du serveur
+  // (UTC sur Vercel) plutot que celui de l'administrateur. Le champ soumis
+  // est donc deja un ISO 8601 complet, ou vide.
+  const scheduledAtRaw = text(formData, "scheduled_at");
+  const scheduledAt = scheduledAtRaw && !Number.isNaN(Date.parse(scheduledAtRaw)) ? scheduledAtRaw : null;
+  const now = new Date();
+  const isFutureSchedule = intent === "publie" && scheduledAt !== null && new Date(scheduledAt) > now;
+
   const payload = {
     title,
     slug,
     excerpt: text(formData, "excerpt"),
+    meta_title: text(formData, "meta_title"),
+    meta_description: text(formData, "meta_description"),
     cover_image_path: text(formData, "cover_image_path"),
     // Repli fixe a la demande du client, pas l'identite de l'administrateur
     // connecte (`profiles.full_name` et l'e-mail restent modifiables dans le
@@ -70,30 +81,40 @@ export async function saveBlogPost(formData: FormData): Promise<ActionResult> {
     // vide publie sous "Administrateur Ifriqiya Soccer Star".
     author_name: text(formData, "author_name") || DEFAULT_BLOG_AUTHOR_NAME,
     content,
-    status: intent,
-    updated_at: new Date().toISOString(),
+    // La date programmee est conservee meme en brouillon, pour ne pas faire
+    // perdre le choix d'une date pas encore confirmee par un "Publier".
+    scheduled_at: scheduledAt,
+    updated_at: now.toISOString(),
   };
 
   if (id) {
     const { data: previous } = await supabase
       .from("blog_posts")
-      .select("title, status, published_at")
+      .select("title, status, published_at, scheduled_at")
       .eq("id", id)
       .maybeSingle();
 
+    // Deja visible du public au moment de cette ecriture — soit franchement
+    // `publie`, soit `programme` mais echu (cf. `effectiveBlogStatus()`,
+    // `lib/queries/blog.ts`). Dans les deux cas, republier ne doit pas
+    // avancer sa date de publication.
+    const wasEffectivelyPublished =
+      previous?.status === "publie" ||
+      (previous?.status === "programme" && Boolean(previous.published_at) && new Date(previous.published_at!) <= now);
+
+    const nextStatus = intent === "brouillon" ? "brouillon" : isFutureSchedule ? "programme" : "publie";
+    const nextPublishedAt =
+      intent === "brouillon"
+        ? (previous?.published_at ?? null)
+        : isFutureSchedule
+          ? scheduledAt
+          : wasEffectivelyPublished && previous?.published_at
+            ? previous.published_at
+            : now.toISOString();
+
     const { data: updated, error } = await supabase
       .from("blog_posts")
-      .update({
-        ...payload,
-        // `published_at` ne se pose qu'une fois : republier un article deja
-        // publie ne doit pas lui donner une date de publication plus recente.
-        published_at:
-          intent === "publie" && previous?.published_at
-            ? previous.published_at
-            : intent === "publie"
-              ? new Date().toISOString()
-              : previous?.published_at ?? null,
-      })
+      .update({ ...payload, status: nextStatus, published_at: nextPublishedAt })
       .eq("id", id)
       .select("id");
     if (error) {
@@ -103,27 +124,38 @@ export async function saveBlogPost(formData: FormData): Promise<ActionResult> {
     if (!touched(updated)) {
       return fail(i18n.t("Aucune ligne modifiee : l'article n'existe plus, ou le RLS ne vous laisse pas l'ecrire."));
     }
-    await logAdminAction("update_blog_post", "blog_post", id, { previous, next: payload });
+    await logAdminAction("update_blog_post", "blog_post", id, { previous, next: { ...payload, status: nextStatus, published_at: nextPublishedAt } });
     REFRESH();
-    return ok(intent === "publie" ? i18n.t("Article publie.") : i18n.t("Brouillon enregistre."));
+    return ok(
+      nextStatus === "programme"
+        ? i18n.t("Article programme.")
+        : nextStatus === "publie"
+          ? i18n.t("Article publie.")
+          : i18n.t("Brouillon enregistre."),
+    );
   }
+
+  const status = intent === "brouillon" ? "brouillon" : isFutureSchedule ? "programme" : "publie";
+  const published_at = intent === "brouillon" ? null : isFutureSchedule ? scheduledAt : now.toISOString();
 
   const { data, error } = await supabase
     .from("blog_posts")
-    .insert({
-      ...payload,
-      author_id: admin.userId,
-      published_at: intent === "publie" ? new Date().toISOString() : null,
-    })
+    .insert({ ...payload, status, published_at, author_id: admin.userId })
     .select("id")
     .single();
   if (error) {
     if (error.code === "23505") return fail(i18n.t("Cette adresse est deja utilisee par un autre article."));
     return fail(makeErrors(i18n.locale).describeError(error));
   }
-  await logAdminAction("create_blog_post", "blog_post", data.id, { ...payload, createdByAdmin: admin.userId });
+  await logAdminAction("create_blog_post", "blog_post", data.id, { ...payload, status, published_at, createdByAdmin: admin.userId });
   REFRESH();
-  return ok(intent === "publie" ? i18n.t("Article publie.") : i18n.t("Brouillon enregistre."));
+  return ok(
+    status === "programme"
+      ? i18n.t("Article programme.")
+      : status === "publie"
+        ? i18n.t("Article publie.")
+        : i18n.t("Brouillon enregistre."),
+  );
 }
 
 export async function deleteBlogPost(id: string): Promise<ActionResult> {
@@ -140,15 +172,35 @@ export async function deleteBlogPost(id: string): Promise<ActionResult> {
   return ok(i18n.t("Article supprime."));
 }
 
-/** Depublier : retour en brouillon sans toucher au contenu. */
+/**
+ * Depublier : retour en brouillon sans toucher au contenu. Sert aussi a
+ * annuler une publication programmee (`status = 'programme'`) — dans ce cas,
+ * `published_at` n'a jamais ete reel : on l'efface avec `scheduled_at`
+ * plutot que de laisser une date de publication qui n'a jamais eu lieu. Un
+ * article deja effectivement publie garde la sienne, comme avant.
+ */
 export async function unpublishBlogPost(id: string): Promise<ActionResult> {
   const i18n = await getRequestAdminI18n();
   await requirePermission("blog.manage");
   const supabase = await createClient();
 
+  const { data: previous } = await supabase
+    .from("blog_posts")
+    .select("status, published_at")
+    .eq("id", id)
+    .maybeSingle();
+  const wasEffectivelyPublished =
+    previous?.status === "publie" ||
+    (previous?.status === "programme" && Boolean(previous.published_at) && new Date(previous.published_at!) <= new Date());
+
   const { data: updated, error } = await supabase
     .from("blog_posts")
-    .update({ status: "brouillon", updated_at: new Date().toISOString() })
+    .update({
+      status: "brouillon",
+      scheduled_at: null,
+      published_at: wasEffectivelyPublished ? previous!.published_at : null,
+      updated_at: new Date().toISOString(),
+    })
     .eq("id", id)
     .select("id");
   if (error) return fail(makeErrors(i18n.locale).describeError(error));

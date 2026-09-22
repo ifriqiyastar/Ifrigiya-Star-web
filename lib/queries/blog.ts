@@ -19,9 +19,27 @@ export type BlogPostListRow = {
   status: BlogPostStatus;
   cover_image_path: string | null;
   published_at: string | null;
+  scheduled_at: string | null;
   updated_at: string;
   author_name: string | null;
 };
+
+/**
+ * Statut reellement visible du public, calcule a la volee. `status` reste
+ * `programme` en base tant que personne ne resauvegarde l'article
+ * (`saveBlogPost()` est le seul endroit qui le fait basculer a `publie`) —
+ * la regle RLS (202609230002) rend deja l'article visible des que
+ * `scheduled_at` est atteinte, donc l'afficher comme « Programme » passe
+ * cette echeance montrerait un statut faux. Utilise par l'ecran de liste
+ * uniquement : `saveBlogPost()` raisonne directement sur `published_at`,
+ * pas sur ce calcul.
+ */
+export function effectiveBlogStatus(row: { status: BlogPostStatus; scheduled_at: string | null }): BlogPostStatus {
+  if (row.status === "programme" && row.scheduled_at && new Date(row.scheduled_at) <= new Date()) {
+    return "publie";
+  }
+  return row.status;
+}
 
 /** Liste des articles pour l'ecran d'administration, avec recherche, filtre de statut et pagination. */
 export async function listBlogPosts(params: { q?: string; statut?: string; page?: number }) {
@@ -30,7 +48,7 @@ export async function listBlogPosts(params: { q?: string; statut?: string; page?
 
   let query = supabase
     .from("blog_posts")
-    .select("id, title, slug, status, cover_image_path, published_at, updated_at, author_name", {
+    .select("id, title, slug, status, cover_image_path, published_at, scheduled_at, updated_at, author_name", {
       count: "exact",
     })
     .order("updated_at", { ascending: false });
@@ -52,12 +70,15 @@ export type BlogPostRecord = {
   title: string;
   slug: string;
   excerpt: string | null;
+  meta_title: string | null;
+  meta_description: string | null;
   cover_image_path: string | null;
   content: object;
   status: BlogPostStatus;
   author_id: string | null;
   author_name: string | null;
   published_at: string | null;
+  scheduled_at: string | null;
   created_at: string;
   updated_at: string;
 };

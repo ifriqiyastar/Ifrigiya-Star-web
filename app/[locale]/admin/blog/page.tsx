@@ -24,7 +24,7 @@ import {
 import { deleteBlogPost, unpublishBlogPost } from "@/lib/actions/blog";
 import { requirePermission } from "@/lib/auth";
 import { BLOG_STATUS } from "@/lib/labels";
-import { listBlogPosts } from "@/lib/queries/blog";
+import { effectiveBlogStatus, listBlogPosts } from "@/lib/queries/blog";
 import { publicStorageUrl } from "@/lib/supabase/config";
 import { cn } from "@/lib/utils";
 
@@ -97,6 +97,12 @@ export default async function BlogPage({ searchParams }: PageProps<"/[locale]/ad
             <TableBody>
               {rows.map((row) => {
                 const cover = publicStorageUrl("blog-media", row.cover_image_path);
+                // `row.status` reste "programme" en base jusqu'au prochain
+                // enregistrement (cf. le commentaire de `effectiveBlogStatus()`) :
+                // c'est ce statut calcule, pas la colonne brute, qui decide de
+                // l'etiquette affichee et du bouton "Depublier".
+                const displayStatus = effectiveBlogStatus(row);
+                const stillScheduled = row.status === "programme" && displayStatus === "programme";
                 return (
                   <TableRow key={row.id}>
                     <TableCell>
@@ -116,9 +122,14 @@ export default async function BlogPage({ searchParams }: PageProps<"/[locale]/ad
                       </Link>
                     </TableCell>
                     <TableCell>
-                      <StatusPill tone={i18n.labels.entry(BLOG_STATUS, row.status).tone}>
-                        {i18n.labels.label(BLOG_STATUS, row.status)}
+                      <StatusPill tone={i18n.labels.entry(BLOG_STATUS, displayStatus).tone}>
+                        {i18n.labels.label(BLOG_STATUS, displayStatus)}
                       </StatusPill>
+                      {stillScheduled && row.scheduled_at ? (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {i18n.t("Le {0}", { "0": i18n.format.formatDateTime(row.scheduled_at) })}
+                        </p>
+                      ) : null}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
                       {row.author_name ?? "—"}
@@ -135,7 +146,7 @@ export default async function BlogPage({ searchParams }: PageProps<"/[locale]/ad
                           <PenLineIcon />
                           {i18n.t("Modifier")}
                         </Link>
-                        {row.status === "publie" ? (
+                        {row.status !== "brouillon" ? (
                           <ActionButton action={unpublishBlogPost.bind(null, row.id)}>
                             {i18n.t("Depublier")}
                           </ActionButton>
