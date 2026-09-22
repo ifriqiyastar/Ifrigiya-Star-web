@@ -327,7 +327,7 @@ function Fonctionnalites({ dict }: { dict: Dictionary }) {
                 delay={(i % 3) * 110}
                 className="flex flex-col items-center gap-3 text-center"
               >
-                <span className="flex size-10 items-center justify-center rounded-xl border border-(--site-accent)/30 bg-(--site-accent)/10 text-(--site-accent)">
+                <span className="flex size-10 items-center justify-center rounded-xl border border-(--site-line-strong) bg-(--site-bg) text-(--site-accent)">
                   <Icon className="size-5" aria-hidden />
                 </span>
                 <div className="flex flex-col items-center gap-2">
@@ -440,7 +440,7 @@ function Faq({ dict }: { dict: Dictionary }) {
             >
               <summary className="flex cursor-pointer list-none items-center gap-4 text-sm font-semibold sm:text-base [&::-webkit-details-marker]:hidden">
                 <span className="flex-1">{item.q}</span>
-                <span className="flex size-7 shrink-0 items-center justify-center rounded-full border border-(--site-line-strong) text-(--site-accent) transition-transform group-open:rotate-45">
+                <span className="flex size-7 shrink-0 items-center justify-center rounded-full border border-(--site-line-strong) bg-(--site-bg) text-(--site-accent) transition-transform group-open:rotate-45">
                   <svg viewBox="0 0 16 16" className="size-3.5 stroke-current stroke-2">
                     <path d="M8 3v10M3 8h10" strokeLinecap="round" />
                   </svg>
