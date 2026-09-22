@@ -25,15 +25,25 @@ export type PublicBlogPostSummary = {
   author_name: string | null;
 };
 
-export async function listPublishedBlogPosts(): Promise<PublicBlogPostSummary[]> {
+/**
+ * Pagine : 6 articles par page sur telephone, 12 sur ordinateur
+ * (`lib/server-device.ts` decide laquelle, avant la requete — la taille de
+ * page change le nombre de lignes ramenees, pas seulement leur mise en page).
+ */
+export async function listPublishedBlogPosts(params: {
+  page: number;
+  pageSize: number;
+}): Promise<{ rows: PublicBlogPostSummary[]; count: number }> {
   const supabase = await createClient();
-  const { data } = await supabase
+  const page = Math.max(1, params.page);
+  const from = (page - 1) * params.pageSize;
+  const { data, count } = await supabase
     .from("blog_posts")
-    .select("id, title, slug, excerpt, cover_image_path, published_at, author_name")
+    .select("id, title, slug, excerpt, cover_image_path, published_at, author_name", { count: "exact" })
     .or(PUBLIC_STATUS_FILTER())
     .order("published_at", { ascending: false })
-    .limit(60);
-  return data ?? [];
+    .range(from, from + params.pageSize - 1);
+  return { rows: data ?? [], count: count ?? 0 };
 }
 
 export type PublicBlogPost = PublicBlogPostSummary & {

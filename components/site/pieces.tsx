@@ -1,4 +1,6 @@
 import Image from "next/image";
+import Link from "next/link";
+import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 
 import type { AppScreen } from "@/lib/app-screens";
 import { Reveal } from "@/components/site/reveal";
@@ -116,5 +118,66 @@ export function SectionHeading({
         </p>
       ) : null}
     </Reveal>
+  );
+}
+
+/**
+ * Pagination par liens (`?page=n`), sur le modele des fleches
+ * precedent/suivant de `steps-time-machine.tsx` — meme forme, cercle bordé,
+ * pour rester dans le meme vocabulaire visuel que le reste de la page.
+ * Non l'equivalent de `components/admin/pagination.tsx` : deux design
+ * systems distincts (voir le commentaire en tete de fichier), et le blog
+ * n'est pas multilingue, donc pas besoin d'un dictionnaire pour "page X / Y".
+ */
+export function SitePagination({
+  basePath,
+  page,
+  pageSize,
+  total,
+}: {
+  basePath: string;
+  page: number;
+  pageSize: number;
+  total: number;
+}) {
+  const lastPage = Math.max(1, Math.ceil(total / pageSize));
+  if (lastPage <= 1) return null;
+
+  const href = (target: number) => (target <= 1 ? basePath : `${basePath}?page=${target}`);
+  const arrowClass =
+    "flex size-11 shrink-0 items-center justify-center rounded-full border text-[var(--site-fg)] transition-colors";
+
+  return (
+    <nav aria-label="Pagination des articles" className="mt-14 flex items-center justify-center gap-4">
+      {page > 1 ? (
+        <Link
+          href={href(page - 1)}
+          aria-label="Page precedente"
+          className={cn(arrowClass, "border-[var(--site-line-strong)] hover:border-[var(--site-accent)] hover:text-[var(--site-accent)]")}
+        >
+          <ChevronLeftIcon className="size-4 rtl:-scale-x-100" aria-hidden />
+        </Link>
+      ) : (
+        <span aria-hidden className={cn(arrowClass, "border-[var(--site-line)] text-[var(--site-muted)] opacity-40")}>
+          <ChevronLeftIcon className="size-4 rtl:-scale-x-100" />
+        </span>
+      )}
+      <span className="font-mono text-xs tracking-[0.18em] text-[var(--site-muted)] uppercase">
+        Page {page} / {lastPage}
+      </span>
+      {page < lastPage ? (
+        <Link
+          href={href(page + 1)}
+          aria-label="Page suivante"
+          className={cn(arrowClass, "border-[var(--site-line-strong)] hover:border-[var(--site-accent)] hover:text-[var(--site-accent)]")}
+        >
+          <ChevronRightIcon className="size-4 rtl:-scale-x-100" aria-hidden />
+        </Link>
+      ) : (
+        <span aria-hidden className={cn(arrowClass, "border-[var(--site-line)] text-[var(--site-muted)] opacity-40")}>
+          <ChevronRightIcon className="size-4 rtl:-scale-x-100" />
+        </span>
+      )}
+    </nav>
   );
 }

@@ -3,14 +3,19 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { NewspaperIcon } from "lucide-react";
 
-import { SectionHeading } from "@/components/site/pieces";
+import { SectionHeading, SitePagination } from "@/components/site/pieces";
 import { Reveal } from "@/components/site/reveal";
 import { SiteFooter } from "@/components/site/site-footer";
 import { SiteNav } from "@/components/site/site-nav";
 import { getLocale } from "@/lib/i18n/dictionaries";
 import { localePath } from "@/lib/i18n/config";
 import { listPublishedBlogPosts, type PublicBlogPostSummary } from "@/lib/queries/site-blog";
+import { isMobileRequest } from "@/lib/server-device";
 import { publicStorageUrl } from "@/lib/supabase/config";
+
+/** 6 articles par page sur telephone, 12 sur ordinateur (client request). */
+const MOBILE_PAGE_SIZE = 6;
+const DESKTOP_PAGE_SIZE = 12;
 
 /** Toujours en francais : le contenu du blog l'est, quelle que soit la langue de l'entete/pied de page autour. */
 const formatPostDate = (iso: string) =>
@@ -36,12 +41,17 @@ export async function generateMetadata(): Promise<Metadata> {
 // a prerendre a la construction.
 export const dynamic = "force-dynamic";
 
-export default async function BlogIndexPage() {
-  const posts = await listPublishedBlogPosts();
+export default async function BlogIndexPage({ searchParams }: PageProps<"/[locale]/blog">) {
+  const resolvedSearchParams = await searchParams;
+  const pageParam = resolvedSearchParams.page;
+  const page = Math.max(1, Number(Array.isArray(pageParam) ? pageParam[0] : pageParam) || 1);
+
+  const [mobile, locale] = await Promise.all([isMobileRequest(), getLocale()]);
+  const pageSize = mobile ? MOBILE_PAGE_SIZE : DESKTOP_PAGE_SIZE;
+  const { rows: posts, count } = await listPublishedBlogPosts({ page, pageSize });
   // Le contenu reste francais, mais les liens internes doivent porter le
   // prefixe de langue du visiteur : sans lui, cliquer sur un article depuis
   // /en ou /ar ramenerait l'entete et le pied de page en francais aussi.
-  const locale = await getLocale();
   const prefix = locale === "fr" ? "" : `/${locale}`;
 
   return (
@@ -56,17 +66,20 @@ export default async function BlogIndexPage() {
             lead="Detections, parcours de joueurs et coulisses de l'academie."
           />
 
-          {!posts.length ? (
+          {!count ? (
             <p className="mx-auto mt-14 flex max-w-md flex-col items-center gap-3 text-center text-sm text-(--site-muted)">
               <NewspaperIcon className="size-6 text-(--site-accent)" aria-hidden />
               Aucun article publie pour le moment.
             </p>
           ) : (
-            <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {posts.map((post, index) => (
-                <PostCard key={post.id} post={post} prefix={prefix} delay={Math.min(index, 5) * 80} />
-              ))}
-            </div>
+            <>
+              <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {posts.map((post, index) => (
+                  <PostCard key={post.id} post={post} prefix={prefix} delay={Math.min(index, 5) * 80} />
+                ))}
+              </div>
+              <SitePagination basePath={`${prefix}/blog`} page={page} pageSize={pageSize} total={count} />
+            </>
           )}
         </div>
       </main>
