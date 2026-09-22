@@ -13,7 +13,7 @@ import { getDictionary } from "@/lib/i18n/dictionaries";
  */
 const TESTIMONIAL_IMAGES = [
   "/images/testimonial-yassine.webp",
-  "/images/testimonial-ines.webp",
+  "/images/testimonial-karim.webp",
   "/images/testimonial-mehdi.webp",
 ] as const;
 

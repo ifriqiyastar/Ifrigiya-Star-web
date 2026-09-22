@@ -134,7 +134,7 @@ function Hero({ dict }: { dict: Dictionary }) {
               borne haute (2.25 rem) rejoint exactement le `sm:text-4xl` qui
               prend le relais a 640 px, pour qu'aucune marche ne se voie au
               passage du palier. */}
-          <Reveal as="h1" delay={80} className="font-heading text-[clamp(1.75rem,8.75vw,2.25rem)] leading-[1.04] font-extrabold drop-shadow-sm sm:text-4xl sm:leading-[1.08] lg:text-6xl">
+          <Reveal as="h1" delay={80} className="font-heading text-[clamp(1.75rem,8.75vw,2.25rem)] leading-[1.25] font-extrabold drop-shadow-sm sm:text-4xl sm:leading-[1.08] lg:text-6xl">
             <span className="block sm:whitespace-nowrap">{t.titleLine1}</span>
             <span className="block sm:whitespace-nowrap">
               {t.titleLine2}{" "}
@@ -149,8 +149,12 @@ function Hero({ dict }: { dict: Dictionary }) {
             </span>
           </Reveal>
 
+          {/* Version raccourcie sur telephone, a la demande du client : le
+              paragraphe complet s'arretait avant le premier appel a l'action
+              sans faire defiler. `t.lead` reste entier a partir de `sm`. */}
           <Reveal as="p" delay={160} className="max-w-xl text-[0.9375rem] leading-relaxed text-(--site-muted) sm:text-base">
-            {t.lead}
+            <span className="sm:hidden">{t.leadMobile}</span>
+            <span className="hidden sm:inline">{t.lead}</span>
           </Reveal>
 
           {/* Les badges de store, sous la promesse plutot qu'au seul bas de
@@ -512,13 +516,18 @@ function AppelFinal({ dict }: { dict: Dictionary }) {
               arrondis) : en pastille pleine elle se lisait comme un vrai
               bouton — juste au-dessus du bouton « Se connecter » reellement
               cliquable dans l'ecran de connexion — et rien ici n'est
-              cliquable, la carte entiere ne menant qu'au telechargement. */}
+              cliquable, la carte entiere ne menant qu'au telechargement.
+
+              Absentes sur telephone, a la demande du client : les deux
+              maquettes n'y ajoutaient plus qu'une image de plus a faire
+              defiler sous le texte et les boutons de store, deja suffisants
+              pour l'appel a l'action. Elles reapparaissent a partir de `sm`. */}
           <Reveal
             variant="right"
             delay={120}
-            className="relative flex items-end justify-center gap-3 sm:gap-5 lg:justify-end"
+            className="relative hidden items-end justify-center gap-3 sm:flex sm:gap-5 lg:justify-end"
           >
-            <figure className="hidden shrink-0 flex-col items-center gap-3 sm:flex">
+            <figure className="flex shrink-0 flex-col items-center gap-3">
               <Phone
                 screen={APP_SCREENS.connexion}
                 alt={t.signInAlt}

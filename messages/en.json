@@ -23,6 +23,7 @@
     "titleLine2": "should remain",
     "titleAccent": "invisible",
     "lead": "Ifriqiya Soccer Star is an elite football academy devoted to training, technical development and the growth of young talent. A verified profile, match footage, scouting days and direct contact with recruiters — all from your phone.",
+    "leadMobile": "Ifriqiya Soccer Star is an elite football academy devoted to training, technical development and the growth of young talent.",
     "pillars": {
       "detection": {
         "title": "Scouting",
@@ -294,7 +295,7 @@
         "quote": "I kept my match videos on my phone without knowing what to do with them. Building my profile taught me how to show my game and my strengths. Above all, my first Scout Day gave me one thing: the urge to aim higher."
       },
       {
-        "name": "Inès",
+        "name": "Karim",
         "role": "Player · Winger",
         "theme": "Moving forward with confidence",
         "quote": "After a scouting day, I finally had concrete feedback on my game. I went back to training with precise goals: my positioning, my runs, my final ball. Every session had a purpose and I saw my progress differently."
@@ -309,7 +310,7 @@
     "titleLine1": "Ambitions.",
     "titleLine2": "Journeys.",
     "titleAccent": "One passion.",
-    "portraitAlt": "AI-generated portrait of {name}, a fictional character",
+    "portraitAlt": "Illustrative portrait of {name}, a fictional character",
     "quoteOpen": "“",
     "quoteClose": "”"
   },

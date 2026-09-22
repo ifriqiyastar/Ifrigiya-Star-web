@@ -23,6 +23,7 @@
     "titleLine2": "ne doit rester",
     "titleAccent": "invisible",
     "lead": "Ifriqiya Soccer Star est une academie de football d'elite dediee a la formation, au developpement technique et a l'epanouissement des jeunes talents. Profil verifie, videos de match, journees de detection et contact direct avec les recruteurs — tout depuis votre telephone.",
+    "leadMobile": "Ifriqiya Soccer Star est une academie de football d'elite dediee a la formation, au developpement technique et a l'epanouissement des jeunes talents.",
     "pillars": {
       "detection": {
         "title": "Detection",
@@ -294,8 +295,8 @@
         "quote": "Je gardais mes vidéos de match sur mon téléphone sans savoir quoi en faire. En construisant mon profil, j’ai appris à montrer mon jeu et mes points forts. Mon premier Scout Day m’a surtout donné une chose : l’envie de viser plus haut."
       },
       {
-        "name": "Inès",
-        "role": "Joueuse · Ailière",
+        "name": "Karim",
+        "role": "Joueur · Ailier",
         "theme": "Avancer avec confiance",
         "quote": "Après une détection, j’avais enfin des retours concrets sur mon jeu. J’ai repris l’entraînement avec des objectifs précis : mon placement, mes appels, ma dernière passe. Chaque séance avait un sens et je voyais mes progrès autrement."
       },
@@ -309,7 +310,7 @@
     "titleLine1": "Des ambitions.",
     "titleLine2": "Des parcours.",
     "titleAccent": "Une passion.",
-    "portraitAlt": "Portrait généré par IA de {name}, personnage fictif",
+    "portraitAlt": "Portrait illustratif de {name}, personnage fictif",
     "quoteOpen": "« ",
     "quoteClose": " »"
   },
