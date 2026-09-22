@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { ArrowUpRightIcon, CopyIcon } from "lucide-react";
 
 import { useI18n } from "@/lib/i18n/client";
+import { sendContactEmail } from "@/lib/actions/contact";
 
 const fieldClass = "mt-2 w-full rounded-xl border border-(--site-line-strong) bg-black px-4 py-3.5 text-base text-white placeholder:text-white/35 transition-colors focus:border-(--site-accent) focus:outline-none focus:ring-1 focus:ring-(--site-accent)";
 
@@ -13,10 +14,13 @@ export function ContactForm() {
   const [draft, setDraft] = useState<{ body: string; href: string } | null>(null);
   const [copyStatus, setCopyStatus] = useState("");
   const [error, setError] = useState("");
+  const [pending, setPending] = useState(false);
+  const [sent, setSent] = useState(false);
 
-  function prepareEmail(event: FormEvent<HTMLFormElement>) {
+  async function prepareEmail(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const data = new FormData(form);
     const name = String(data.get("name") ?? "").trim();
     const email = String(data.get("email") ?? "").trim();
     const subject = String(data.get("subject") ?? "").trim();
@@ -27,10 +31,25 @@ export function ContactForm() {
       return;
     }
 
-    const body = `${message}\n\n—\nNom : ${name}\nE-mail : ${email}`;
-    const href = `mailto:contact@ifriqiya-soccer-star.com?subject=${encodeURIComponent(`[Contact Ifriqiya Soccer Star] ${subject}`)}&body=${encodeURIComponent(body)}`;
     setError("");
     setCopyStatus("");
+    setDraft(null);
+    setSent(false);
+    setPending(true);
+    const result = await sendContactEmail(data);
+    setPending(false);
+
+    if (result.ok) {
+      setSent(true);
+      form.reset();
+      return;
+    }
+
+    // Repli : le serveur n'a pas pu envoyer (cle Resend absente, domaine pas
+    // encore verifie, panne du service...) — on ouvre quand meme un brouillon
+    // dans la messagerie du visiteur plutot que de le bloquer.
+    const body = `${message}\n\n—\nNom : ${name}\nE-mail : ${email}`;
+    const href = `mailto:contact@ifriqiya-soccer-star.com?subject=${encodeURIComponent(`[Contact Ifriqiya Soccer Star] ${subject}`)}&body=${encodeURIComponent(body)}`;
     setDraft({ body, href });
     window.location.href = href;
   }
@@ -48,7 +67,7 @@ export function ContactForm() {
   return (
     <form
       onSubmit={prepareEmail}
-      onChange={() => { setDraft(null); setCopyStatus(""); setError(""); }}
+      onChange={() => { setDraft(null); setCopyStatus(""); setError(""); setSent(false); }}
       aria-labelledby="contact-form-title"
       className="rounded-3xl border border-(--site-line-strong) bg-(--site-card) p-5 sm:p-8"
     >
@@ -84,14 +103,21 @@ export function ContactForm() {
 
       {error && <p role="alert" className="mt-5 text-sm text-red-300">{error}</p>}
 
-      <button type="submit" className="mt-6 flex w-full items-center justify-center gap-3 rounded-full bg-(--site-accent) px-5 py-4 text-sm font-semibold text-black transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-(--site-accent)">
-        {t.submit}
-        <ArrowUpRightIcon className="size-5 rtl:-scale-x-100" aria-hidden />
+      <button
+        type="submit"
+        disabled={pending}
+        className="mt-6 flex w-full items-center justify-center gap-3 rounded-full bg-(--site-accent) px-5 py-4 text-sm font-semibold text-black transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-(--site-accent) disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {pending ? t.sending : t.submit}
+        {!pending && <ArrowUpRightIcon className="size-5 rtl:-scale-x-100" aria-hidden />}
       </button>
-      <p className="mt-4 text-xs leading-relaxed text-(--site-muted)">
-        {t.submitHint}
-      </p>
       <noscript><p className="mt-4 text-sm text-(--site-muted)">{t.noscript}</p></noscript>
+
+      {sent && (
+        <p role="status" className="mt-5 rounded-xl border border-(--site-accent)/30 bg-(--site-accent)/5 p-4 text-sm leading-relaxed">
+          {t.sent}
+        </p>
+      )}
 
       {draft && (
         <div className="mt-5 rounded-xl border border-(--site-accent)/30 bg-(--site-accent)/5 p-4">
