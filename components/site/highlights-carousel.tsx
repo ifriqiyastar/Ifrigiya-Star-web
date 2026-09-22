@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useI18n } from "@/lib/i18n/client";
+import { Pill } from "@/components/site/pieces";
 import { Reveal } from "@/components/site/reveal";
 
 /**
@@ -144,7 +145,7 @@ export function HighlightsCarousel() {
             >
               <Image src={SLIDE_MEDIA[index].image} alt="" fill sizes="(min-width: 1280px) 1216px, 100vw" className="-z-20 object-cover grayscale" />
               <div aria-hidden className="absolute inset-0 -z-10 bg-[linear-gradient(180deg,rgba(0,0,0,0.5),rgba(0,0,0,0.92)),linear-gradient(90deg,rgba(0,0,0,0.45),transparent)]" />
-              <span className="rounded-full bg-(--site-accent) px-4 py-2 text-[0.625rem] font-extrabold tracking-wider text-black uppercase">{slide.tag}</span>
+              <Pill>{slide.tag}</Pill>
               <h2 className="font-heading mt-6 max-w-xl text-3xl leading-[1.05] font-extrabold tracking-tight text-white uppercase sm:text-4xl lg:text-5xl">{slide.title}</h2>
               <p className="mt-5 max-w-lg text-sm leading-relaxed text-white/70 sm:text-base">{slide.text}</p>
               <a
