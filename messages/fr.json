@@ -257,7 +257,9 @@
     "formTitle": "Parlons de votre projet",
     "formRequired": "Tous les champs sont obligatoires.",
     "name": "Nom complet",
+    "namePlaceholder": "Votre nom",
     "email": "Adresse e-mail",
+    "emailPlaceholder": "vous@exemple.com",
     "subject": "Votre demande concerne",
     "subjectPlaceholder": "Choisissez un sujet",
     "subjects": [
@@ -268,6 +270,7 @@
       "Une autre question"
     ],
     "message": "Votre message",
+    "messagePlaceholder": "Présentez-nous votre projet ou posez-nous votre question…",
     "messageLimit": "1 500 caractères maximum.",
     "missing": "Merci de renseigner tous les champs obligatoires.",
     "submit": "Envoyer mon e-mail",

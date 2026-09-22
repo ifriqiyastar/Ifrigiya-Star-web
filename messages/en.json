@@ -257,7 +257,9 @@
     "formTitle": "Let's talk about your project",
     "formRequired": "All fields are required.",
     "name": "Full name",
+    "namePlaceholder": "Your name",
     "email": "Email address",
+    "emailPlaceholder": "you@example.com",
     "subject": "Your enquiry is about",
     "subjectPlaceholder": "Choose a subject",
     "subjects": [
@@ -268,6 +270,7 @@
       "Another question"
     ],
     "message": "Your message",
+    "messagePlaceholder": "Tell us about your project or ask us your question…",
     "messageLimit": "1,500 characters maximum.",
     "missing": "Please fill in all required fields.",
     "submit": "Send my email",
