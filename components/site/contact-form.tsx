@@ -28,7 +28,7 @@ export function ContactForm() {
     }
 
     const body = `${message}\n\n—\nNom : ${name}\nE-mail : ${email}`;
-    const href = `mailto:contact@ifriqiyastar.com?subject=${encodeURIComponent(`[Contact Ifriqiya Soccer Star] ${subject}`)}&body=${encodeURIComponent(body)}`;
+    const href = `mailto:contact@ifriqiya-soccer-star.com?subject=${encodeURIComponent(`[Contact Ifriqiya Soccer Star] ${subject}`)}&body=${encodeURIComponent(body)}`;
     setError("");
     setCopyStatus("");
     setDraft({ body, href });

@@ -276,12 +276,12 @@
     "missing": "Please fill in all required fields.",
     "submit": "Prepare my email",
     "submitHint": "Your mail app opens with your message pre-filled. You can check it, then send it to our team.",
-    "noscript": "Enable JavaScript to prepare your email, or write directly to contact@ifriqiyastar.com.",
+    "noscript": "Enable JavaScript to prepare your email, or write directly to contact@ifriqiya-soccer-star.com.",
     "ready": "Your message is ready. Finish sending it in your mail app.",
-    "readyFallback": "Nothing opened? Copy your message and send it to contact@ifriqiyastar.com.",
+    "readyFallback": "Nothing opened? Copy your message and send it to contact@ifriqiya-soccer-star.com.",
     "openMail": "Open mail app",
     "copy": "Copy the message",
-    "copied": "Message copied. Paste it into an email to contact@ifriqiyastar.com.",
+    "copied": "Message copied. Paste it into an email to contact@ifriqiya-soccer-star.com.",
     "copyFailed": "Automatic copying is unavailable. You can select your message in the form."
   },
   "testimonials": {

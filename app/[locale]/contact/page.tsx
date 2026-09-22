@@ -53,8 +53,8 @@ export default async function ContactPage() {
                   </span>
                   <div className="min-w-0">
                     <p className="text-xs text-(--site-muted)">{t.mailPrompt}</p>
-                    <a href="mailto:contact@ifriqiyastar.com" className="mt-2 inline-block break-all text-sm font-semibold text-(--site-accent) hover:underline sm:text-base">
-                      contact@ifriqiyastar.com
+                    <a href="mailto:contact@ifriqiya-soccer-star.com" className="mt-2 inline-block break-all text-sm font-semibold text-(--site-accent) hover:underline sm:text-base">
+                      contact@ifriqiya-soccer-star.com
                     </a>
                   </div>
                 </div>

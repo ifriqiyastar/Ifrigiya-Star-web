@@ -276,12 +276,12 @@
     "missing": "يرجى تعبئة كل الحقول الإجبارية.",
     "submit": "تحضير بريدي",
     "submitHint": "يُفتح تطبيق البريد لديك والرسالة معبّأة مسبقًا. يمكنك مراجعتها ثم إرسالها إلى فريقنا.",
-    "noscript": "فعّل جافاسكريبت لتحضير بريدك، أو اكتب مباشرة إلى contact@ifriqiyastar.com.",
+    "noscript": "فعّل جافاسكريبت لتحضير بريدك، أو اكتب مباشرة إلى contact@ifriqiya-soccer-star.com.",
     "ready": "رسالتك جاهزة. أكمل الإرسال من تطبيق بريدك.",
-    "readyFallback": "لم يُفتح شيء؟ انسخ رسالتك وأرسلها إلى contact@ifriqiyastar.com.",
+    "readyFallback": "لم يُفتح شيء؟ انسخ رسالتك وأرسلها إلى contact@ifriqiya-soccer-star.com.",
     "openMail": "فتح تطبيق البريد",
     "copy": "نسخ الرسالة",
-    "copied": "نُسخت الرسالة. الصقها في بريد إلى contact@ifriqiyastar.com.",
+    "copied": "نُسخت الرسالة. الصقها في بريد إلى contact@ifriqiya-soccer-star.com.",
     "copyFailed": "النسخ التلقائي غير متاح. يمكنك تحديد رسالتك داخل النموذج."
   },
   "testimonials": {
