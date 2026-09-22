@@ -7,9 +7,9 @@ import { getDictionary, getLocale } from "@/lib/i18n/dictionaries";
 
 
 /** Le logo, en vectoriel — voir `components/site/site-nav.tsx` pour le detail. */
-function Logo({ size = 32 }: { size?: number }) {
+function Logo({ size = 32, className }: { size?: number; className?: string }) {
   return (
-    <Image src="/brand/ifriqiya-star.svg" alt="Ifriqiya Soccer Star" width={size} height={size} />
+    <Image src="/brand/ifriqiya-star.svg" alt="Ifriqiya Soccer Star" width={size} height={size} className={className} />
   );
 }
 
@@ -37,9 +37,14 @@ export async function SiteFooter({
     <footer className="border-t border-(--site-line) py-14">
       <div className="mx-auto grid max-w-7xl gap-10 px-5 sm:px-8 md:grid-cols-2 lg:grid-cols-4">
         <div className="flex flex-col gap-4">
+          {/* Un peu plus grand sur telephone qu'a partir de `sm` (demande
+              client) : `size` reste au plus grand rendu (40) pour que
+              `next/image` ne serve jamais une image plus petite que ce que
+              `size-9` affiche, la classe se contentant de la reduire a
+              `sm:size-8` sur plus grand ecran. */}
           <Link href={prefix || "/"} className="flex items-center gap-2.5">
-            <Logo size={32} />
-            <span className="font-heading text-base font-extrabold">Ifriqiya Soccer Star</span>
+            <Logo size={40} className="size-9 sm:size-8" />
+            <span className="font-heading text-lg font-extrabold sm:text-base">Ifriqiya Soccer Star</span>
           </Link>
           <p className="max-w-xs text-sm leading-relaxed text-(--site-muted)">
             {t.tagline}
