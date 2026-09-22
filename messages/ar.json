@@ -257,9 +257,7 @@
     "formTitle": "لنتحدّث عن مشروعك",
     "formRequired": "كل الحقول إجبارية.",
     "name": "الاسم الكامل",
-    "namePlaceholder": "اسمك",
     "email": "البريد الإلكتروني",
-    "emailPlaceholder": "you@example.com",
     "subject": "يتعلّق طلبك بـ",
     "subjectPlaceholder": "اختر موضوعًا",
     "subjects": [
@@ -270,11 +268,9 @@
       "سؤال آخر"
     ],
     "message": "رسالتك",
-    "messagePlaceholder": "قدّم لنا مشروعك أو اطرح سؤالك…",
     "messageLimit": "١٥٠٠ حرف على الأقصى.",
     "missing": "يرجى تعبئة كل الحقول الإجبارية.",
-    "submit": "تحضير بريدي",
-    "submitHint": "يُفتح تطبيق البريد لديك والرسالة معبّأة مسبقًا. يمكنك مراجعتها ثم إرسالها إلى فريقنا.",
+    "submit": "إرسال بريدي الإلكتروني",
     "noscript": "فعّل جافاسكريبت لتحضير بريدك، أو اكتب مباشرة إلى contact@ifriqiya-soccer-star.com.",
     "ready": "رسالتك جاهزة. أكمل الإرسال من تطبيق بريدك.",
     "readyFallback": "لم يُفتح شيء؟ انسخ رسالتك وأرسلها إلى contact@ifriqiya-soccer-star.com.",

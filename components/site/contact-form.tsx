@@ -5,7 +5,25 @@ import { ArrowUpRightIcon, CopyIcon } from "lucide-react";
 
 import { useI18n } from "@/lib/i18n/client";
 
-const fieldClass = "mt-2 w-full rounded-xl border border-(--site-line-strong) bg-black px-4 py-3.5 text-base text-white placeholder:text-white/35 transition-colors focus:border-(--site-accent) focus:outline-none focus:ring-1 focus:ring-(--site-accent)";
+const inputClass =
+  "peer w-full rounded-xl border border-(--site-line-strong) bg-black px-4 pt-6 pb-2.5 text-base text-white placeholder-transparent transition-colors focus:border-(--site-accent) focus:outline-none focus:ring-1 focus:ring-(--site-accent)";
+
+/**
+ * Label flottant : au repos il reprend la place du placeholder (centre,
+ * grande taille), et remonte en petit des que le champ est focus ou rempli.
+ * Le `placeholder=" "` (espace, jamais vide) est ce qui rend
+ * `:placeholder-shown` fiable sur tous les navigateurs.
+ */
+const labelClass =
+  "pointer-events-none absolute start-4 top-3.5 text-xs text-(--site-muted) transition-all duration-150 peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-base peer-focus:top-3.5 peer-focus:translate-y-0 peer-focus:text-xs peer-focus:text-(--site-accent)";
+
+/** Meme chose, mais la position "au repos" est plus haute : un textarea est grand, le centrer verticalement ferait flotter le label au milieu du cadre. */
+const textareaLabelClass =
+  "pointer-events-none absolute start-4 top-3.5 text-xs text-(--site-muted) transition-all duration-150 peer-placeholder-shown:top-6 peer-placeholder-shown:text-base peer-focus:top-3.5 peer-focus:text-xs peer-focus:text-(--site-accent)";
+
+/** Un <select> n'a pas de pseudo-classe :placeholder-shown : son label reste flottant en permanence, l'option grisee jouant deja ce role. */
+const selectLabelClass =
+  "pointer-events-none absolute start-4 top-3.5 text-xs text-(--site-muted) transition-colors peer-focus:text-(--site-accent)";
 
 export function ContactForm() {
   const { dict } = useI18n();
@@ -58,28 +76,28 @@ export function ContactForm() {
       </div>
 
       <div className="grid gap-5 sm:grid-cols-2">
-        <label htmlFor="contact-name" className="text-sm font-medium">
-          {t.name}
-          <input id="contact-name" name="name" autoComplete="name" placeholder={t.namePlaceholder} required maxLength={100} className={fieldClass} />
-        </label>
-        <label htmlFor="contact-email" className="text-sm font-medium">
-          {t.email}
-          <input id="contact-email" name="email" type="email" autoComplete="email" placeholder={t.emailPlaceholder} required maxLength={254} className={fieldClass} />
-        </label>
-        <label htmlFor="contact-subject" className="text-sm font-medium sm:col-span-2">
-          {t.subject}
-          <select id="contact-subject" name="subject" required defaultValue="" className={fieldClass}>
+        <div className="relative">
+          <input id="contact-name" name="name" autoComplete="name" placeholder=" " required maxLength={100} className={inputClass} />
+          <label htmlFor="contact-name" className={labelClass}>{t.name}</label>
+        </div>
+        <div className="relative">
+          <input id="contact-email" name="email" type="email" autoComplete="email" placeholder=" " required maxLength={254} className={inputClass} />
+          <label htmlFor="contact-email" className={labelClass}>{t.email}</label>
+        </div>
+        <div className="relative sm:col-span-2">
+          <select id="contact-subject" name="subject" required defaultValue="" className={inputClass}>
             <option value="" disabled>{t.subjectPlaceholder}</option>
             {t.subjects.map((sujet) => (
               <option key={sujet}>{sujet}</option>
             ))}
           </select>
-        </label>
-        <label htmlFor="contact-message" className="text-sm font-medium sm:col-span-2">
-          {t.message}
-          <textarea id="contact-message" name="message" placeholder={t.messagePlaceholder} required maxLength={1500} rows={5} className={`${fieldClass} min-h-36 resize-y`} />
+          <label htmlFor="contact-subject" className={selectLabelClass}>{t.subject}</label>
+        </div>
+        <div className="relative sm:col-span-2">
+          <textarea id="contact-message" name="message" placeholder=" " required maxLength={1500} rows={5} className={`${inputClass} min-h-36 resize-y`} />
+          <label htmlFor="contact-message" className={textareaLabelClass}>{t.message}</label>
           <span className="mt-2 block text-xs font-normal text-(--site-muted)">{t.messageLimit}</span>
-        </label>
+        </div>
       </div>
 
       {error && <p role="alert" className="mt-5 text-sm text-red-300">{error}</p>}
@@ -88,9 +106,6 @@ export function ContactForm() {
         {t.submit}
         <ArrowUpRightIcon className="size-5 rtl:-scale-x-100" aria-hidden />
       </button>
-      <p className="mt-4 text-xs leading-relaxed text-(--site-muted)">
-        {t.submitHint}
-      </p>
       <noscript><p className="mt-4 text-sm text-(--site-muted)">{t.noscript}</p></noscript>
 
       {draft && (
