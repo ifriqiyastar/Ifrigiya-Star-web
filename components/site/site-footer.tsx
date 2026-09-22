@@ -69,7 +69,6 @@ export async function SiteFooter({
             { href: `${prefix}/#temoignages`, label: t.testimonials },
             { href: `${prefix}/blog`, label: t.blog },
             { href: `${prefix}/contact`, label: t.contact },
-            { href: `${prefix}/#telecharger`, label: t.download },
           ]}
         />
 
