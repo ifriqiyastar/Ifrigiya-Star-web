@@ -681,6 +681,21 @@ body:has(.admin-dashboard-shell) {
   font-size: 0.875em;
 }
 
+/* Defilement doux vers les ancres (`#section`), pour les liens du tiroir
+   mobile et de la page vitrine (`site-nav.tsx`, `site-footer.tsx`,
+   `app/[locale]/page.tsx`). `scroll-behavior` ne s'applique qu'a l'element
+   qui defile reellement la page — `html`, jamais `.site-shell`, qui n'est
+   qu'une `div` sans overflow propre — donc la regle est globale et touche
+   aussi le back-office. Sans consequence : aucun ecran d'administration n'y
+   scrolle par ancre, et les deux seuls appels a `scrollTo()` du site
+   (carrousel de mises en avant, rail des videos Scout Days) passent deja un
+   `behavior` explicite, qui l'emporte toujours sur cette regle. */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
 /* ------------------------------------------------------------- animations
    Le site vitrine s'anime en CSS seulement. Aucune librairie de motion n'a
    ete ajoutee : une page marketing n'a pas besoin d'embarquer un moteur
