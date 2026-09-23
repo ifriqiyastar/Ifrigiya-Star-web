@@ -146,6 +146,38 @@ alter table public.profiles enable trigger trg_prevent_self_role_escalation;
 Une fois un premier admin en place, les changements de role suivants passent par
 la fiche compte du back-office (le trigger est alors satisfait).
 
+### Creer un compte editeur (blog uniquement)
+
+Le role RBAC `editeur` ([`202609230004_admin_editor_role.sql`](supabase/migrations/202609230004_admin_editor_role.sql))
+ne porte que `dashboard.read` et `blog.manage` : la personne voit le tableau
+de bord et l'ecran Blog, rien d'autre — ni validations, ni moderation, ni
+Scout Days, ni finances.
+
+Deux etapes, dans cet ordre :
+
+1. **`profiles.role = 'admin'`** — obligatoire, c'est la garde de
+   `requireAdmin()` (`lib/auth.ts`), verifiee avant meme de regarder le role
+   RBAC. Si au moins un admin existe deja, faites-le depuis la fiche compte
+   du back-office (`/admin/utilisateurs/[id]`) plutot que par SQL — le
+   trigger `trg_prevent_self_role_escalation` n'a alors pas besoin d'etre
+   desactive.
+2. **L'attribution du role `editeur`** — comme tous les roles RBAC, il n'y a
+   pas d'ecran pour ca (voir le commentaire de
+   `202608240001_admin_platform.sql`) : ca passe par le SQL Editor de
+   Supabase.
+
+```sql
+insert into public.admin_user_roles (admin_id, role_id)
+select p.id, r.id
+from public.profiles p, public.admin_roles r
+where p.email = 'REMPLACER@exemple.com' and r.code = 'editeur'
+on conflict (admin_id) do update set role_id = excluded.role_id;
+```
+
+`on conflict ... do update` fait aussi office de changement de role : relancer
+cette requete avec un autre `r.code` (`support`, `moderator`...) reassigne un
+compte qui avait deja un role RBAC.
+
 ## Couverture du cahier des charges
 
 | Section | Ecran | Ce qui est couvert |
@@ -183,6 +215,8 @@ Dans cet ordre, sur le projet Supabase partage. Toutes sont idempotentes.
 | [`202609210001_blog.sql`](supabase/migrations/202609210001_blog.sql) | back-office | Table `blog_posts`, entierement propre a ce depot (n'existe pas cote mobile) : articles rediges en Tiptap depuis `/admin/blog`, publies sur `/blog`. Bucket public `blog-media`, permission `blog.manage` accordee a tous les roles. |
 | [`202609230001_blog_author_name.sql`](supabase/migrations/202609230001_blog_author_name.sql) | back-office | `blog_posts.author_name` : copie figee du nom d'auteur a la creation, pour l'afficher sans ouvrir `profiles` a une session anonyme. |
 | [`202609230002_blog_scheduling_seo.sql`](supabase/migrations/202609230002_blog_scheduling_seo.sql) | back-office | `blog_posts.meta_title` / `meta_description` (repli sur `title`/`excerpt` quand vides) et `scheduled_at` avec le statut `programme` : publication reellement differee, sans tache planifiee — les deux pages du blog etant `force-dynamic`, la regle RLS suffit a rendre l'article visible a l'heure dite. |
+| [`202609230003_blog_category.sql`](supabase/migrations/202609230003_blog_category.sql) | back-office | `blog_posts.category` : texte libre choisi par l'administration, pas une liste fermee. Alimente le filtre « Categories » de `/blog`. |
+| [`202609230004_admin_editor_role.sql`](supabase/migrations/202609230004_admin_editor_role.sql) | back-office | Role RBAC `editeur` : `dashboard.read` + `blog.manage` uniquement. Voir « Creer un compte editeur ». |
 
 ### Validation des retraits de contenu
 

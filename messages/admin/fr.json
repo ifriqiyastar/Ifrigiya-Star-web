@@ -114,7 +114,8 @@
       "moderator": "Moderateur",
       "event_manager": "Responsable evenements",
       "finance_admin": "Administrateur finances",
-      "support": "Support"
+      "support": "Support",
+      "editeur": "Editeur"
     }
   },
   "common": {
