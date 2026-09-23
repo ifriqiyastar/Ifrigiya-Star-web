@@ -134,16 +134,27 @@ export function SitePagination({
   page,
   pageSize,
   total,
+  params,
 }: {
   basePath: string;
   page: number;
   pageSize: number;
   total: number;
+  /** Autres filtres actifs (`?q=`, `?auteur=`...) a reporter d'une page a l'autre. */
+  params?: Record<string, string | undefined>;
 }) {
   const lastPage = Math.max(1, Math.ceil(total / pageSize));
   if (lastPage <= 1) return null;
 
-  const href = (target: number) => (target <= 1 ? basePath : `${basePath}?page=${target}`);
+  const href = (target: number) => {
+    const query = new URLSearchParams();
+    for (const [key, value] of Object.entries(params ?? {})) {
+      if (value) query.set(key, value);
+    }
+    if (target > 1) query.set("page", String(target));
+    const search = query.toString();
+    return search ? `${basePath}?${search}` : basePath;
+  };
   const arrowClass =
     "flex size-11 shrink-0 items-center justify-center rounded-full border text-[var(--site-fg)] transition-colors";
 
