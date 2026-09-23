@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { ArrowUpRightIcon, CopyIcon } from "lucide-react";
+import { ArrowUpRightIcon } from "lucide-react";
 
 import { useI18n } from "@/lib/i18n/client";
 import { sendContactEmail } from "@/lib/actions/contact";
@@ -11,13 +11,11 @@ const fieldClass = "mt-2 w-full rounded-xl border border-(--site-line-strong) bg
 export function ContactForm() {
   const { dict } = useI18n();
   const t = dict.contactPage;
-  const [draft, setDraft] = useState<{ body: string; href: string } | null>(null);
-  const [copyStatus, setCopyStatus] = useState("");
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
   const [sent, setSent] = useState(false);
 
-  async function prepareEmail(event: FormEvent<HTMLFormElement>) {
+  async function submitEmail(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
     const data = new FormData(form);
@@ -32,8 +30,6 @@ export function ContactForm() {
     }
 
     setError("");
-    setCopyStatus("");
-    setDraft(null);
     setSent(false);
     setPending(true);
     const result = await sendContactEmail(data);
@@ -45,29 +41,18 @@ export function ContactForm() {
       return;
     }
 
-    // Repli : le serveur n'a pas pu envoyer (cle Resend absente, domaine pas
-    // encore verifie, panne du service...) — on ouvre quand meme un brouillon
-    // dans la messagerie du visiteur plutot que de le bloquer.
-    const body = `${message}\n\n—\nNom : ${name}\nE-mail : ${email}`;
-    const href = `mailto:contact@ifriqiya-soccer-star.com?subject=${encodeURIComponent(`[Contact Ifriqiya Soccer Star] ${subject}`)}&body=${encodeURIComponent(body)}`;
-    setDraft({ body, href });
-    window.location.href = href;
-  }
-
-  async function copyMessage() {
-    if (!draft) return;
-    try {
-      await navigator.clipboard.writeText(draft.body);
-      setCopyStatus(t.copied);
-    } catch {
-      setCopyStatus(t.copyFailed);
-    }
+    // Envoi direct uniquement : aucune redirection vers une application de
+    // messagerie. Un echec cote serveur (cle Resend absente, domaine pas
+    // encore verifie, panne du service...) affiche une erreur au visiteur,
+    // qui peut reessayer ou ecrire directement a l'adresse affichee plus haut
+    // sur la page.
+    setError(t.sendError);
   }
 
   return (
     <form
-      onSubmit={prepareEmail}
-      onChange={() => { setDraft(null); setCopyStatus(""); setError(""); setSent(false); }}
+      onSubmit={submitEmail}
+      onChange={() => { setError(""); setSent(false); }}
       aria-labelledby="contact-form-title"
       className="rounded-3xl border border-(--site-line-strong) bg-(--site-card) p-5 sm:p-8"
     >
@@ -117,18 +102,6 @@ export function ContactForm() {
         <p role="status" className="mt-5 rounded-xl border border-(--site-accent)/30 bg-(--site-accent)/5 p-4 text-sm leading-relaxed">
           {t.sent}
         </p>
-      )}
-
-      {draft && (
-        <div className="mt-5 rounded-xl border border-(--site-accent)/30 bg-(--site-accent)/5 p-4">
-          <p role="status" className="text-sm leading-relaxed">{t.ready}</p>
-          <p className="mt-2 text-xs leading-relaxed text-(--site-muted)">{t.readyFallback}</p>
-          <div className="mt-3 flex flex-wrap items-center gap-4 text-xs font-semibold text-(--site-accent)">
-            <a href={draft.href} className="hover:underline">{t.openMail}</a>
-            <button type="button" onClick={copyMessage} className="inline-flex items-center gap-2 hover:underline"><CopyIcon className="size-3.5" aria-hidden />{t.copy}</button>
-          </div>
-          <p role="status" className="mt-2 text-xs leading-relaxed text-(--site-muted)">{copyStatus}</p>
-        </div>
       )}
     </form>
   );

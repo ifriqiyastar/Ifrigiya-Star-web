@@ -277,13 +277,8 @@
     "submit": "إرسال بريدي الإلكتروني",
     "sending": "جارٍ الإرسال…",
     "sent": "أُرسلت رسالتك بنجاح. سيرد عليك فريقنا في أقرب وقت.",
-    "noscript": "فعّل جافاسكريبت لتحضير بريدك، أو اكتب مباشرة إلى contact@ifriqiya-soccer-star.com.",
-    "ready": "رسالتك جاهزة. أكمل الإرسال من تطبيق بريدك.",
-    "readyFallback": "لم يُفتح شيء؟ انسخ رسالتك وأرسلها إلى contact@ifriqiya-soccer-star.com.",
-    "openMail": "فتح تطبيق البريد",
-    "copy": "نسخ الرسالة",
-    "copied": "نُسخت الرسالة. الصقها في بريد إلى contact@ifriqiya-soccer-star.com.",
-    "copyFailed": "النسخ التلقائي غير متاح. يمكنك تحديد رسالتك داخل النموذج."
+    "sendError": "حدث خطأ أثناء الإرسال. أعد المحاولة، أو راسلنا مباشرة على contact@ifriqiya-soccer-star.com.",
+    "noscript": "فعّل جافاسكريبت لإرسال رسالتك، أو اكتب مباشرة إلى contact@ifriqiya-soccer-star.com."
   },
   "testimonials": {
     "pill": "شهادات",

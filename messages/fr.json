@@ -277,13 +277,8 @@
     "submit": "Envoyer mon e-mail",
     "sending": "Envoi en cours…",
     "sent": "Votre message a bien été envoyé. Notre équipe vous répond au plus vite.",
-    "noscript": "Activez JavaScript pour préparer votre e-mail, ou écrivez directement à contact@ifriqiya-soccer-star.com.",
-    "ready": "Votre message est prêt. Finalisez l'envoi dans votre messagerie.",
-    "readyFallback": "Rien ne s'est ouvert ? Copiez votre message et envoyez-le à contact@ifriqiya-soccer-star.com.",
-    "openMail": "Ouvrir la messagerie",
-    "copy": "Copier le message",
-    "copied": "Message copié. Collez-le dans un e-mail à contact@ifriqiya-soccer-star.com.",
-    "copyFailed": "La copie automatique est indisponible. Vous pouvez sélectionner votre message dans le formulaire."
+    "sendError": "Une erreur est survenue lors de l'envoi. Réessayez, ou écrivez-nous directement à contact@ifriqiya-soccer-star.com.",
+    "noscript": "Activez JavaScript pour envoyer votre message, ou écrivez directement à contact@ifriqiya-soccer-star.com."
   },
   "testimonials": {
     "pill": "Témoignages",
