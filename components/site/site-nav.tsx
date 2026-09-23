@@ -9,10 +9,12 @@ import {
   ArrowUpRightIcon,
   CircleHelpIcon,
   CompassIcon,
+  FileTextIcon,
   MenuIcon,
   NewspaperIcon,
   QuoteIcon,
   RouteIcon,
+  ShieldCheckIcon,
   SmartphoneIcon,
   XIcon,
 } from "lucide-react";
@@ -83,6 +85,8 @@ export function SiteNav() {
     { href: `${prefix}/#faq`, label: foot.faq, Icon: CircleHelpIcon },
     { href: `${prefix}/#temoignages`, label: foot.testimonials, Icon: QuoteIcon },
     { href: `${prefix}/blog`, label: foot.blog, Icon: NewspaperIcon },
+    { href: `${prefix}/confidentialite`, label: foot.privacy, Icon: ShieldCheckIcon },
+    { href: `${prefix}/conditions`, label: foot.terms, Icon: FileTextIcon },
   ];
 
   const [open, setOpen] = React.useState(false);

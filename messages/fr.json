@@ -221,7 +221,9 @@
     "writeHeading": "Nous ecrire",
     "rights": "Tous droits reserves.",
     "writeBody": "Une question sur l'academie, une detection ou un partenariat ? Notre equipe repond.",
-    "motto": "Detection · Progression · Excellence"
+    "motto": "Detection · Progression · Excellence",
+    "privacy": "Confidentialité",
+    "terms": "Conditions"
   },
   "language": {
     "label": "Langue",
@@ -279,6 +281,191 @@
     "sent": "Votre message a bien été envoyé. Notre équipe vous répond au plus vite.",
     "sendError": "Une erreur est survenue lors de l'envoi. Réessayez, ou écrivez-nous directement à ifriqiya.star@gmail.com.",
     "noscript": "Activez JavaScript pour envoyer votre message, ou écrivez directement à ifriqiya.star@gmail.com."
+  },
+  "privacyPage": {
+    "metaTitle": "Politique de confidentialité",
+    "metaDescription": "Quelles données Ifriqiya Soccer Star traite, pourquoi, qui peut y accéder et comment exercer vos droits.",
+    "back": "Retour à l'accueil",
+    "pill": "Confidentialité",
+    "title": "Politique de",
+    "titleAccent": "confidentialité.",
+    "updated": "Dernière mise à jour : 23/09/2026",
+    "lead": "Ifriqiya Soccer Star met en relation des joueurs de football avec des recruteurs, clubs, académies et agents. Cette page explique quelles données nous traitons, pourquoi, qui peut y accéder et comment exercer vos droits.",
+    "todoLabel": "À compléter avant publication",
+    "controllerTitle": "Responsable du traitement",
+    "controllerTodo": "Raison sociale, forme juridique, adresse du siège, numéro d'immatriculation et adresse e-mail de contact. Sans ces mentions, le document reste incomplet juridiquement.",
+    "dataTitle": "Les données que nous collectons",
+    "dataIntro": "Compte et identité :",
+    "dataRows": [
+      [
+        "Adresse e-mail, mot de passe (stocké sous forme chiffrée irréversible)",
+        "Créer et sécuriser votre compte"
+      ],
+      [
+        "Nom, prénom, numéro de téléphone",
+        "Vous identifier auprès des autres utilisateurs"
+      ],
+      [
+        "Type de compte (joueur ou professionnel)",
+        "Déterminer les fonctionnalités auxquelles vous avez accès"
+      ],
+      [
+        "Date d'acceptation des CGU et de cette politique",
+        "Preuve du consentement"
+      ],
+      [
+        "Langue de l'application",
+        "Afficher l'interface dans votre langue"
+      ]
+    ],
+    "dataGoogle": "Si vous utilisez « Continuer avec Google », Google nous transmet votre adresse e-mail, votre nom et votre photo de profil Google. Nous ne recevons jamais votre mot de passe Google.",
+    "dataOthers": [
+      [
+        "Profil sportif (joueurs)",
+        "Date de naissance, nationalité, pays et ville, taille, poids, pied fort, poste principal et secondaire, niveau de pratique, club actuel ou statut de joueur libre, présentation libre, photo de profil, photos et vidéos que vous ajoutez."
+      ],
+      [
+        "Profil professionnel",
+        "Type de compte, nom de l'organisation, fonction, pays et ville, photo, et les justificatifs téléversés pour la validation du compte."
+      ],
+      [
+        "Vérification d'identité",
+        "Les pièces d'identité que vous transmettez et, le cas échéant, les informations relatives au représentant légal d'un mineur. Elles sont stockées dans un espace privé, accessible aux seuls administrateurs chargés de la validation."
+      ],
+      [
+        "Messagerie",
+        "Le contenu de vos messages, leurs pièces jointes, vos messages vocaux, la date de lecture et votre dernière activité."
+      ],
+      [
+        "Détections (Scout Days)",
+        "Vos inscriptions, votre présence, et les évaluations rédigées par l'organisateur (notes sur 100 et commentaire)."
+      ],
+      [
+        "Activité dans l'application",
+        "Publications, commentaires, « j'aime », abonnements, et l'enregistrement des consultations de votre profil par un professionnel."
+      ],
+      [
+        "Données techniques",
+        "Un identifiant de notification propre à votre appareil, le type d'appareil et son nom, et les journaux nécessaires à la sécurité du service. Lorsque vous utilisez « Ma position » sur la carte d'une détection, votre position est utilisée sur l'appareil uniquement et n'est pas enregistrée par nos serveurs."
+      ]
+    ],
+    "whyTitle": "Pourquoi nous traitons ces données",
+    "whyItems": [
+      "Exécution du service : créer votre compte, afficher votre profil aux recruteurs, permettre la messagerie et les inscriptions aux détections.",
+      "Obligation de vérification : contrôler l'identité des joueurs et la qualité des professionnels avant de leur ouvrir les fonctions sensibles.",
+      "Sécurité et modération : prévenir la fraude, les abus et le harcèlement, et traiter les signalements.",
+      "Votre consentement : notifications, appareil photo, micro et galerie — chacun refusable et révocable dans les réglages de votre téléphone."
+    ],
+    "visibilityTitle": "Qui peut voir vos données",
+    "visibilityItems": [
+      "Le profil d'un joueur validé est consultable par les professionnels validés. Vous pouvez à tout moment rendre votre profil invisible depuis l'application.",
+      "Vos publications, commentaires, « j'aime » et vos listes d'abonnés et d'abonnements sont visibles par les utilisateurs connectés.",
+      "Votre dernière activité n'est visible que par une personne avec qui vous avez déjà une conversation.",
+      "Une évaluation de détection n'est visible par le joueur évalué que si l'organisateur choisit de la publier."
+    ],
+    "moderationTitle": "La modération",
+    "moderationBody1": "Les messages privés sont chiffrés au repos sur nos serveurs. Un administrateur ne peut lire une conversation que si un message de cette conversation, ou l'un de ses participants, a fait l'objet d'un signalement — et chacun de ces accès est journalisé.",
+    "moderationBody2": "Signaler une personne depuis la messagerie rend donc cette conversation lisible par la modération. C'est la contrepartie du traitement de votre signalement.",
+    "providersTitle": "Nos prestataires techniques",
+    "providersRows": [
+      [
+        "Supabase",
+        "Hébergement, base de données, authentification, stockage des fichiers"
+      ],
+      [
+        "Expo, Google (FCM), Apple (APNs)",
+        "Acheminement des notifications"
+      ],
+      [
+        "Resend",
+        "E-mails transactionnels (réinitialisation de mot de passe, avis de sécurité)"
+      ],
+      [
+        "Google",
+        "Connexion « Continuer avec Google », si vous l'utilisez"
+      ],
+      [
+        "Cloudflare (Turnstile)",
+        "Protection anti-robot des écrans de connexion et d'inscription"
+      ],
+      [
+        "Esri",
+        "Fonds de carte des lieux de détection"
+      ],
+      [
+        "YouTube",
+        "Lecture des vidéos ajoutées sous forme de lien"
+      ]
+    ],
+    "providersNote": "Ces prestataires agissent pour notre compte et peuvent, selon leur localisation, traiter des données hors de votre pays de résidence. Le chargement d'un fond de carte ou d'une vidéo YouTube expose votre adresse IP au prestataire concerné.",
+    "providersNoSale": "Nous ne vendons pas vos données et nous ne les transmettons pas à des annonceurs.",
+    "hostingTodo": "Indiquer la région d'hébergement de la base de données et, si des données quittent la Tunisie ou l'Union européenne, le mécanisme de transfert retenu.",
+    "retentionTitle": "Durée de conservation",
+    "retentionTodo": "Ce point n'est pas encore arbitré. Doivent être fixées puis écrites ici : la durée de conservation d'un compte inactif, celle des messages, celle des pièces d'identité après validation (l'usage étant de les supprimer dès la vérification effectuée), et celle des signalements et journaux de modération. Une durée annoncée est un engagement : ne rien inventer.",
+    "minorsTitle": "Mineurs",
+    "minorsTodo": "L'application s'adresse à de jeunes joueurs et peut recevoir des inscriptions de mineurs. Doivent être définis puis décrits ici : l'âge minimum, le mode de recueil du consentement du représentant légal, et les éventuelles restrictions de messagerie entre un adulte et un mineur.",
+    "rightsTitle": "Vos droits",
+    "rightsBody1": "Vous pouvez demander l'accès à vos données, leur rectification, leur effacement, leur portabilité, ainsi que la limitation ou l'opposition à leur traitement. Vous pouvez aussi retirer à tout moment les autorisations accordées (notifications, appareil photo, micro, galerie) depuis les réglages de votre téléphone.",
+    "rightsBody2": "Une partie de ces droits s'exerce directement dans l'application : modifier votre profil, le rendre invisible, supprimer vos photos, vos vidéos et vos publications.",
+    "contactTodo": "Adresse e-mail dédiée aux demandes relatives aux données, délai de réponse, et autorité auprès de laquelle introduire une réclamation (en Tunisie : l'Instance Nationale de Protection des Données Personnelles). Fixer par ailleurs un domaine unique : l'application affiche une adresse en @ifriqiyastar.com alors que le domaine vérifié pour l'envoi d'e-mails est ifriqiya-soccer.com.",
+    "securityTitle": "Sécurité",
+    "securityBody": "Les échanges avec nos serveurs sont chiffrés en transit. Les messages privés sont chiffrés au repos. Les pièces d'identité, les justificatifs professionnels et les pièces jointes de la messagerie sont stockés dans des espaces privés à accès restreint. Aucun système n'étant infaillible, utilisez un mot de passe unique et signalez-nous tout comportement suspect.",
+    "changesTitle": "Modifications",
+    "changesBody": "Cette politique peut évoluer. En cas de changement significatif, nous vous en informerons dans l'application. La date en haut de page indique la dernière mise à jour."
+  },
+  "termsPage": {
+    "metaTitle": "Conditions d'utilisation",
+    "metaDescription": "Les règles d'utilisation d'Ifriqiya Soccer Star : inscription, validation des comptes, contenus, messagerie, détections et résiliation.",
+    "back": "Retour à l'accueil",
+    "pill": "Conditions",
+    "title": "Conditions",
+    "titleAccent": "d'utilisation.",
+    "updated": "Dernière mise à jour : 23/09/2026",
+    "lead": "En créant un compte sur Ifriqiya Soccer Star, vous acceptez les règles ci-dessous. Elles complètent la politique de confidentialité, qui décrit le traitement de vos données.",
+    "todoLabel": "À compléter avant publication",
+    "operatorTitle": "L'éditeur du service",
+    "operatorTodo": "Raison sociale, forme juridique, adresse du siège, numéro d'immatriculation et adresse e-mail de contact — les mêmes mentions que dans la politique de confidentialité.",
+    "serviceTitle": "Ce que fait le service",
+    "serviceBody1": "Ifriqiya Soccer Star met en relation des joueurs de football avec des recruteurs, clubs, académies et agents. Un joueur construit un profil sportif, y ajoute des vidéos et des photos, et peut s'inscrire à des journées de détection (Scout Days). Un professionnel recherche des profils, les consulte et peut entrer en contact.",
+    "serviceBody2": "Nous fournissons une plateforme de mise en relation. Nous ne sommes ni un agent, ni un employeur, ni une partie aux accords que vous concluez avec un club, une académie ou un agent rencontré par son intermédiaire.",
+    "accountTitle": "Votre compte",
+    "accountItems": [
+      "Vous vous engagez à fournir des informations exactes et à les tenir à jour. Un profil sportif inexact fausse le travail des recruteurs.",
+      "Votre compte est personnel. Vous êtes responsable de sa confidentialité et de tout ce qui s'y produit.",
+      "Un compte joueur est vérifié au moyen d'une pièce d'identité ; un compte professionnel l'est au moyen de justificatifs. Tant que cette vérification n'a pas abouti, l'accès à certaines fonctions reste fermé.",
+      "Nous pouvons refuser, suspendre ou clore un compte dont les informations sont fausses, dont les justificatifs ne peuvent être vérifiés, ou qui enfreint ces règles."
+    ],
+    "ageTitle": "Âge et mineurs",
+    "ageTodo": "L'âge minimum d'inscription et le mode de recueil du consentement du représentant légal d'un mineur ne sont pas encore arrêtés. Ils doivent être fixés puis écrits ici, en cohérence avec la section « Mineurs » de la politique de confidentialité.",
+    "conductTitle": "Ce qui est interdit",
+    "conductItems": [
+      "Se faire passer pour quelqu'un d'autre, ou prétendre à une qualité professionnelle que l'on n'a pas.",
+      "Publier des contenus haineux, violents, sexuels, diffamatoires ou portant atteinte à la vie privée d'autrui.",
+      "Harceler, menacer ou solliciter de façon insistante un autre utilisateur, en particulier un mineur.",
+      "Publier des contenus dont vous ne détenez pas les droits, notamment des vidéos de match appartenant à un tiers.",
+      "Collecter automatiquement les données du service, contourner ses limitations techniques, ou en perturber le fonctionnement."
+    ],
+    "contentTitle": "Les contenus que vous publiez",
+    "contentBody1": "Vos photos, vidéos, publications et messages restent les vôtres. Vous nous accordez seulement le droit de les héberger et de les afficher dans le service, afin qu'il fonctionne : montrer votre profil à un recruteur, lire une vidéo, délivrer un message.",
+    "contentBody2": "Vous garantissez détenir les droits sur ce que vous publiez, et disposer de l'accord des personnes identifiables qui y figurent.",
+    "moderationTitle": "Signalement et modération",
+    "moderationBody1": "Tout contenu et tout compte peuvent être signalés depuis l'application. Nous pouvons masquer un contenu le temps d'instruire un signalement, puis le rétablir ou le retirer.",
+    "moderationBody2": "Signaler une personne depuis la messagerie rend cette conversation lisible par la modération : c'est la seule façon d'instruire un signalement de harcèlement. Le détail figure dans la politique de confidentialité.",
+    "scoutDaysTitle": "Détections (Scout Days)",
+    "scoutDaysBody": "Une détection est organisée par un professionnel, qui en fixe la date, le lieu, les places et les critères d'éligibilité. L'inscription n'est possible que si votre profil répond à ces critères. L'organisateur peut confirmer, refuser, marquer la présence et rédiger une évaluation ; il choisit de la publier ou non au joueur évalué.",
+    "scoutDaysNote": "Nous n'organisons pas ces journées et ne garantissons ni leur tenue, ni leur contenu, ni les suites qui leur sont données.",
+    "moneyTitle": "Abonnements et paiements",
+    "moneyTodo": "Les offres payantes ne sont pas ouvertes. Tarifs, devises, taxes, commissions sur les détections, renouvellement, expiration, annulation et remboursement restent à définir, ainsi que la conformité aux règles d'achat intégré d'Apple et de Google. Cette section devra être écrite avant toute mise en service du paiement.",
+    "terminationTitle": "Résiliation",
+    "terminationBody": "Vous pouvez cesser d'utiliser le service à tout moment et demander la suppression de votre compte. Nous pouvons suspendre ou clore un compte en cas de manquement à ces règles, et vous en informons sauf lorsque la loi l'interdit. La durée de conservation des données après clôture est précisée dans la politique de confidentialité.",
+    "liabilityTitle": "Disponibilité et responsabilité",
+    "liabilityBody": "Le service est fourni en l'état. Nous faisons le nécessaire pour qu'il reste disponible et sûr, sans pouvoir garantir une absence totale d'interruption ou d'erreur. Nous ne sommes pas responsables des décisions de recrutement, des accords conclus entre utilisateurs, ni du comportement d'un utilisateur envers un autre.",
+    "ipTitle": "Propriété intellectuelle",
+    "ipBody": "Le nom Ifriqiya Soccer Star, son logo, son identité visuelle et le service lui-même sont protégés. Ces conditions ne vous transfèrent aucun droit sur eux.",
+    "lawTitle": "Droit applicable et litiges",
+    "lawTodo": "Droit applicable, juridiction compétente et éventuel mode de résolution amiable préalable. À faire fixer par un juriste.",
+    "changesTitle": "Modifications",
+    "changesBody": "Ces conditions peuvent évoluer. En cas de changement significatif, nous vous en informerons dans l'application. La date en haut de page indique la dernière mise à jour ; continuer à utiliser le service vaut acceptation de la version en vigueur."
   },
   "testimonials": {
     "pill": "Témoignages",
