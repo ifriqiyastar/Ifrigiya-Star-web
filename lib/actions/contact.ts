@@ -4,7 +4,7 @@ import { Resend } from "resend";
 
 export type ContactResult = { ok: boolean; reason?: "missing" | "unconfigured" | "send_failed" };
 
-const CONTACT_ADDRESS = "contact@ifriqiya-soccer-star.com";
+const CONTACT_ADDRESS = "contact@ifriqiya-soccer.com";
 
 /**
  * Envoie reellement l'e-mail du formulaire de contact public, via Resend
@@ -12,7 +12,7 @@ const CONTACT_ADDRESS = "contact@ifriqiya-soccer-star.com";
  * Server Actions du back-office (`lib/actions/*.ts`), celle-ci est appelee
  * depuis une page publique sans session.
  *
- * Le domaine d'envoi (`ifriqiya-soccer-star.com`) doit etre verifie dans le
+ * Le domaine d'envoi (`ifriqiya-soccer.com`) doit etre verifie dans le
  * tableau de bord Resend (enregistrements SPF/DKIM) : sans cela Resend refuse
  * l'envoi ou le fait atterrir en spam. Tant que `RESEND_API_KEY` est absente
  * ou que l'envoi echoue, le formulaire (`components/site/contact-form.tsx`)

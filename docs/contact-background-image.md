@@ -11,7 +11,7 @@ Use case: photorealistic-natural. Asset type: wide photographic background for t
 
 The `/contact` form validates the required name, email, topic, and message,
 then opens an encoded `mailto:` draft addressed to the existing public
-contact address, `contact@ifriqiya-soccer-star.com`. The visitor completes sending
+contact address, `contact@ifriqiya-soccer.com`. The visitor completes sending
 in their mail application. A copy-message fallback is offered after preparing
 the draft. No delivery confirmation is claimed and no message is stored on
 the server. Direct server delivery would require an email service.
