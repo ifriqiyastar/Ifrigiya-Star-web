@@ -117,8 +117,15 @@ export function PostEditor({
     onUpdate: ({ editor }) => setContentJson(JSON.stringify(editor.getJSON())),
   });
 
+  // Capture au moment de la soumission, pas via un `onClick` sur chaque
+  // bouton : ainsi valider avec Entree (qui declenche le bouton "Publier",
+  // premier du formulaire) est suivi tout aussi correctement.
+  const lastIntentRef = React.useRef<string | null>(null);
   const [state, formAction, pending] = useActionState(
-    async (_previous: ActionResult, formData: FormData) => saveBlogPost(formData),
+    async (_previous: ActionResult, formData: FormData) => {
+      lastIntentRef.current = String(formData.get("intent") ?? "");
+      return saveBlogPost(formData);
+    },
     INITIAL,
   );
 
@@ -128,8 +135,13 @@ export function PostEditor({
       toast.success(state.message);
       // Une creation reussie n'a pas encore d'URL d'edition a offrir : la
       // Server Action ne renvoie pas l'id cree, `ActionResult` restant
-      // volontairement le meme type partout dans le back-office.
-      if (!post) router.push(i18n.path("/admin/blog"));
+      // volontairement le meme type partout dans le back-office — d'ou la
+      // redirection systematique. Une modification publiee redirige aussi,
+      // a la demande du client ; un brouillon enregistre reste sur place,
+      // pour continuer a le modifier.
+      if (!post || lastIntentRef.current === "publie") {
+        router.push(i18n.path("/admin/blog"));
+      }
     } else {
       toast.error(state.message);
     }
