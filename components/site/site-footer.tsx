@@ -84,9 +84,21 @@ export async function SiteFooter({
         </div>
       </div>
 
-      <div className="mx-auto mt-12 flex max-w-7xl flex-col gap-2 border-t border-(--site-line) px-5 pt-6 text-xs text-(--site-muted) sm:flex-row sm:items-center sm:justify-between sm:px-8">
+      {/* Les liens legaux vivent dans la barre du bas, a cote du (c) : c'est
+          la convention, et c'est aussi l'endroit ou Google et les stores les
+          cherchent. Les mettre dans une colonne thematique les noierait parmi
+          des liens de contenu. */}
+      <div className="mx-auto mt-12 flex max-w-7xl flex-col gap-3 border-t border-(--site-line) px-5 pt-6 text-xs text-(--site-muted) sm:flex-row sm:items-center sm:justify-between sm:px-8">
         <p>© {new Date().getFullYear()} Ifriqiya Soccer Star. {t.rights}</p>
-        <p>{t.motto}</p>
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+          <Link href={`${prefix}/confidentialite`} className="transition-colors hover:text-(--site-accent)">
+            {t.privacy}
+          </Link>
+          <Link href={`${prefix}/conditions`} className="transition-colors hover:text-(--site-accent)">
+            {t.terms}
+          </Link>
+          <p>{t.motto}</p>
+        </div>
       </div>
     </footer>
   );
