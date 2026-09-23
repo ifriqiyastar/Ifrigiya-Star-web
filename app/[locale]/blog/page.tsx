@@ -13,9 +13,9 @@ import { listPublishedBlogPosts, type PublicBlogPostSummary } from "@/lib/querie
 import { isMobileRequest } from "@/lib/server-device";
 import { publicStorageUrl } from "@/lib/supabase/config";
 
-/** 6 articles par page sur telephone, 12 sur ordinateur (client request). */
+/** 6 articles par page sur telephone, 9 sur ordinateur (client request) — trois rangees pleines de trois sur la grille `lg:grid-cols-3`. */
 const MOBILE_PAGE_SIZE = 6;
-const DESKTOP_PAGE_SIZE = 12;
+const DESKTOP_PAGE_SIZE = 9;
 
 /** Toujours en francais : le contenu du blog l'est, quelle que soit la langue de l'entete/pied de page autour. */
 const formatPostDate = (iso: string) =>
