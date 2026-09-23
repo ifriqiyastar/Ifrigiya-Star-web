@@ -85,17 +85,24 @@ export function PostEditor({
   const i18n = useAdminTranslations();
   const router = useRouter();
 
+  // `title`/`category`/`metaTitle` sont controles pour la meme raison que
+  // `slug`/`authorName` ci-dessous : un `defaultValue` non controle ne doit
+  // jamais changer apres le premier rendu (Base UI le signale), mais
+  // `revalidatePath()` dans `saveBlogPost()` refait relire l'article des
+  // qu'un enregistrement reussit — la page reçoit alors un `post` frais en
+  // props sans que `PostEditor` soit demonte, et un champ non controle
+  // recevait ce nouveau `defaultValue` en cours de vie, exactement ce que
+  // Base UI refuse.
+  const [title, setTitle] = React.useState(post?.title ?? "");
   const [slug, setSlug] = React.useState(post?.slug ?? "");
   const [slugTouched, setSlugTouched] = React.useState(Boolean(post));
   const [coverPath, setCoverPath] = React.useState<string | null>(post?.cover_image_path ?? null);
-  // Controle (comme `slug`), pas `defaultValue` : un `defaultValue` sur ce
-  // champ se faisait effacer entre le rendu serveur (verifiable, la valeur
-  // etait bien dans le HTML initial) et ce que l'administrateur voyait a
-  // l'ecran une fois l'hydratation passee.
   // `||`, pas `??` : un article enregistre avant le repli cote serveur peut
   // avoir `author_name = ""` en base (chaine vide, pas `null`), auquel cas
   // `??` ne serait jamais declenche et le champ resterait visible-vide.
   const [authorName, setAuthorName] = React.useState(post?.author_name || defaultAuthorName || "");
+  const [category, setCategory] = React.useState(post?.category ?? "");
+  const [metaTitle, setMetaTitle] = React.useState(post?.meta_title ?? "");
   const [contentJson, setContentJson] = React.useState(() => JSON.stringify(post?.content ?? {}));
   const [scheduledAtLocal, setScheduledAtLocal] = React.useState(() => toDatetimeLocalValue(post?.scheduled_at ?? null));
   const nowLocal = React.useMemo(() => toDatetimeLocalValue(new Date().toISOString()), []);
@@ -171,8 +178,9 @@ export function PostEditor({
           <Input
             id="blog-title"
             name="title"
-            defaultValue={post?.title}
+            value={title}
             onChange={(event) => {
+              setTitle(event.target.value);
               if (!slugTouched) setSlug(slugify(event.target.value));
             }}
             placeholder={i18n.t("Titre de l'article")}
@@ -237,7 +245,8 @@ export function PostEditor({
           <Input
             id="blog-category"
             name="category"
-            defaultValue={post?.category ?? ""}
+            value={category}
+            onChange={(event) => setCategory(event.target.value)}
             placeholder={i18n.t("Ex : Actualites, Coulisses, Transferts…")}
           />
           <p className="mt-1.5 text-xs text-muted-foreground">
@@ -268,7 +277,8 @@ export function PostEditor({
           <Input
             id="blog-meta-title"
             name="meta_title"
-            defaultValue={post?.meta_title ?? ""}
+            value={metaTitle}
+            onChange={(event) => setMetaTitle(event.target.value)}
             placeholder={i18n.t("Repli : le titre de l'article")}
           />
 
