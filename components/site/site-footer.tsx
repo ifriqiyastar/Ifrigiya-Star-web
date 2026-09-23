@@ -76,10 +76,10 @@ export async function SiteFooter({
           <p className="font-heading text-sm font-bold tracking-wide uppercase">{t.writeHeading}</p>
           <p className="text-sm leading-relaxed text-(--site-muted)">{t.writeBody}</p>
           <a
-            href="mailto:contact@ifriqiya-soccer.com"
+            href="mailto:ifriqiya.star@gmail.com"
             className="w-fit text-sm font-semibold text-(--site-accent) hover:underline"
           >
-            contact@ifriqiya-soccer.com
+            ifriqiya.star@gmail.com
           </a>
         </div>
       </div>

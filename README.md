@@ -48,7 +48,10 @@ verifie pour l'envoi, mais personne ne peut recevoir de courrier a
 une boite existante). En attendant, `DELIVERY_ADDRESS` dans
 `lib/actions/contact.ts` route les messages vers la boite Gmail deja utilisee
 par l'app (`ifriqiya.star@gmail.com`) — a remplacer par l'adresse du domaine
-des que sa reception sera configuree.
+des que sa reception sera configuree. **L'adresse affichee sur le site**
+(pied de page, page `/contact`, messages d'erreur) est la meme
+`ifriqiya.star@gmail.com`, pour ne jamais montrer une adresse que personne ne
+lit — a remettre a jour avec `DELIVERY_ADDRESS` le jour ou les deux changent.
 
 **Protection anti-robot (Cloudflare Turnstile).** Activee le 2026-09-17 a la
 demande du client, c'est la fonctionnalite captcha de **Supabase Auth**

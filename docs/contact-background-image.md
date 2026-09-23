@@ -10,8 +10,9 @@ Use case: photorealistic-natural. Asset type: wide photographic background for t
 ## Contact form delivery
 
 The `/contact` form validates the required name, email, topic, and message,
-then opens an encoded `mailto:` draft addressed to the existing public
-contact address, `contact@ifriqiya-soccer.com`. The visitor completes sending
-in their mail application. A copy-message fallback is offered after preparing
-the draft. No delivery confirmation is claimed and no message is stored on
-the server. Direct server delivery would require an email service.
+then sends it server-side via Resend (`lib/actions/contact.ts`). The public
+contact address shown on the page, `ifriqiya.star@gmail.com`, is also where
+these submissions land — see that file for why (the domain
+`ifriqiya-soccer.com` is verified with Resend for sending but has no mailbox
+of its own yet). No message is stored on the server; a failed send shows an
+inline error instead of a delivery confirmation.
