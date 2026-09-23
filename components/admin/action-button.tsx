@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { Loader2Icon } from "lucide-react";
 import { toast } from "sonner";
 
@@ -27,6 +28,13 @@ type Props = {
   className?: string;
   /** Si present, une confirmation est demandee avant d'executer l'action. */
   confirm?: { title: string; description: string; actionLabel?: string };
+  /**
+   * Ou naviguer apres un succes — un geste qui fait disparaitre la ligne ou
+   * la fiche courante (suppression definitive d'un compte) ne peut pas se
+   * contenter du `revalidatePath` deja fait par l'action cote serveur : la
+   * page resterait affichee sur une fiche qui n'existe plus.
+   */
+  redirectTo?: string;
 };
 
 /**
@@ -41,8 +49,10 @@ export function ActionButton({
   size = "xs",
   className,
   confirm,
+  redirectTo,
 }: Props) {
   const { dict } = useAdminI18n();
+  const router = useRouter();
   const [pending, setPending] = React.useState(false);
   const [open, setOpen] = React.useState(false);
 
@@ -50,8 +60,12 @@ export function ActionButton({
     setPending(true);
     try {
       const result = await action();
-      if (result.ok) toast.success(result.message);
-      else toast.error(result.message);
+      if (result.ok) {
+        toast.success(result.message);
+        if (redirectTo) router.push(redirectTo);
+      } else {
+        toast.error(result.message);
+      }
     } catch {
       toast.error(dict.common.actionFailed);
     } finally {

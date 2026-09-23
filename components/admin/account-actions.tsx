@@ -187,6 +187,10 @@ export async function AccountActions({
           action={deleteAccount.bind(null, profileId)}
           variant="destructive"
           size="sm"
+          // La fiche courante n'a plus de compte a afficher une fois la
+          // suppression reussie (definitive ou repli sur la desactivation) :
+          // rester dessus montrerait une page perimee ou en erreur.
+          redirectTo={i18n.path("/admin/utilisateurs")}
           confirm={{
             title: i18n.t("Supprimer ce compte"),
             description: hasServiceRole()
