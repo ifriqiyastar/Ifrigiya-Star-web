@@ -193,7 +193,7 @@ export function SiteNav() {
                 ref={qrTriggerRef}
                 type="button"
                 onClick={openQr}
-                className="inline-flex items-center rounded-full border border-[var(--site-accent)] bg-[var(--site-accent)] px-2 py-2 text-xs font-semibold whitespace-nowrap text-[var(--site-ink)] transition-colors hover:bg-transparent hover:text-[var(--site-accent)] sm:px-5 sm:text-sm"
+                className="inline-flex cursor-pointer items-center rounded-full border border-[var(--site-accent)] bg-[var(--site-accent)] px-2 py-2 text-xs font-semibold whitespace-nowrap text-[var(--site-ink)] transition-colors hover:bg-transparent hover:text-[var(--site-accent)] sm:px-5 sm:text-sm"
               >
                 {nav.download}
               </button>
