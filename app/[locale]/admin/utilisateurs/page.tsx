@@ -16,6 +16,7 @@ import {
   UsersIcon,
 } from "lucide-react";
 
+import { CreateEditorDialog } from "@/components/admin/create-editor-dialog";
 import { EmptyState } from "@/components/admin/empty-state";
 import { KpiTile } from "@/components/admin/kpi-tile";
 import { NoteCards } from "@/components/admin/note-cards";
@@ -41,7 +42,7 @@ import { localePath } from "@/lib/i18n/config";
 import { ACCOUNT_STATUS, ROLE, makeLabels } from "@/lib/labels";
 import { listUsers, USERS_PAGE_SIZE } from "@/lib/queries/users";
 import { createClient } from "@/lib/supabase/server";
-import { requirePermission } from "@/lib/auth";
+import { isSuperAdmin, requirePermission } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -53,7 +54,11 @@ export default async function UsersPage({ searchParams }: PageProps<"/[locale]/a
   const i18n = await getAdminI18n();
 
   const admin = await requirePermission("users.read");
-  const [locale, dict] = await Promise.all([getAdminLocale(), getAdminDict()]);
+  const [locale, dict, canCreateEditor] = await Promise.all([
+    getAdminLocale(),
+    getAdminDict(),
+    isSuperAdmin(),
+  ]);
   const d = dict.users;
   const { formatDate, formatNumber } = makeFormat(locale);
   const { entry, label, options } = makeLabels(locale);
@@ -140,19 +145,25 @@ export default async function UsersPage({ searchParams }: PageProps<"/[locale]/a
         }
         description={d.description}
         actions={
-          // Un seul bouton : l'export existe. Pas de « Creer un compte » —
-          // l'inscription passe par l'application mobile, aucun fournisseur
-          // d'email d'invitation n'est configure, et l'attribution d'un role
-          // administrateur se fait en SQL depuis la migration 202608240006.
-          <Link
-            href={href(
-              i18n.path(`/admin/utilisateurs/export${exportQuery.size ? `?${exportQuery}` : ""}`),
-            )}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-accent px-3 text-sm font-semibold hover:bg-accent/70"
-          >
-            <DownloadIcon className="size-4" />
-            {dict.common.export}
-          </Link>
+          <>
+            {/* Reserve au super administrateur : creer un compte donne acces
+                au back-office, un cran au-dessus de `users.write`. Le geste
+                touche l'API Auth Admin et `admin_user_roles` (aucune policy
+                d'ecriture, meme pour un admin authentifie) — voir
+                `createEditorAccount()`. Un seul role attribuable ici,
+                `editeur` : ce n'est pas un ecran general de gestion des roles
+                RBAC, qui reste par l'editeur SQL (202608240006). */}
+            {canCreateEditor ? <CreateEditorDialog /> : null}
+            <Link
+              href={href(
+                i18n.path(`/admin/utilisateurs/export${exportQuery.size ? `?${exportQuery}` : ""}`),
+              )}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-accent px-3 text-sm font-semibold hover:bg-accent/70"
+            >
+              <DownloadIcon className="size-4" />
+              {dict.common.export}
+            </Link>
+          </>
         }
       />
 
