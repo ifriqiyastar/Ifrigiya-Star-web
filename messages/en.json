@@ -221,7 +221,9 @@
     "writeHeading": "Write to us",
     "rights": "All rights reserved.",
     "writeBody": "A question about the academy, a scouting day or a partnership? Our team answers.",
-    "motto": "Scouting · Progression · Excellence"
+    "motto": "Scouting · Progression · Excellence",
+    "privacy": "Privacy",
+    "terms": "Terms"
   },
   "language": {
     "label": "Language",
@@ -279,6 +281,191 @@
     "sent": "Your message has been sent. Our team will get back to you shortly.",
     "sendError": "Something went wrong while sending. Please try again, or write to us directly at ifriqiya.star@gmail.com.",
     "noscript": "Enable JavaScript to send your message, or write directly to ifriqiya.star@gmail.com."
+  },
+  "privacyPage": {
+    "metaTitle": "Privacy policy",
+    "metaDescription": "What data Ifriqiya Soccer Star processes, why, who can access it and how to exercise your rights.",
+    "back": "Back to home",
+    "pill": "Privacy",
+    "title": "Privacy",
+    "titleAccent": "policy.",
+    "updated": "Last updated: 23/09/2026",
+    "lead": "Ifriqiya Soccer Star connects football players with recruiters, clubs, academies and agents. This page explains what data we process, why, who can access it and how to exercise your rights.",
+    "todoLabel": "To complete before publishing",
+    "controllerTitle": "Data controller",
+    "controllerTodo": "Legal name, legal form, registered address, registration number and contact email address. Without these, the document remains legally incomplete.",
+    "dataTitle": "The data we collect",
+    "dataIntro": "Account and identity:",
+    "dataRows": [
+      [
+        "Email address, password (stored in irreversibly hashed form)",
+        "Create and secure your account"
+      ],
+      [
+        "Last name, first name, phone number",
+        "Identify you to other users"
+      ],
+      [
+        "Account type (player or professional)",
+        "Determine which features you can access"
+      ],
+      [
+        "Date you accepted the terms and this policy",
+        "Proof of consent"
+      ],
+      [
+        "App language",
+        "Show the interface in your language"
+      ]
+    ],
+    "dataGoogle": "If you use “Continue with Google”, Google sends us your email address, your name and your Google profile picture. We never receive your Google password.",
+    "dataOthers": [
+      [
+        "Sporting profile (players)",
+        "Date of birth, nationality, country and city, height, weight, strong foot, main and secondary position, level, current club or free-agent status, free-text presentation, profile photo, and the photos and videos you add."
+      ],
+      [
+        "Professional profile",
+        "Account type, organisation name, role, country and city, photo, and the supporting documents uploaded for account validation."
+      ],
+      [
+        "Identity verification",
+        "The identity documents you submit and, where applicable, information about a minor's legal guardian. They are stored in a private area, accessible only to the administrators in charge of validation."
+      ],
+      [
+        "Messaging",
+        "The content of your messages, their attachments, your voice messages, read timestamps and your last activity."
+      ],
+      [
+        "Scout Days",
+        "Your registrations, your attendance, and the assessments written by the organiser (scores out of 100 and a comment)."
+      ],
+      [
+        "In-app activity",
+        "Posts, comments, likes, follows, and the record of professionals viewing your profile."
+      ],
+      [
+        "Technical data",
+        "A notification identifier specific to your device, the device type and name, and the logs required to keep the service secure. When you use “My location” on a Scout Day map, your position is used on the device only and is not stored on our servers."
+      ]
+    ],
+    "whyTitle": "Why we process this data",
+    "whyItems": [
+      "Providing the service: creating your account, showing your profile to recruiters, enabling messaging and Scout Day registrations.",
+      "Verification duty: checking players' identity and professionals' credentials before opening sensitive features to them.",
+      "Security and moderation: preventing fraud, abuse and harassment, and handling reports.",
+      "Your consent: notifications, camera, microphone and gallery — each one refusable and revocable in your phone's settings."
+    ],
+    "visibilityTitle": "Who can see your data",
+    "visibilityItems": [
+      "A validated player's profile can be viewed by validated professionals. You can make your profile invisible at any time from the app.",
+      "Your posts, comments, likes and your follower and following lists are visible to signed-in users.",
+      "Your last activity is only visible to someone you already have a conversation with.",
+      "A Scout Day assessment is only visible to the assessed player if the organiser chooses to publish it."
+    ],
+    "moderationTitle": "Moderation",
+    "moderationBody1": "Private messages are encrypted at rest on our servers. An administrator can only read a conversation if a message in it, or one of its participants, has been reported — and each such access is logged.",
+    "moderationBody2": "Reporting someone from the messaging screen therefore makes that conversation readable by moderation. That is the trade-off for handling your report.",
+    "providersTitle": "Our technical providers",
+    "providersRows": [
+      [
+        "Supabase",
+        "Hosting, database, authentication, file storage"
+      ],
+      [
+        "Expo, Google (FCM), Apple (APNs)",
+        "Delivering notifications"
+      ],
+      [
+        "Resend",
+        "Transactional email (password reset, security notices)"
+      ],
+      [
+        "Google",
+        "“Continue with Google” sign-in, if you use it"
+      ],
+      [
+        "Cloudflare (Turnstile)",
+        "Anti-bot protection on the sign-in and sign-up screens"
+      ],
+      [
+        "Esri",
+        "Map tiles for Scout Day locations"
+      ],
+      [
+        "YouTube",
+        "Playback of videos added as links"
+      ]
+    ],
+    "providersNote": "These providers act on our behalf and may, depending on where they operate, process data outside your country of residence. Loading a map tile or a YouTube video exposes your IP address to the provider concerned.",
+    "providersNoSale": "We do not sell your data and we do not pass it to advertisers.",
+    "hostingTodo": "State the hosting region of the database and, if data leaves Tunisia or the European Union, the transfer mechanism relied upon.",
+    "retentionTitle": "Retention periods",
+    "retentionTodo": "This point has not been decided yet. The following must be set and then written here: how long an inactive account is kept, how long messages are kept, how long identity documents are kept after validation (the usual practice being to delete them as soon as verification is done), and how long reports and moderation logs are kept. A stated period is a commitment: do not invent one.",
+    "minorsTitle": "Minors",
+    "minorsTodo": "The app is aimed at young players and may receive sign-ups from minors. The following must be defined and then described here: the minimum age, how a legal guardian's consent is obtained, and any messaging restrictions between an adult and a minor.",
+    "rightsTitle": "Your rights",
+    "rightsBody1": "You can request access to your data, its correction, its erasure, its portability, as well as restriction of or objection to its processing. You can also withdraw at any time the permissions you granted (notifications, camera, microphone, gallery) from your phone's settings.",
+    "rightsBody2": "Some of these rights can be exercised directly in the app: edit your profile, make it invisible, delete your photos, videos and posts.",
+    "contactTodo": "Dedicated email address for data requests, response time, and the authority to lodge a complaint with (in Tunisia: the Instance Nationale de Protection des Données Personnelles). Also settle on a single domain: the app shows an address at @ifriqiyastar.com while the domain verified for sending email is ifriqiya-soccer.com.",
+    "securityTitle": "Security",
+    "securityBody": "Traffic to our servers is encrypted in transit. Private messages are encrypted at rest. Identity documents, professional supporting documents and messaging attachments are stored in private, access-restricted areas. No system is infallible, so use a unique password and report any suspicious behaviour to us.",
+    "changesTitle": "Changes",
+    "changesBody": "This policy may change. If a change is significant, we will tell you in the app. The date at the top of this page shows the last update."
+  },
+  "termsPage": {
+    "metaTitle": "Terms of use",
+    "metaDescription": "The rules for using Ifriqiya Soccer Star: sign-up, account validation, content, messaging, Scout Days and termination.",
+    "back": "Back to home",
+    "pill": "Terms",
+    "title": "Terms",
+    "titleAccent": "of use.",
+    "updated": "Last updated: 23/09/2026",
+    "lead": "By creating an account on Ifriqiya Soccer Star, you accept the rules below. They complement the privacy policy, which describes how your data is processed.",
+    "todoLabel": "To complete before publishing",
+    "operatorTitle": "Who operates the service",
+    "operatorTodo": "Legal name, legal form, registered address, registration number and contact email address — the same details as in the privacy policy.",
+    "serviceTitle": "What the service does",
+    "serviceBody1": "Ifriqiya Soccer Star connects football players with recruiters, clubs, academies and agents. A player builds a sporting profile, adds videos and photos to it, and can register for scouting days (Scout Days). A professional searches profiles, views them and can get in touch.",
+    "serviceBody2": "We provide a platform that puts people in contact. We are not an agent, not an employer, and not a party to any agreement you reach with a club, an academy or an agent met through it.",
+    "accountTitle": "Your account",
+    "accountItems": [
+      "You undertake to provide accurate information and to keep it up to date. An inaccurate sporting profile distorts recruiters' work.",
+      "Your account is personal. You are responsible for keeping it confidential and for everything that happens on it.",
+      "A player account is verified with an identity document; a professional account with supporting documents. Until that verification succeeds, some features remain closed.",
+      "We may refuse, suspend or close an account whose information is false, whose documents cannot be verified, or which breaches these rules."
+    ],
+    "ageTitle": "Age and minors",
+    "ageTodo": "The minimum sign-up age and the way a minor's legal guardian's consent is obtained have not been settled yet. They must be defined and then written here, consistently with the “Minors” section of the privacy policy.",
+    "conductTitle": "What is not allowed",
+    "conductItems": [
+      "Impersonating someone else, or claiming a professional capacity you do not have.",
+      "Posting hateful, violent, sexual or defamatory content, or content that invades someone's privacy.",
+      "Harassing, threatening or persistently soliciting another user, in particular a minor.",
+      "Posting content you do not hold the rights to, notably match footage belonging to a third party.",
+      "Scraping the service's data, circumventing its technical limits, or disrupting its operation."
+    ],
+    "contentTitle": "The content you post",
+    "contentBody1": "Your photos, videos, posts and messages remain yours. You only grant us the right to host and display them within the service so that it works: showing your profile to a recruiter, playing a video, delivering a message.",
+    "contentBody2": "You warrant that you hold the rights to what you post, and that you have the agreement of any identifiable people appearing in it.",
+    "moderationTitle": "Reporting and moderation",
+    "moderationBody1": "Any content and any account can be reported from the app. We may hide content while a report is being handled, then restore or remove it.",
+    "moderationBody2": "Reporting someone from the messaging screen makes that conversation readable by moderation: it is the only way to handle a harassment report. The detail is in the privacy policy.",
+    "scoutDaysTitle": "Scout Days",
+    "scoutDaysBody": "A Scout Day is organised by a professional, who sets its date, place, capacity and eligibility criteria. You can only register if your profile meets those criteria. The organiser may confirm, refuse, mark attendance and write an assessment; they choose whether to publish it to the assessed player.",
+    "scoutDaysNote": "We do not organise these days and we do not guarantee that they will take place, what they will contain, or what follows from them.",
+    "moneyTitle": "Subscriptions and payments",
+    "moneyTodo": "Paid plans are not open. Prices, currencies, taxes, Scout Day commissions, renewal, expiry, cancellation and refunds are still to be defined, as is compliance with Apple's and Google's in-app purchase rules. This section must be written before payment goes live.",
+    "terminationTitle": "Termination",
+    "terminationBody": "You may stop using the service at any time and ask for your account to be deleted. We may suspend or close an account that breaches these rules, and we will tell you unless the law forbids it. How long data is kept after closure is set out in the privacy policy.",
+    "liabilityTitle": "Availability and liability",
+    "liabilityBody": "The service is provided as is. We do what is needed to keep it available and secure, without being able to guarantee it will never be interrupted or contain errors. We are not responsible for recruitment decisions, for agreements reached between users, or for one user's behaviour towards another.",
+    "ipTitle": "Intellectual property",
+    "ipBody": "The name Ifriqiya Soccer Star, its logo, its visual identity and the service itself are protected. These terms transfer no rights in them to you.",
+    "lawTitle": "Governing law and disputes",
+    "lawTodo": "Governing law, competent courts, and any required prior amicable resolution step. To be settled by a lawyer.",
+    "changesTitle": "Changes",
+    "changesBody": "These terms may change. If a change is significant, we will tell you in the app. The date at the top of this page shows the last update; continuing to use the service means accepting the version in force."
   },
   "testimonials": {
     "pill": "Testimonials",
