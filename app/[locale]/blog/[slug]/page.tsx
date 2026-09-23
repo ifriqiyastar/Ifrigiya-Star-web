@@ -8,7 +8,7 @@ import { BlogContent } from "@/components/site/blog-content";
 import { SiteFooter } from "@/components/site/site-footer";
 import { SiteNav } from "@/components/site/site-nav";
 import { getLocale } from "@/lib/i18n/dictionaries";
-import { localePath } from "@/lib/i18n/config";
+import { localePath, ogImagePath } from "@/lib/i18n/config";
 import { getPublishedBlogPostBySlug } from "@/lib/queries/site-blog";
 import { publicStorageUrl } from "@/lib/supabase/config";
 
@@ -22,12 +22,27 @@ export async function generateMetadata({
   const { slug } = await params;
   const post = await getPublishedBlogPostBySlug(slug);
   if (!post) return {};
+  const title = `${post.meta_title || post.title} — Ifriqiya Soccer Star`;
+  const description = post.meta_description || post.excerpt || undefined;
+  // Sa propre couverture quand l'article en a une : un article partage doit
+  // montrer son sujet, pas la carte de marque generique. Sans couverture, la
+  // carte de la langue courante (`ogImagePath()`) sert de repli — jamais
+  // d'image du tout serait pire qu'une image generique.
+  const images = [publicStorageUrl("blog-media", post.cover_image_path) ?? ogImagePath(await getLocale())];
   return {
-    title: `${post.meta_title || post.title} — Ifriqiya Soccer Star`,
-    description: post.meta_description || post.excerpt || undefined,
+    title,
+    description,
     // Meme contenu sous les trois prefixes de langue (cf. /blog) : une seule
     // adresse canonique, sans prefixe, pour ne pas diviser le referencement.
     alternates: { canonical: localePath("fr", `/blog/${post.slug}`) },
+    openGraph: {
+      title,
+      description,
+      siteName: "Ifriqiya Soccer Star",
+      type: "article",
+      images,
+    },
+    twitter: { card: "summary_large_image", title, description, images },
   };
 }
 

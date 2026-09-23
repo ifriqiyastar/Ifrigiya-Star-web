@@ -6,17 +6,24 @@ import { ContactForm } from "@/components/site/contact-form";
 import { SiteFooter } from "@/components/site/site-footer";
 import { SiteNav } from "@/components/site/site-nav";
 import { getDictionary, getLocale } from "@/lib/i18n/dictionaries";
-import { LOCALES, localePath } from "@/lib/i18n/config";
+import { LOCALES, localePath, ogImagePath } from "@/lib/i18n/config";
 
 export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale();
   const dict = await getDictionary();
+  const { metaTitle: title, metaDescription: description } = dict.contactPage;
+  const images = [ogImagePath(locale)];
   return {
-    title: dict.contactPage.metaTitle,
-    description: dict.contactPage.metaDescription,
+    title,
+    description,
     alternates: {
-      canonical: localePath(await getLocale(), "/contact"),
+      canonical: localePath(locale, "/contact"),
       languages: Object.fromEntries(LOCALES.map((l) => [l, localePath(l, "/contact")])),
     },
+    // Voir le commentaire equivalent dans `app/[locale]/page.tsx` : la fusion
+    // de metadonnees est superficielle, `siteName`/`type` doivent revenir ici.
+    openGraph: { title, description, siteName: "Ifriqiya Soccer Star", type: "website", images },
+    twitter: { card: "summary_large_image", title, description, images },
   };
 }
 

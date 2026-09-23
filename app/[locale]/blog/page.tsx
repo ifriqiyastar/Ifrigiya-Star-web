@@ -8,7 +8,7 @@ import { Reveal } from "@/components/site/reveal";
 import { SiteFooter } from "@/components/site/site-footer";
 import { SiteNav } from "@/components/site/site-nav";
 import { getLocale } from "@/lib/i18n/dictionaries";
-import { localePath } from "@/lib/i18n/config";
+import { localePath, ogImagePath } from "@/lib/i18n/config";
 import { listPublishedBlogPosts, type PublicBlogPostSummary } from "@/lib/queries/site-blog";
 import { isMobileRequest } from "@/lib/server-device";
 import { publicStorageUrl } from "@/lib/supabase/config";
@@ -30,10 +30,17 @@ const formatPostDate = (iso: string) =>
  * de recherche.
  */
 export async function generateMetadata(): Promise<Metadata> {
+  const title = "Blog — Ifriqiya Soccer Star";
+  const description = "Actualites, conseils et coulisses d'Ifriqiya Soccer Star.";
+  const images = [ogImagePath(await getLocale())];
   return {
-    title: "Blog — Ifriqiya Soccer Star",
-    description: "Actualites, conseils et coulisses d'Ifriqiya Soccer Star.",
+    title,
+    description,
     alternates: { canonical: localePath("fr", "/blog") },
+    // Voir le commentaire equivalent dans `app/[locale]/page.tsx` : la fusion
+    // de metadonnees est superficielle, `siteName`/`type` doivent revenir ici.
+    openGraph: { title, description, siteName: "Ifriqiya Soccer Star", type: "website", images },
+    twitter: { card: "summary_large_image", title, description, images },
   };
 }
 

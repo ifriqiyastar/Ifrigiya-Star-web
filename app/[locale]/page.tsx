@@ -18,7 +18,7 @@ import { Reveal } from "@/components/site/reveal";
 import { APP_SCREENS } from "@/lib/app-screens";
 import { getDictionary, getLocale } from "@/lib/i18n/dictionaries";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
-import { LOCALES, localePath } from "@/lib/i18n/config";
+import { LOCALES, localePath, ogImagePath } from "@/lib/i18n/config";
 
 /**
  * Page publique d'Ifriqiya Soccer Star.
@@ -44,16 +44,28 @@ import { LOCALES, localePath } from "@/lib/i18n/config";
  * sont ce qui dit aux moteurs que `/`, `/en` et `/ar` sont la meme page en
  * trois langues plutot que trois pages concurrentes — c'est la raison d'etre
  * du prefixe d'URL, et sans ces balises il ne sert a rien.
+ *
+ * `openGraph`/`twitter` sont repetes ici (et non hérités du layout racine)
+ * parce que la fusion de metadonnees de Next est superficielle : des qu'un
+ * segment definit son propre `openGraph`, celui du parent est **remplace**,
+ * pas complete — `siteName`/`type` doivent donc revenir a chaque fois qu'on
+ * fixe `title`/`description`. `images` pointe vers la carte pre-rendue de la
+ * langue courante (`ogImagePath()`, voir `docs/og-image.md`).
  */
 export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale();
   const dict = await getDictionary();
+  const title = `Ifriqiya Soccer Star — ${dict.hero.titleLine1} ${dict.hero.titleLine2} ${dict.hero.titleAccent}`;
+  const images = [ogImagePath(locale)];
   return {
-    title: { absolute: `Ifriqiya Soccer Star — ${dict.hero.titleLine1} ${dict.hero.titleLine2} ${dict.hero.titleAccent}` },
+    title: { absolute: title },
     description: dict.hero.lead,
     alternates: {
-      canonical: localePath(await getLocale(), "/"),
+      canonical: localePath(locale, "/"),
       languages: Object.fromEntries(LOCALES.map((l) => [l, localePath(l, "/")])),
     },
+    openGraph: { title, description: dict.hero.lead, siteName: "Ifriqiya Soccer Star", type: "website", images },
+    twitter: { card: "summary_large_image", title, description: dict.hero.lead, images },
   };
 }
 

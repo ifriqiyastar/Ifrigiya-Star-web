@@ -26,6 +26,18 @@ export const metadata: Metadata = {
   },
   description:
     "Back-office administrateur d'Ifriqiya Soccer Star : validations, moderation, Scout Days, abonnements et paiements.",
+  // Repris tel quel par toute page qui ne definit pas son propre `openGraph`
+  // (fusion superficielle de Next : cf. commentaire de `generateMetadata` dans
+  // `app/[locale]/page.tsx`). Le site public precise `title`/`description`
+  // **et** `images` par page (voir `page.tsx`, `blog/page.tsx`,
+  // `contact/page.tsx`, `blog/[slug]/page.tsx`) : l'image de partage
+  // (`public/og/{fr,en,ar}.png`) depend de la langue, donc ne peut pas vivre
+  // ici. ⚠️ Ces chemins ne se resolvent en URL absolue — necessaire pour
+  // qu'un client externe (WhatsApp, X...) recupere l'image — qu'avec
+  // `metadataBase`, donc `NEXT_PUBLIC_SITE_URL` doit etre renseignee en
+  // production.
+  openGraph: { siteName: "Ifriqiya Soccer Star", type: "website" },
+  twitter: { card: "summary_large_image" },
 };
 
 /**

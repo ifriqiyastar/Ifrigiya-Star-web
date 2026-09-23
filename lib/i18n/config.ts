@@ -149,6 +149,21 @@ export function localePath(locale: Locale, path: string): string {
 }
 
 /**
+ * L'image de partage (WhatsApp, X, LinkedIn...) de la langue donnee —
+ * `public/og/{fr,en,ar}.png`. Ce ne sont **pas** des `localePath()` : ce sont
+ * de simples fichiers statiques, jamais prefixes par la langue de l'URL.
+ *
+ * Pre-rendues une fois (voir `docs/og-image.md`) plutot que generees a la
+ * volee par `next/og` : dans ce projet, `ImageResponse` ignore silencieusement
+ * les polices personnalisees (satori retombe sur sa police par defaut sans
+ * erreur), quel que soit le rasteriseur (sharp ou resvg) — bogue confirme,
+ * pas une limitation qu'on pourrait contourner par la config.
+ */
+export function ogImagePath(locale: Locale): string {
+  return `/og/${locale}.png`;
+}
+
+/**
  * L'inverse : retire le prefixe de langue d'un chemin pour retrouver la route
  * « neutre ». Sert au selecteur, qui doit rester sur la page courante.
  */
