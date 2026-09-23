@@ -33,7 +33,7 @@ les deux jeux de variables :
 | `NEXT_PUBLIC_APP_STORE_URL` | non — a renseigner le jour de la publication | Fiche App Store ; des qu'elle existe, le badge Apple du site devient un vrai lien et le QR de l'entete redirige un iPhone qui le scanne directement vers elle (`lib/store-urls.ts`) |
 | `NEXT_PUBLIC_PLAY_STORE_URL` | non — a renseigner le jour de la publication | Meme mecanique, cote Google Play / Android |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | oui tant que la protection anti-robot est active sur le projet Supabase | Cle **publique** du widget Cloudflare Turnstile, la meme que l'app mobile. Voir « Protection anti-robot » ci-dessous |
-| `RESEND_API_KEY` | oui | Envoi de l'e-mail du formulaire `/contact` vers `contact@ifriqiya-soccer.com` via Resend (`lib/actions/contact.ts`) |
+| `RESEND_API_KEY` | oui | Envoi de l'e-mail du formulaire `/contact` via Resend (`lib/actions/contact.ts`) |
 
 **Formulaire de contact (`/contact`).** Envoi uniquement par le serveur, via
 Resend — pas de repli `mailto:`. Le domaine d'expedition
@@ -41,6 +41,14 @@ Resend — pas de repli `mailto:`. Le domaine d'expedition
 doit rester verifie dans le tableau de bord Resend (SPF/DKIM) : sans
 `RESEND_API_KEY`, ou si Resend refuse l'envoi (domaine desverifie, panne du
 service), le formulaire affiche une erreur au visiteur au lieu de l'envoyer.
+⚠️ **`ifriqiya-soccer.com` n'a pas d'enregistrement MX** : le domaine est
+verifie pour l'envoi, mais personne ne peut recevoir de courrier a
+`contact@ifriqiya-soccer.com` tant qu'une messagerie n'y est pas branchee
+(Google Workspace, Zoho Mail, ou une redirection Cloudflare Email Routing vers
+une boite existante). En attendant, `DELIVERY_ADDRESS` dans
+`lib/actions/contact.ts` route les messages vers la boite Gmail deja utilisee
+par l'app (`ifriqiya.star@gmail.com`) — a remplacer par l'adresse du domaine
+des que sa reception sera configuree.
 
 **Protection anti-robot (Cloudflare Turnstile).** Activee le 2026-09-17 a la
 demande du client, c'est la fonctionnalite captcha de **Supabase Auth**
