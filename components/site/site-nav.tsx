@@ -181,11 +181,6 @@ export function SiteNav() {
           </Link>
 
           <div className="ms-auto flex items-center gap-2 sm:gap-4">
-            {/* Le selecteur de langue passe dans le tiroir sur telephone, a la
-                demande du client : c'est le bouton de telechargement qui
-                prend sa place dans l'entete la ou la place manque. Il reste
-                visible directement des `sm`, comme avant. */}
-            <LanguageSwitcher className="hidden sm:block" />
             {os === "ios" || os === "android" ? (
               <Link
                 href={`${prefix}/#telecharger`}
@@ -209,6 +204,13 @@ export function SiteNav() {
             >
               {nav.contact}
             </Link>
+
+            {/* Le selecteur de langue passe dans le tiroir sur telephone, a la
+                demande du client : c'est le bouton de telechargement qui
+                prend sa place dans l'entete la ou la place manque. Sur
+                ordinateur, il vient apres le bouton Contact (autre demande
+                client), et reste visible des `sm` comme avant. */}
+            <LanguageSwitcher className="hidden sm:block" />
 
             <button
               ref={burgerRef}
