@@ -22,10 +22,6 @@ import { publicStorageUrl } from "@/lib/supabase/config";
 const MOBILE_PAGE_SIZE = 6;
 const DESKTOP_PAGE_SIZE = 9;
 
-/** Toujours en francais : le contenu du blog l'est, quelle que soit la langue de l'entete/pied de page autour. */
-const formatPostDate = (iso: string) =>
-  new Intl.DateTimeFormat("fr-FR", { dateStyle: "long" }).format(new Date(iso));
-
 /** Pastille courte posee sur la vignette ("SEPT. 2026") — voir la note sur les categories plus bas. */
 const formatBadgeDate = (iso: string) =>
   new Intl.DateTimeFormat("fr-FR", { month: "short", year: "numeric" }).format(new Date(iso)).toUpperCase();
@@ -248,16 +244,10 @@ function FilterGroup({
   );
 }
 
-/** La ligne "auteur · date" partagee entre les deux formats de carte. */
+/** L'auteur, sous le titre — la date vit desormais uniquement dans la pastille lime posee sur l'image, pas ici en double. */
 function PostMeta({ post, className }: { post: PublicBlogPostSummary; className: string }) {
-  if (!post.author_name && !post.published_at) return null;
-  return (
-    <span className={className}>
-      {[post.author_name, post.published_at ? formatPostDate(post.published_at) : null]
-        .filter(Boolean)
-        .join(" · ")}
-    </span>
-  );
+  if (!post.author_name) return null;
+  return <span className={className}>{post.author_name}</span>;
 }
 
 /** Une vignette d'article : pastille de date sur l'image, texte en dessous. */
