@@ -54,6 +54,7 @@ export default async function EditBlogPostPage({
           content: post.content,
           status: post.status,
           author_name: post.author_name,
+          category: post.category,
           scheduled_at: post.scheduled_at,
         }}
         // Repli pour les articles crees avant l'ajout de ce champ

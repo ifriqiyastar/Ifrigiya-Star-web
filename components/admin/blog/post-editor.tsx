@@ -58,6 +58,7 @@ export type EditablePost = {
   content: object;
   status: BlogPostStatus;
   author_name: string | null;
+  category: string | null;
   scheduled_at: string | null;
 };
 
@@ -217,6 +218,19 @@ export function PostEditor({
             onChange={(event) => setAuthorName(event.target.value)}
             placeholder={i18n.t("Nom affiche sur l'article")}
           />
+
+          <label htmlFor="blog-category" className="mt-4 mb-1.5 block text-xs font-medium text-muted-foreground">
+            {i18n.t("Categorie")}
+          </label>
+          <Input
+            id="blog-category"
+            name="category"
+            defaultValue={post?.category ?? ""}
+            placeholder={i18n.t("Ex : Actualites, Coulisses, Transferts…")}
+          />
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            {i18n.t("Texte libre, affiche comme filtre sur la page publique du blog. Laisse vide, l'article n'apparait dans aucun filtre de categorie.")}
+          </p>
         </div>
 
         <div className="rounded-xl border border-border bg-card p-4 sm:p-5">

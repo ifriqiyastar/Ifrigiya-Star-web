@@ -43,6 +43,8 @@ export type PublicBlogPostSummary = {
   published_at: string | null;
   /** Copie figee au moment de la creation (migration 202609230001) — jamais lue depuis `profiles`, inaccessible a une session anonyme. */
   author_name: string | null;
+  /** Texte libre choisi par l'administration (migration 202609230003) — pas une liste fermee. */
+  category: string | null;
 };
 
 /**
@@ -50,16 +52,15 @@ export type PublicBlogPostSummary = {
  * (`lib/server-device.ts` decide laquelle, avant la requete — la taille de
  * page change le nombre de lignes ramenees, pas seulement leur mise en page).
  *
- * `author`/`month` filtrent sur des colonnes reelles (`author_name`,
- * `published_at`) ; il n'existe pas de notion de categorie dans le schema, et
- * la page publique n'en propose donc pas — voir `docs/og-image.md` pour le
- * meme genre d'arbitrage (ne pas fabriquer une donnee que le schema n'a pas).
+ * `category`/`month` filtrent sur des colonnes reelles. Un filtre par auteur
+ * a existe un temps (colonne `author_name` reelle) mais a ete retire a la
+ * demande du client.
  */
 export async function listPublishedBlogPosts(params: {
   page: number;
   pageSize: number;
   search?: string;
-  author?: string;
+  category?: string;
   /** "YYYY-MM" */
   month?: string;
 }): Promise<{ rows: PublicBlogPostSummary[]; count: number }> {
@@ -69,10 +70,10 @@ export async function listPublishedBlogPosts(params: {
 
   let query = supabase
     .from("blog_posts")
-    .select("id, title, slug, excerpt, cover_image_path, published_at, author_name", { count: "exact" })
+    .select("id, title, slug, excerpt, cover_image_path, published_at, author_name, category", { count: "exact" })
     .or(statusAndSearchFilter(params.search));
 
-  if (params.author) query = query.eq("author_name", params.author);
+  if (params.category) query = query.eq("category", params.category);
   if (params.month) {
     const [year, month] = params.month.split("-").map(Number);
     if (year && month) {
@@ -94,23 +95,24 @@ export async function listPublishedBlogPosts(params: {
 export type BlogFacet = { value: string; label: string; count: number };
 
 /**
- * Les valeurs des filtres de la barre laterale (`/blog`), avec leur nombre
- * d'articles. Agregees cote application plutot que via une RPC dediee : le
- * blog compte une poignee d'articles, pas des milliers — un `GROUP BY` SQL
- * serait de la prevoyance inutile pour ce volume.
+ * Les valeurs disponibles pour les filtres "Categories" et "Dates" de la
+ * barre laterale (`/blog`), avec leur nombre d'articles. Agrege cote
+ * application plutot que via une RPC dediee : le blog compte une poignee
+ * d'articles, pas des milliers — un `GROUP BY` SQL serait de la prevoyance
+ * inutile pour ce volume.
  */
-export async function fetchBlogFacets(): Promise<{ authors: BlogFacet[]; months: BlogFacet[] }> {
+export async function fetchBlogFacets(): Promise<{ categories: BlogFacet[]; months: BlogFacet[] }> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("blog_posts")
-    .select("author_name, published_at")
+    .select("category, published_at")
     .or(statusAndSearchFilter());
 
-  const authorCounts = new Map<string, number>();
+  const categoryCounts = new Map<string, number>();
   const monthCounts = new Map<string, number>();
   for (const row of data ?? []) {
-    if (row.author_name) {
-      authorCounts.set(row.author_name, (authorCounts.get(row.author_name) ?? 0) + 1);
+    if (row.category) {
+      categoryCounts.set(row.category, (categoryCounts.get(row.category) ?? 0) + 1);
     }
     if (row.published_at) {
       const d = new Date(row.published_at);
@@ -127,7 +129,7 @@ export async function fetchBlogFacets(): Promise<{ authors: BlogFacet[]; months:
   };
 
   return {
-    authors: [...authorCounts.entries()]
+    categories: [...categoryCounts.entries()]
       .sort((a, b) => b[1] - a[1])
       .map(([value, count]) => ({ value, label: value, count })),
     // Les mois les plus recents en tete : la cle "YYYY-MM" se trie deja
@@ -149,7 +151,7 @@ export async function getPublishedBlogPostBySlug(slug: string): Promise<PublicBl
   const supabase = await createClient();
   const { data } = await supabase
     .from("blog_posts")
-    .select("id, title, slug, excerpt, meta_title, meta_description, cover_image_path, published_at, author_name, content")
+    .select("id, title, slug, excerpt, meta_title, meta_description, cover_image_path, published_at, author_name, category, content")
     .eq("slug", slug)
     .or(PUBLIC_STATUS_FILTER())
     .maybeSingle();

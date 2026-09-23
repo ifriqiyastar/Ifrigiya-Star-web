@@ -22,6 +22,7 @@ export type BlogPostListRow = {
   scheduled_at: string | null;
   updated_at: string;
   author_name: string | null;
+  category: string | null;
 };
 
 /**
@@ -48,7 +49,7 @@ export async function listBlogPosts(params: { q?: string; statut?: string; page?
 
   let query = supabase
     .from("blog_posts")
-    .select("id, title, slug, status, cover_image_path, published_at, scheduled_at, updated_at, author_name", {
+    .select("id, title, slug, status, cover_image_path, published_at, scheduled_at, updated_at, author_name, category", {
       count: "exact",
     })
     .order("updated_at", { ascending: false });
@@ -77,6 +78,7 @@ export type BlogPostRecord = {
   status: BlogPostStatus;
   author_id: string | null;
   author_name: string | null;
+  category: string | null;
   published_at: string | null;
   scheduled_at: string | null;
   created_at: string;

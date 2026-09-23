@@ -80,6 +80,7 @@ export async function saveBlogPost(formData: FormData): Promise<ActionResult> {
     // champ pour qui veut vraiment signer sous son nom) : un champ laisse
     // vide publie sous "Administrateur Ifriqiya Soccer Star".
     author_name: text(formData, "author_name") || DEFAULT_BLOG_AUTHOR_NAME,
+    category: text(formData, "category"),
     content,
     // La date programmee est conservee meme en brouillon, pour ne pas faire
     // perdre le choix d'une date pas encore confirmee par un "Publier".

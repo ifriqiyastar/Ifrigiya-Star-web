@@ -22,7 +22,7 @@ import { publicStorageUrl } from "@/lib/supabase/config";
 const MOBILE_PAGE_SIZE = 6;
 const DESKTOP_PAGE_SIZE = 9;
 
-/** Pastille courte posee sur la vignette ("SEPT. 2026") — voir la note sur les categories plus bas. */
+/** Pastille courte posee sur la vignette ("SEPT. 2026"). */
 const formatBadgeDate = (iso: string) =>
   new Intl.DateTimeFormat("fr-FR", { month: "short", year: "numeric" }).format(new Date(iso)).toUpperCase();
 
@@ -62,16 +62,16 @@ export default async function BlogIndexPage({ searchParams }: PageProps<"/[local
   const resolvedSearchParams = await searchParams;
   const page = Math.max(1, Number(firstParam(resolvedSearchParams.page)) || 1);
   const search = firstParam(resolvedSearchParams.q);
-  const author = firstParam(resolvedSearchParams.auteur);
+  const category = firstParam(resolvedSearchParams.categorie);
   const month = firstParam(resolvedSearchParams.mois);
   // Reporte sur chaque lien (pagination, filtres) pour ne jamais perdre les
   // autres criteres actifs en changeant l'un d'eux.
-  const activeParams = { q: search, auteur: author, mois: month };
+  const activeParams = { q: search, categorie: category, mois: month };
 
   const [mobile, locale] = await Promise.all([isMobileRequest(), getLocale()]);
   const pageSize = mobile ? MOBILE_PAGE_SIZE : DESKTOP_PAGE_SIZE;
   const [{ rows: posts, count }, facets] = await Promise.all([
-    listPublishedBlogPosts({ page, pageSize, search, author, month }),
+    listPublishedBlogPosts({ page, pageSize, search, category, month }),
     fetchBlogFacets(),
   ]);
   // Le contenu reste francais, mais les liens internes doivent porter le
@@ -79,7 +79,7 @@ export default async function BlogIndexPage({ searchParams }: PageProps<"/[local
   // /en ou /ar ramenerait l'entete et le pied de page en francais aussi.
   const prefix = locale === "fr" ? "" : `/${locale}`;
   const basePath = `${prefix}/blog`;
-  const hasActiveFilter = Boolean(search || author || month);
+  const hasActiveFilter = Boolean(search || category || month);
 
   return (
     <div className="site-shell min-h-screen overflow-x-clip font-sans">
@@ -94,7 +94,7 @@ export default async function BlogIndexPage({ searchParams }: PageProps<"/[local
           />
 
           <div className="mt-14 grid gap-10 lg:grid-cols-[260px_1fr] lg:items-start lg:gap-12">
-            <BlogSidebar basePath={basePath} search={search} author={author} month={month} facets={facets} />
+            <BlogSidebar basePath={basePath} search={search} category={category} month={month} facets={facets} />
 
             <div>
               <p className="mb-6 text-xs font-medium tracking-wide text-(--site-muted) uppercase">
@@ -134,11 +134,13 @@ export default async function BlogIndexPage({ searchParams }: PageProps<"/[local
 }
 
 /**
- * Recherche + filtres par auteur et par mois. Pas de filtre par categorie :
- * `blog_posts` n'en a pas (ni colonne, ni table separee), et en inventer un
- * cote ecran afficherait des categories que rien en base ne soutient — voir
- * la meme regle appliquee ailleurs sur ce site (pas de chiffre d'audience
- * invente, pas de badge sans donnee reelle derriere, cf. CLAUDE.md).
+ * Recherche + filtres par categorie et par mois. La categorie est un texte
+ * libre choisi par l'administration au fil des articles (`category`,
+ * migration 202609230003), pas une liste fermee decidee ici — la barre ne
+ * propose que les valeurs reellement utilisees (`fetchBlogFacets()`). Un
+ * filtre par auteur a existe un temps mais a ete retire a la demande du
+ * client — les auteurs restent visibles sur chaque carte, simplement plus
+ * filtrables.
  *
  * Formulaire GET natif et liens simples plutot qu'un composant client : la
  * page reste un Server Component, l'etat vit entierement dans l'URL, et un
@@ -147,19 +149,19 @@ export default async function BlogIndexPage({ searchParams }: PageProps<"/[local
 function BlogSidebar({
   basePath,
   search,
-  author,
+  category,
   month,
   facets,
 }: {
   basePath: string;
   search: string | undefined;
-  author: string | undefined;
+  category: string | undefined;
   month: string | undefined;
-  facets: { authors: BlogFacet[]; months: BlogFacet[] };
+  facets: { categories: BlogFacet[]; months: BlogFacet[] };
 }) {
   const href = (overrides: Record<string, string | undefined>) => {
     const query = new URLSearchParams();
-    const merged = { q: search, auteur: author, mois: month, ...overrides };
+    const merged = { q: search, categorie: category, mois: month, ...overrides };
     for (const [key, value] of Object.entries(merged)) {
       if (value) query.set(key, value);
     }
@@ -170,7 +172,7 @@ function BlogSidebar({
   return (
     <aside className="flex flex-col gap-6">
       <form action={basePath} method="get" role="search" className="relative">
-        {author ? <input type="hidden" name="auteur" value={author} /> : null}
+        {category ? <input type="hidden" name="categorie" value={category} /> : null}
         {month ? <input type="hidden" name="mois" value={month} /> : null}
         <SearchIcon className="pointer-events-none absolute top-1/2 start-4 size-4 -translate-y-1/2 text-(--site-muted)" aria-hidden />
         <input
@@ -182,7 +184,7 @@ function BlogSidebar({
         />
       </form>
 
-      {search || author || month ? (
+      {search || category || month ? (
         <Link
           href={basePath}
           className="inline-flex w-fit items-center gap-1.5 text-xs font-semibold text-(--site-muted) transition-colors hover:text-(--site-accent)"
@@ -192,8 +194,8 @@ function BlogSidebar({
         </Link>
       ) : null}
 
+      <FilterGroup title="Categories" items={facets.categories} activeValue={category} paramName="categorie" href={href} />
       <FilterGroup title="Dates" items={facets.months} activeValue={month} paramName="mois" href={href} />
-      <FilterGroup title="Auteurs" items={facets.authors} activeValue={author} paramName="auteur" href={href} />
     </aside>
   );
 }
@@ -282,6 +284,9 @@ function PostCard({
           ) : null}
         </div>
         <div className="flex flex-1 flex-col gap-2">
+          {post.category ? (
+            <span className="text-xs font-bold tracking-wide text-(--site-accent) uppercase">{post.category}</span>
+          ) : null}
           <PostMeta post={post} className="text-xs font-medium tracking-wide text-(--site-muted) uppercase" />
           <h3 className="font-heading text-base leading-snug font-extrabold text-balance group-hover:text-(--site-accent)">
             {post.title}
