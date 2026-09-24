@@ -65,7 +65,8 @@ import {
   getUserDossier,
   getUserFinances,
 } from "@/lib/queries/user-detail";
-import { privateStorageUrl, publicStorageUrl } from "@/lib/supabase/config";
+import { accountAvatarUrl } from "@/lib/queries/profiles";
+import { privateStorageUrl, storageUrl } from "@/lib/supabase/config";
 import { cn } from "@/lib/utils";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -172,9 +173,11 @@ export default async function UserDetailPage({
   );
 
   // La photo vient des tables metier (cf. fetchProfilesByIds) : `profiles`
-  // n'a pas de colonne avatar sur ce projet.
-  const avatarUrl =
-    ((player?.profile_photo_url ?? professional?.photo_url) as string | null) ?? null;
+  // n'a pas de colonne avatar sur ce projet. Signee, le bucket etant prive.
+  const avatarUrl = accountAvatarUrl(
+    player?.profile_photo_url as string | null,
+    professional?.photo_url as string | null,
+  );
   const contextLine =
     (player?.current_club as string | null) ??
     (professional?.organization_name as string | null) ??
@@ -872,7 +875,7 @@ async function ContentView({ profileId, role }: { profileId: string; role: strin
                     // `storage.buckets`) : l'URL directe suffit, et une balise
                     // `<video>` la lit.
                     const url =
-                      youtube ?? publicStorageUrl("player-videos", video.storage_path as string);
+                      youtube ?? storageUrl("player-videos", video.storage_path as string);
                     const titre = (video.title as string) ?? i18n.t("Sans titre");
                     const thumbnail = video.thumbnail_url as string | null;
                     return (

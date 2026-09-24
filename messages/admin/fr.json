@@ -85,6 +85,14 @@
     "deletions": {
       "one": "{count} demande de suppression de compte",
       "other": "{count} demandes de suppression de compte"
+    },
+    "posts": {
+      "one": "{count} publication a valider",
+      "other": "{count} publications a valider"
+    },
+    "comments": {
+      "one": "{count} commentaire a valider",
+      "other": "{count} commentaires a valider"
     }
   },
   "diagnostics": {
@@ -1658,7 +1666,29 @@
     "Utilises par les moteurs de recherche et les apercus partages. Laisses vides, le titre et le resume de l'article ci-dessus s'appliquent.": "Utilises par les moteurs de recherche et les apercus partages. Laisses vides, le titre et le resume de l'article ci-dessus s'appliquent.",
     "Publication programmee": "Publication programmee",
     "Laissez vide pour publier immediatement. Une date future rend l'article visible sur le site tout seul a l'heure choisie — inutile de revenir cliquer Publier ce jour-la.": "Laissez vide pour publier immediatement. Une date future rend l'article visible sur le site tout seul a l'heure choisie — inutile de revenir cliquer Publier ce jour-la.",
-    "Programmer la publication": "Programmer la publication"
+    "Programmer la publication": "Programmer la publication",
+    "Refuser ce contenu": "Refuser ce contenu",
+    "Le contenu reste invisible des autres utilisateurs. Son auteur recoit le motif en notification, tel quel.": "Le contenu reste invisible des autres utilisateurs. Son auteur recoit le motif en notification, tel quel.",
+    "Propos deplaces, coordonnees personnelles, hors sujet…": "Propos deplaces, coordonnees personnelles, hors sujet…",
+    "Refuser le contenu": "Refuser le contenu",
+    "Publications a valider ({0})": "Publications a valider ({0})",
+    "Une publication deposee par un utilisateur arrive ici automatiquement et n'est visible que de son auteur, grisee. Valider la publie dans le fil ; refuser la laisse invisible et envoie le motif a son auteur, tel quel.": "Une publication deposee par un utilisateur arrive ici automatiquement et n'est visible que de son auteur, grisee. Valider la publie dans le fil ; refuser la laisse invisible et envoie le motif a son auteur, tel quel.",
+    "Une publication deposee par un utilisateur arrive ici automatiquement. Seul un super administrateur peut la valider ou la refuser.": "Une publication deposee par un utilisateur arrive ici automatiquement. Seul un super administrateur peut la valider ou la refuser.",
+    "En attente de validation": "En attente de validation",
+    "Refusee": "Refusee",
+    "Commentaires a valider ({0})": "Commentaires a valider ({0})",
+    "Un commentaire n'est visible que de son auteur tant qu'il n'est pas valide, et l'auteur de la publication n'en est prevenu qu'a ce moment-la.": "Un commentaire n'est visible que de son auteur tant qu'il n'est pas valide, et l'auteur de la publication n'en est prevenu qu'a ce moment-la.",
+    "Seul un super administrateur peut valider ou refuser un commentaire.": "Seul un super administrateur peut valider ou refuser un commentaire.",
+    "Voir la publication": "Voir la publication",
+    "Refuse": "Refuse",
+    "Indiquez le motif du refus : l'auteur le recevra tel quel.": "Indiquez le motif du refus : l'auteur le recevra tel quel.",
+    "Validation des contenus indisponible : la migration 0089_content_moderation.sql n'est pas appliquee sur ce projet.": "Validation des contenus indisponible : la migration 0089_content_moderation.sql n'est pas appliquee sur ce projet.",
+    "Refuse par Postgres : seul un super administrateur peut valider un contenu.": "Refuse par Postgres : seul un super administrateur peut valider un contenu.",
+    "Aucune ligne modifiee : le contenu n'existe plus, ou le RLS ne vous laisse pas l'ecrire. Rien n'a ete valide.": "Aucune ligne modifiee : le contenu n'existe plus, ou le RLS ne vous laisse pas l'ecrire. Rien n'a ete valide.",
+    "Publication validee : elle est desormais visible dans le fil.": "Publication validee : elle est desormais visible dans le fil.",
+    "Commentaire valide : il est desormais visible.": "Commentaire valide : il est desormais visible.",
+    "Contenu refuse : l'auteur est prevenu du motif.": "Contenu refuse : l'auteur est prevenu du motif.",
+    "Examiner": "Examiner"
   },
   "validations": {
     "metaTitle": "Validations",
@@ -1880,5 +1910,25 @@
       "weak_password": "Ce mot de passe est trop faible. Choisissez-en un plus long ou moins courant.",
       "unknown": "La demande n'a pas abouti. Réessayez dans quelques instants."
     }
+  },
+  "postPreview": {
+    "title": "Apercu de la publication",
+    "description": "La publication telle que son auteur l'a deposee. Les gestes de validation et de moderation sont ici.",
+    "noText": "(sans texte)",
+    "hidden": "Masquee",
+    "deleted": "Supprimee",
+    "openMedia": "Ouvrir le media",
+    "refusedFor": "Motif du refus :",
+    "reasonLabel": "Motif du refus",
+    "reasonPlaceholder": "Propos deplaces, coordonnees personnelles, hors sujet…",
+    "reasonHint": "L'auteur recoit ce texte tel quel, en notification.",
+    "approve": "Valider",
+    "refuse": "Refuser",
+    "confirmRefuse": "Confirmer le refus",
+    "hide": "Masquer",
+    "unhide": "Reafficher",
+    "delete": "Supprimer",
+    "restore": "Restaurer",
+    "preview": "Apercu"
   }
 }

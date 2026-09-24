@@ -125,7 +125,9 @@ Every one of them matters; don't collapse them.
 3. `requirePermission(perm)` — fine-grained RBAC on top, backed by the
    `admin_has_permission` RPC. `AdminPermission` in `lib/auth.ts` is the
    canonical list — note `events.validate`, held by `super_admin` alone,
-   sitting beside the broader `events.manage`; `getAdminAccess()` resolves a role label plus permissions for
+   sitting beside the broader `events.manage`, and `content.validate`, which
+   does the same for feed posts and comments beside the broader
+   `moderation.manage`; `getAdminAccess()` resolves a role label plus permissions for
    the nav, and `components/admin/nav-items.ts` tags each section with the
    permission that reveals it. **Both degrade open on purpose**: if the RBAC
    migration is not applied (`PGRST202` / missing function, or no
@@ -149,6 +151,233 @@ client's request** (mobile migration `0045`); the calls are deliberately kept in
 place so the journal refills by itself if it ever comes back, and
 `logAdminAction()` now returns silently when the table or RPC is absent
 (`42P01` / `PGRST202`). It never fails the business action.
+
+### Feed posts and comments need super-admin approval (Sept 2026)
+
+Client request, mirroring Scout Days: **every post and every comment waits for a
+super administrator** before anyone but its author can see it. Mobile migration
+`0089_content_moderation.sql` carries the rule; this repo carries the screen and
+the fine-grained permission.
+
+| File | Role |
+|---|---|
+| `supabase/migrations/202609240001_content_validation_permission.sql` | seeds `content.validate`, super admin only |
+| `lib/actions/content-validation.ts` | approve / reject a post or a comment |
+| `app/[locale]/admin/moderation/page.tsx` | the queue + preview, in the existing `publications` and `commentaires` views |
+
+Where it lives, and why not a new nav section: `/admin/moderation` **already
+had** `vue=publications` and `vue=commentaires`. A queue panel was added at the
+top of each — same shape as the Scout Days pending queue — rather than a
+seventh rail entry for a module the CDC calls secondary. `moderation.manage`
+opens the screen; `content.validate` reveals the buttons. Exactly the
+`events.manage` / `events.validate` split.
+
+Things that will bite whoever touches this next:
+
+- ⚠️ **Asking for `moderation_status` on a project without 0089 fails the whole
+  query in `42703`** — the entire post list would vanish from the back-office,
+  not just the new column. `selectWithModeration()` therefore retries without
+  the columns and returns `available: false`; the status pill, the two extra
+  filters and the buttons disappear together. Same reasoning as the Scout Days
+  list deliberately not selecting 0040's columns.
+- ⚠️ **Write with the admin's session (`createClient`), never
+  `createServiceClient`.** `service_role` bypasses RLS **and makes
+  `auth.uid()` null**, so the trigger could not stamp `moderated_by` and the
+  decision would be untraceable — the very objection mobile migration 0042
+  raised against moderating through a service key.
+- **`.select("id")` after the update, always.** PostgREST does not fail when
+  RLS filters the targeted row: the update touches zero rows and returns
+  success. The screen would announce "post approved" with nothing changed —
+  the trap already paid on `professional_documents` and then on `scout_days`.
+- **The rejection reason is mandatory here and in Postgres**
+  (`moderation_reason_required`): it is the only explanation the author gets,
+  delivered by the `notify_content_moderation` trigger. Do not also queue an
+  `admin_notification_campaigns` row — that would send the notice twice.
+- **Both lists stay newest-first; the two queues are oldest-first**, so the
+  content that has waited longest comes up first. Same convention as the Scout
+  Day queue.
+- **"Voir la publication" opens the same popup**, from the comment queue and
+  from the comment list alike — a comment is judged on what it sits under, and
+  "bien joue" under an announcement is not "bien joue" under an insult. The
+  parent posts are loaded in **one** query for the whole page (`.in("id", …)`
+  through `selectWithModeration`), never one per row, and their authors are
+  folded into the same `fetchProfilesByIds` call — the post's author is not the
+  comment's. ⚠️ **It was previously a link to
+  `?vue=publications&q=<post_id>`, which could never work**: `q` is a full-text
+  filter on `content`, so searching an id matched nothing. When the parent is
+  unreachable (removed, or filtered by RLS) **nothing** is rendered rather than
+  an inert button — a control that opens nothing casts doubt on the whole
+  screen.
+- `content.validate` was added to `ALL_ADMIN_PERMISSIONS`, so on a project
+  where the permission migration has not run `getAdminAccess()` treats it as
+  unseeded and the buttons still show — matching `requirePermission()`, which
+  lets unknown codes through. That is the fix documented above for the Scout
+  Day "Valider" button; it only works because the code is in that array.
+
+Verified: `npm run build` green, `npm run lint` clean for the touched files
+(the remaining errors pre-date this change, in `tests/admin-i18n.test.cjs` and
+`app/[locale]/blog/page.tsx`), `npm run test:i18n` 7/7 including fr/en parity,
+and the permission migration replayed twice against a throwaway Postgres —
+including the guard-rail case where a previous deployment had granted it to
+`moderator`, which it strips.
+
+### ⚠️⚠️ No media bucket is public any more (Sept 2026)
+
+Reported as three separate bugs — the preview popup showed no image, "Ouvrir le
+media" led nowhere, and no player or professional photo appeared anywhere in
+the back-office. **One cause**: the whole admin built `/object/public/...` URLs
+for buckets that migration mobile `0051` made private.
+
+Probed against the live project, and the method matters as much as the result:
+
+```
+GET  /storage/v1/object/public/avatars/__probe__  -> NoSuchBucket
+POST /storage/v1/object/sign/avatars/__probe__    -> permission denied for function is_admin
+```
+
+⚠️ **`NoSuchBucket` on the public route does NOT distinguish "absent" from
+"private"** — it is the *sign* probe that settles it: a Postgres/RLS error
+means Storage reached the database, so the bucket exists and is private.
+`avatars`, `post-media`, `player-videos` and `player-photos` are all four
+private. `blog-media` answered `NoSuchKey`, i.e. it exists **and is still
+public** — it belongs to the website, and nothing here routes it differently.
+
+The fix, in `lib/supabase/config.ts`:
+
+- `storagePathOf(bucket, value)` normalises what the database actually holds.
+  ⚠️ **The columns are not homogeneous, and that is a mobile-side divergence,
+  not a choice**: `player_profiles.profile_photo_url` and
+  `professional_profiles.photo_url` hold a **complete public URL**, while
+  `posts.media_url` and `player_videos.storage_path` hold sometimes a path and
+  sometimes a URL. Both shapes are accepted; a stale signed URL has its token
+  stripped and is re-signed; `dummy/photo/url.jpg` (the pre-upload sentinel,
+  the same one the five mobile SQL functions exclude with `like 'http%'`)
+  yields null instead of a guaranteed 404; and an **external** address — a
+  YouTube thumbnail — is returned untouched rather than swallowed.
+- `storageUrl(bucket, value)` returns the `/admin/documents` URL, the route
+  that already signs private buckets with the admin session and redirects.
+  `avatars`, `post-media` and `player-videos` were added to its allow-list.
+
+⚠️ **Avatars are signed at the source, in `accountAvatarUrl()`
+(`lib/queries/profiles.ts`), and every reader must go through it.** `avatar_url`
+feeds roughly twenty `<UserCell>` call sites; **three** different files were
+computing it (`fetchProfilesByIds`, `lib/queries/users.ts`, and the
+`utilisateurs/[id]` page), which is three places to fix and three to forget.
+They are now one function.
+
+- **Cost, accepted**: one redirect per image, each re-running the admin check
+  and a signing round-trip. Fine for a back-office, and it is the mechanism
+  already used for identity documents — but not a path for a public page.
+- ⚠️ **In the popup the image is a plain `<img>`, not `next/image`.** The
+  source is a route that **redirects**; Next's optimizer would try to fetch the
+  original itself, from a host not declared in `next.config.ts`, and 400 a
+  perfectly valid image.
+- `tests/storage-url.test.cjs` transpiles the real `config.ts` and runs it —
+  10 assertions, including a non-null witness and **verified by mutation**
+  (putting `publicStorageUrl` back makes it fail 1/10). `npm test` runs both
+  suites.
+
+⚠️ **One thing this does not settle.** The probe above ran as `anon`, and
+`permission denied for function is_admin` is the 0082 failure documented in the
+mobile repo: one non-executable function poisons reads of *every* bucket,
+because Postgres OR-expands all permissive policies on `storage.objects`. For
+`anon` that refusal is intended (0070/0071 closed it deliberately). Whether
+**`authenticated`** — which is what the back-office actually uses — hits the
+same wall could not be measured without an admin session. If images still do
+not appear after this change, that is the next thing to check: paste
+`scripts/health-check.sql` from the mobile repo and read control n° 4, then
+apply `0082_storage_policy_execute.sql`.
+
+### The moderation search bar, and the 21-pixel dropdown (Sept 2026)
+
+Reported as "the search bar isn't responsive". It is the **Signalements**
+filter form in `app/[locale]/admin/moderation/page.tsx`, and the failure was
+measured in a headless Chrome against the app's own compiled CSS:
+
+| viewport | `<select>` width before | after |
+|---|---|---|
+| 768px | **21px / 30px** | 138px / 146px |
+| 1024px | 83px / 92px | 262px / 270px |
+
+⚠️ **The cause is that `md` (768px) is also where the 16rem rail becomes
+`fixed`.** The content area drops from 608px to 480px at the exact breakpoint
+where the form splits into twelve columns — and media queries read the
+**viewport**, not the container, so `md:col-span-3` believed it had 768px to
+share. The grid now goes `grid-cols-1 sm:grid-cols-2 xl:grid-cols-4`, and both
+the label and the `<select>` carry `min-w-0`.
+
+⚠️⚠️ **This class of bug does not show up as horizontal scrolling, which is
+why looking for overflow finds nothing.** Tailwind's `grid-cols-*` is
+`repeat(n, minmax(0, 1fr))`: the tracks *shrink below their content* instead of
+overflowing. The symptom is a crushed control, and `document.scrollWidth` stays
+equal to `clientWidth` throughout. Measure the **rendered width of the input
+and the select**, not the overflow.
+
+**`FilterBar` was measured too and left alone** — with three filters (the
+Finances worst case) its input never drops below 186px and no value is clipped,
+at any width from 320 to 1280. Do not "fix" it.
+
+#### How to re-run that measurement
+
+It costs ten minutes and it is the only thing that settles this kind of report.
+The recipe, which also documents two traps paid for here:
+
+1. `npm run build`, then take the **largest** `.next/static/chunks/*.css` — that
+   is the app's real compiled Tailwind, not an approximation.
+2. Build a static page with the component's exact class strings, **inside a
+   shell that reproduces the 16rem rail** (`display:none` below 768px, then
+   `flex: 0 0 16rem`) and `main`'s `p-3 sm:p-4 lg:p-5`. Without the rail the
+   form measures fine at every width and the bug is invisible.
+3. Drive Chrome from `~/.cache/puppeteer` over CDP and set the viewport with
+   `Emulation.setDeviceMetricsOverride`. ⚠️ **`--dump-dom` in the historic
+   headless mode reports a viewport of 0 and lays the page out at 200px**, so
+   `sm:` / `lg:` never fire and every conclusion drawn from it is wrong.
+4. ⚠️ **Do not let the probe write into the page.** A first attempt appended a
+   one-line `<pre>` (`white-space: pre`) to read the result, and *that* widened
+   the document to 874px at every width — a number I very nearly diagnosed as
+   the bug. The control that would have caught it immediately, an empty page
+   with the same CSS **and the same probe**, was not equivalent: it had no
+   probe. A witness must differ from the subject by one thing only.
+5. ⚠️ When simulating `cn()` by hand, remember it is **tailwind-merge**: writing
+   `sm:max-w-md sm:max-w-2xl` in a harness measures whichever the stylesheet
+   orders last, not what the component renders.
+
+### Previewing a post before deciding (Sept 2026)
+
+Client request: the administrator should read a post **in a popup**, and be
+able to delete it and act on it from there.
+`components/admin/post-preview-dialog.tsx` carries it — author, status pills,
+the full text in its own scrollable region, the image inline, and every gesture
+in the footer: approve, reject with a reason, hide, delete. The pending queue
+and the post list open the *same* dialog, built by one `previewOf()` factory,
+so the two cannot drift.
+
+- ⚠️⚠️ **A client component may not import `lib/actions/*` nor `UserCell`.**
+  Both reach `lib/i18n/admin.ts`, hence `server-only` / `next/headers` /
+  `next/root-params`, and the build fails with *"'server-only' cannot be
+  imported from a Client Component module"*. The four Server Actions arrive
+  **bound, as props** (`onApprove={approvePost.bind(null, row.id)}`), exactly
+  the convention `ActionButton` already follows, and the author block is
+  redrawn inline. `npm run test:i18n` guards this — its last case is
+  *"client component imports never pull in request-only translation modules"*,
+  and it is what caught both mistakes here.
+- **Rejection is a step inside the dialog, not a second dialog.** Stacking two
+  `Dialog`s works on a desktop and misbehaves the moment a keyboard or a screen
+  reader is involved — the second steals focus from the first, which stays
+  mounted underneath. The reason is typed in place.
+- ⚠️ **`DialogFooter` defaults to `flex-col-reverse`**, which on a phone would
+  have put the destructive group (hide / delete) *above* the approval group —
+  the irreversible gesture first under the thumb. Overridden to `flex-col`.
+- **"Delete" writes `is_deleted`; it is not a `DELETE`.** The schema has no
+  admin DELETE policy on `posts`, deliberately: a removed post stays readable
+  by the administration, which is what instructing a report requires.
+- `next/image` with `unoptimized`: the media lives on Supabase Storage, whose
+  host is not declared in `next.config.ts`, so the optimizer would 400 a
+  perfectly valid image.
+- Measured from 320px to 1280px: the dialog scales from 288px to 672px with no
+  child escaping its frame. (At 320px `scrollWidth` exceeds `clientWidth` by
+  6px — that is the vertical scrollbar gutter of `overflow-y-auto`, which
+  `clientWidth` excludes and `scrollWidth` does not. Not an overflow.)
 
 ### The sign-in screen must send a captcha token
 

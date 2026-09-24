@@ -28,6 +28,7 @@ import { FilterBar } from "@/components/admin/filter-bar";
 import { NoteCards } from "@/components/admin/note-cards";
 import { HeaderMeta, PageHeader } from "@/components/admin/page-header";
 import { Panel, PanelHeader } from "@/components/admin/panel";
+import { PostPreviewDialog, type PreviewPost } from "@/components/admin/post-preview-dialog";
 import { Pagination } from "@/components/admin/pagination";
 import { ReasonDialog } from "@/components/admin/reason-dialog";
 import { RemovalProposalDialog } from "@/components/admin/removal-proposal-dialog";
@@ -43,6 +44,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  approveComment,
+  approvePost,
+  refuseComment,
+  refusePost,
+} from "@/lib/actions/content-validation";
 import {
   confirmRemoval,
   deletePlayerPhoto,
@@ -62,12 +69,17 @@ import {
   removalConfirmation,
   removalOptions,
 } from "@/lib/moderation-targets";
-import { MODERATION_ACTION, REPORTABLE_TYPE, REPORT_STATUS } from "@/lib/labels";
+import {
+  CONTENT_MODERATION_STATUS,
+  MODERATION_ACTION,
+  REPORTABLE_TYPE,
+  REPORT_STATUS,
+} from "@/lib/labels";
 import { fetchBlockSignals, fetchReportTargets } from "@/lib/queries/moderation";
 import { displayName, fetchProfilesByIds } from "@/lib/queries/profiles";
 import { createClient } from "@/lib/supabase/server";
 import { getAdminAccess, requirePermission } from "@/lib/auth";
-import { privateStorageUrl, publicStorageUrl } from "@/lib/supabase/config";
+import { privateStorageUrl, storageUrl } from "@/lib/supabase/config";
 import { cn } from "@/lib/utils";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -88,6 +100,10 @@ export default async function ModerationPage({ searchParams }: PageProps<"/[loca
   // par un refus Postgres.
   const { permissions } = await getAdminAccess(admin.userId);
   const canValidate = permissions.includes("moderation.validate");
+  // §9 / migration 0089 : valider une publication ou un commentaire est un
+  // geste distinct de la validation d'un retrait, et il a sa propre
+  // permission (`content.validate`, super administrateur uniquement).
+  const canValidateContent = permissions.includes("content.validate");
   const resolved = await searchParams;
   const requested = typeof resolved.vue === "string" ? resolved.vue : "signalements";
   const vue: Vue = (VUES as readonly string[]).includes(requested)
@@ -188,9 +204,23 @@ export default async function ModerationPage({ searchParams }: PageProps<"/[loca
         </div>
 
         {vue === "signalements" ? (
-          <form method="get" className="grid grid-cols-1 items-center gap-2 md:grid-cols-12">
+          /* ⚠️ LA GRILLE NE PASSE PLUS EN COLONNES A `md`, ET C'EST MESURE.
+              `md` (768px) est **aussi** le point ou le rail de 16rem devient
+              `fixed` : le contenu tombe de 608 a 480 px au moment precis ou la
+              mise en page se decoupe en 12 colonnes. Les media queries lisent
+              le **viewport**, pas le conteneur, donc `md:col-span-3` valait
+              ~110 px — et le `<select>` qu'il porte tombait a **21 px**,
+              mesure au navigateur. Deux colonnes jusqu'a `xl`, quatre ensuite.
+              (`grid-cols-*` de Tailwind vaut `minmax(0,1fr)` : les pistes
+              retrecissent sous leur contenu au lieu de deborder, donc le
+              symptome est un controle ecrase et non une barre de defilement —
+              c'est pourquoi il ne se voit pas en cherchant un debordement.) */
+          <form
+            method="get"
+            className="grid grid-cols-1 items-center gap-2 sm:grid-cols-2 xl:grid-cols-4"
+          >
             <input type="hidden" name="vue" value="signalements" />
-            <div className="flex items-center gap-2 rounded-lg bg-background px-3 py-1.5 md:col-span-6">
+            <div className="flex min-w-0 items-center gap-2 rounded-lg bg-background px-3 py-1.5 sm:col-span-2">
               <SearchIcon className="size-4 shrink-0 text-muted-foreground" />
               <input
                 name="q"
@@ -222,8 +252,8 @@ export default async function ModerationPage({ searchParams }: PageProps<"/[loca
       {vue === "signalements" ? (
         <ReportsView params={params} canValidate={canValidate} />
       ) : null}
-      {vue === "publications" ? <PostsView params={params} /> : null}
-      {vue === "commentaires" ? <CommentsView params={params} /> : null}
+      {vue === "publications" ? <PostsView params={params} canValidate={canValidateContent} /> : null}
+      {vue === "commentaires" ? <CommentsView params={params} canValidate={canValidateContent} /> : null}
       {vue === "medias" ? <MediaView params={params} /> : null}
 
       <NoteCards
@@ -574,29 +604,282 @@ async function ReportsView({
 
 /* --------------------------------------------------------------- publications */
 
-async function PostsView({ params }: { params: Record<string, string | undefined> }) {
+
+/* ------------------------------------------------- validation des contenus */
+
+const POST_COLUMNS =
+  "id, author_id, content, media_type, media_url, is_hidden, is_deleted, created_at";
+const COMMENT_COLUMNS = "id, post_id, author_id, content, is_hidden, is_deleted, created_at";
+
+type PostRow = {
+  id: string;
+  author_id: string;
+  content: string | null;
+  media_type: "aucun" | "photo" | "video" | "lien";
+  media_url: string | null;
+  is_hidden: boolean;
+  is_deleted: boolean;
+  created_at: string;
+  moderation_status?: "en_attente" | "approuve" | "refuse";
+  moderation_reason?: string | null;
+};
+
+type CommentRow = {
+  id: string;
+  post_id: string;
+  author_id: string;
+  content: string;
+  is_hidden: boolean;
+  is_deleted: boolean;
+  created_at: string;
+  moderation_status?: "en_attente" | "approuve" | "refuse";
+  moderation_reason?: string | null;
+};
+
+/**
+ * Lit une table du fil **avec** les colonnes de la migration 0089, et retombe
+ * sans elles si la migration n'est pas appliquee.
+ *
+ * ⚠️ Demander une colonne absente fait echouer **toute** la requete en
+ * `42703` : sans ce repli, la liste entiere des publications disparaitrait du
+ * back-office le jour ou l'on deploie l'ecran avant la migration. C'est le
+ * meme raisonnement qui fait que la page Scout Days ne demande pas les
+ * colonnes de 0040 dans sa liste principale.
+ *
+ * `available` dit a l'appelant s'il peut afficher l'etat de validation — un
+ * ecran qui rend une colonne vide et un ecran qui rend « tout est valide » se
+ * ressemblent trop.
+ */
+/**
+ * Le strict necessaire du constructeur de requete PostgREST : `build` ne fait
+ * que chainer des filtres. Le decrire ainsi evite deux `any` — et surtout
+ * evite de devoir nommer le type genere de supabase-js, que ce depot n'a pas.
+ */
+type FeedQuery<T> = PromiseLike<{
+  data: T[] | null;
+  count: number | null;
+  error: { code?: string } | null;
+}> & {
+  order(column: string, options?: { ascending?: boolean }): FeedQuery<T>;
+  range(from: number, to: number): FeedQuery<T>;
+  eq(column: string, value: unknown): FeedQuery<T>;
+  in(column: string, values: readonly unknown[]): FeedQuery<T>;
+};
+
+async function selectWithModeration<T>(
+  table: "posts" | "post_comments",
+  columns: string,
+  build: (q: FeedQuery<T>) => FeedQuery<T>,
+): Promise<{ rows: T[]; count: number; available: boolean }> {
+  const supabase = await createClient();
+  // Un seul emplacement de conversion, et il est assume : supabase-js infere
+  // ses types depuis un schema genere que ce depot ne versionne pas.
+  const query = (select: string) =>
+    supabase.from(table).select(select, { count: "exact" }) as unknown as FeedQuery<T>;
+
+  const withCols = await build(query(`${columns}, moderation_status, moderation_reason`));
+  if (!withCols.error) {
+    return { rows: withCols.data ?? [], count: withCols.count ?? 0, available: true };
+  }
+  if (withCols.error.code !== "42703") {
+    return { rows: [], count: 0, available: true };
+  }
+  const plain = await build(query(columns));
+  return { rows: plain.data ?? [], count: plain.count ?? 0, available: false };
+}
+
+/** La file d'attente d'une table du fil. Muette si 0089 n'est pas appliquee. */
+async function fetchPendingContent<T>(
+  table: "posts" | "post_comments",
+  columns: string,
+): Promise<T[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from(table)
+    .select(`${columns}, moderation_status`)
+    .eq("moderation_status", "en_attente")
+    .eq("is_deleted", false)
+    // Le plus ancien en tete : c'est celui qui attend depuis le plus
+    // longtemps, comme la file des Scout Days.
+    .order("created_at", { ascending: true })
+    .limit(50);
+  return (data ?? []) as T[];
+}
+
+/** Le refus, cote interface : meme dialogue pour une publication et un commentaire. */
+function RefuseContentDialog({
+  action,
+  i18n,
+}: {
+  action: (reason: string) => Promise<import("@/lib/actions/result").ActionResult>;
+  i18n: Awaited<ReturnType<typeof getAdminI18n>>;
+}) {
+  return (
+    <ReasonDialog
+      action={action}
+      trigger={
+        <button
+          type="button"
+          className="inline-flex h-8 items-center gap-1.5 rounded-full border border-destructive/40 px-3 text-xs font-medium text-destructive hover:bg-destructive/10"
+        >
+          <XIcon className="size-3.5" />
+          {i18n.t("Refuser")}
+        </button>
+      }
+      title={i18n.t("Refuser ce contenu")}
+      description={i18n.t("Le contenu reste invisible des autres utilisateurs. Son auteur recoit le motif en notification, tel quel.")}
+      label={i18n.t("Motif du refus")}
+      placeholder={i18n.t("Propos deplaces, coordonnees personnelles, hors sujet…")}
+      submitLabel={i18n.t("Refuser le contenu")}
+    />
+  );
+}
+
+/**
+ * Les donnees de la popup, construites au meme endroit pour la file d'attente
+ * et pour la liste : deux constructions divergeraient au premier changement.
+ */
+function previewOf(
+  row: PostRow,
+  author: { id?: string; email?: string | null; avatar_url?: string | null } | undefined,
+  name: string,
+  mediaUrl: string | null,
+): PreviewPost {
+  return {
+    id: row.id,
+    content: row.content,
+    mediaType: row.media_type,
+    mediaUrl,
+    createdAt: row.created_at,
+    isHidden: row.is_hidden,
+    isDeleted: row.is_deleted,
+    moderationStatus: row.moderation_status,
+    moderationReason: row.moderation_reason ?? null,
+    author: {
+      id: row.author_id,
+      name,
+      email: author?.email ?? null,
+      avatarUrl: author?.avatar_url ?? null,
+    },
+  };
+}
+
+/**
+ * L'URL servable du media d'une publication.
+ *
+ * ⚠️ La colonne porte tantot un chemin, tantot une URL **publique complete**
+ * — et `post-media` est prive depuis la migration mobile 0051, donc cette URL
+ * publique repond 400. C'est pour ca que ni la vignette de la liste, ni
+ * l'image de la popup, ni « Ouvrir le media » ne montraient quoi que ce soit.
+ * `storageUrl()` ramene les deux formes au chemin et passe par la route qui
+ * signe avec la session administrateur.
+ */
+const mediaUrlOf = (row: PostRow) => storageUrl("post-media", row.media_url);
+
+async function PostsView({
+  params,
+  canValidate,
+}: {
+  params: Record<string, string | undefined>;
+  canValidate: boolean;
+}) {
   const i18n = await getAdminI18n();
 
-  const supabase = await createClient();
   const page = Math.max(1, Number(params.page ?? 1) || 1);
 
-  let query = supabase
-    .from("posts")
-    .select("id, author_id, content, media_type, media_url, is_hidden, is_deleted, created_at", { count: "exact" })
-    .order("created_at", { ascending: false })
-    .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
+  // Le tri reste du plus recent au plus ancien — c'est l'ordre du fil cote
+  // application, et le back-office n'a aucune raison d'en montrer un autre.
+  const { rows: all, count, available } = await selectWithModeration<PostRow>(
+    "posts",
+    POST_COLUMNS,
+    (q) => {
+      let query = q
+        .order("created_at", { ascending: false })
+        .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
+      if (params.etat === "masque") query = query.eq("is_hidden", true);
+      if (params.etat === "supprime") query = query.eq("is_deleted", true);
+      if (params.etat === "en_ligne") query = query.eq("is_hidden", false).eq("is_deleted", false);
+      if (params.etat === "attente") query = query.eq("moderation_status", "en_attente");
+      if (params.etat === "refuse_validation") query = query.eq("moderation_status", "refuse");
+      return query;
+    },
+  );
 
-  if (params.etat === "masque") query = query.eq("is_hidden", true);
-  if (params.etat === "supprime") query = query.eq("is_deleted", true);
-  if (params.etat === "en_ligne") query = query.eq("is_hidden", false).eq("is_deleted", false);
+  // File d'attente : independante des filtres de la liste, comme celle des
+  // Scout Days. Le plus ancien en tete.
+  const pending = available ? await fetchPendingContent<PostRow>("posts", POST_COLUMNS) : [];
 
-  const { data, count } = await query;
-  const rows = (data ?? []).filter((row) =>
+  const rows = all.filter((row) =>
     params.q ? row.content?.toLowerCase().includes(params.q.toLowerCase()) : true,
   );
-  const profiles = await fetchProfilesByIds(rows.map((row) => row.author_id));
+  const profiles = await fetchProfilesByIds([
+    ...rows.map((row) => row.author_id),
+    ...pending.map((row) => row.author_id),
+  ]);
 
   return (
+    <>
+      {/* §9 / migration 0089 — la file d'attente. Elle passe AVANT la liste :
+          c'est le seul endroit de cet ecran ou quelque chose est bloque en
+          attendant une decision. */}
+      {pending.length ? (
+        <Panel highlighted>
+          <PanelHeader
+            icon={ShieldCheckIcon}
+            title={i18n.t("Publications a valider ({0})", { "0": pending.length })}
+            description={
+              canValidate
+                ? i18n.t("Une publication deposee par un utilisateur arrive ici automatiquement et n'est visible que de son auteur, grisee. Valider la publie dans le fil ; refuser la laisse invisible et envoie le motif a son auteur, tel quel.")
+                : i18n.t("Une publication deposee par un utilisateur arrive ici automatiquement. Seul un super administrateur peut la valider ou la refuser.")
+            }
+          />
+          <ul className="divide-y divide-border">
+            {pending.map((row) => {
+              const author = profiles.get(row.author_id);
+              const name = displayName(author, undefined, i18n.locale);
+              return (
+                <li key={row.id} className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
+                  <UserCell
+                    name={name}
+                    secondary={i18n.format.formatDateTime(row.created_at)}
+                    avatarUrl={author?.avatar_url}
+                    href={i18n.path(`/admin/utilisateurs/${row.author_id}`)}
+                  />
+                  {/* L'extrait suffit dans la file : c'est la popup qui montre
+                      la publication en entier, et c'est elle qui porte les
+                      gestes. Une file qui deroule chaque texte integral
+                      s'allonge a proportion de ce qui attend. */}
+                  <p className="min-w-40 flex-1 truncate text-sm text-muted-foreground">
+                    {row.content?.trim() || i18n.t("(sans texte)")}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <StatusPill tone="warning">{i18n.t("En attente de validation")}</StatusPill>
+                    <PostPreviewDialog
+                      post={previewOf(row, author, name, mediaUrlOf(row))}
+                      canValidate={canValidate}
+                      onApprove={approvePost.bind(null, row.id)}
+                      onRefuse={refusePost.bind(null, row.id)}
+                      onToggleHidden={setPostHidden.bind(null, row.id, !row.is_hidden)}
+                      onToggleDeleted={setPostDeleted.bind(null, row.id, !row.is_deleted)}
+                      statusLabel={{
+                        label: i18n.labels.label(CONTENT_MODERATION_STATUS, "en_attente"),
+                        tone: "warning",
+                      }}
+                      trigger={
+                        <Button size="xs" variant="outline">
+                          <EyeIcon />
+                          {i18n.t("Examiner")}
+                        </Button>
+                      }
+                    />
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </Panel>
+      ) : null}
+
     <Panel>
       <PanelHeader
         title={i18n.t("Publications du fil d'actualite")}
@@ -612,6 +895,12 @@ async function PostsView({ params }: { params: Record<string, string | undefined
             label: i18n.t("Etat"),
             options: [
               { value: "en_ligne", label: i18n.t("En ligne") },
+              ...(available
+                ? [
+                    { value: "attente", label: i18n.t("En attente de validation") },
+                    { value: "refuse_validation", label: i18n.t("Refusee") },
+                  ]
+                : []),
               { value: "masque", label: i18n.t("Masquee") },
               { value: "supprime", label: i18n.t("Supprimee") },
             ],
@@ -624,30 +913,40 @@ async function PostsView({ params }: { params: Record<string, string | undefined
         <ul className="divide-y divide-border">
           {rows.map((row) => {
             const author = profiles.get(row.author_id);
-            const mediaUrl =
-              row.media_url && !row.media_url.startsWith("http")
-                ? publicStorageUrl("post-media", row.media_url)
-                : row.media_url;
+            const name = displayName(author, undefined, i18n.locale);
+            const mediaUrl = mediaUrlOf(row);
 
             return (
               <li key={row.id} className="space-y-3 px-4 py-4 sm:px-5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <UserCell
-                    name={displayName(author, undefined, i18n.locale)}
+                    name={name}
                     secondary={i18n.format.formatDateTime(row.created_at)}
                     avatarUrl={author?.avatar_url}
                     href={i18n.path(`/admin/utilisateurs/${row.author_id}`)}
                   />
                   <div className="flex flex-wrap items-center gap-2">
+                    {/* L'etat de validation passe AVANT le masquage : une
+                        publication en attente n'a jamais ete « en ligne », et
+                        l'annoncer ainsi serait faux. */}
+                    {available && row.moderation_status && row.moderation_status !== "approuve" ? (
+                      <StatusPill
+                        tone={i18n.labels.entry(CONTENT_MODERATION_STATUS, row.moderation_status).tone}
+                      >
+                        {i18n.labels.label(CONTENT_MODERATION_STATUS, row.moderation_status)}
+                      </StatusPill>
+                    ) : null}
                     {row.is_hidden ? <StatusPill tone="warning">{i18n.t("Masquee")}</StatusPill> : null}
                     {row.is_deleted ? <StatusPill tone="danger">{i18n.t("Supprimee")}</StatusPill> : null}
-                    {!row.is_hidden && !row.is_deleted ? (
+                    {!row.is_hidden &&
+                    !row.is_deleted &&
+                    (!available || row.moderation_status === "approuve") ? (
                       <StatusPill tone="success">{i18n.t("En ligne")}</StatusPill>
                     ) : null}
                   </div>
                 </div>
 
-                <p className="text-sm leading-relaxed whitespace-pre-line">
+                <p className="line-clamp-3 text-sm leading-relaxed whitespace-pre-line">
                   {row.content ?? i18n.t("(sans texte)")}
                 </p>
 
@@ -662,6 +961,49 @@ async function PostsView({ params }: { params: Record<string, string | undefined
                 ) : null}
 
                 <div className="flex flex-wrap gap-2">
+                  {/* La popup porte tous les gestes ; les boutons ci-dessous
+                      restent pour agir sans l'ouvrir, sur une ligne qu'on
+                      reconnait deja. */}
+                  <PostPreviewDialog
+                    post={previewOf(row, author, name, mediaUrl)}
+                    canValidate={canValidate && available}
+                    onApprove={approvePost.bind(null, row.id)}
+                    onRefuse={refusePost.bind(null, row.id)}
+                    onToggleHidden={setPostHidden.bind(null, row.id, !row.is_hidden)}
+                    onToggleDeleted={setPostDeleted.bind(null, row.id, !row.is_deleted)}
+                    statusLabel={
+                      available && row.moderation_status
+                        ? {
+                            label: i18n.labels.label(
+                              CONTENT_MODERATION_STATUS,
+                              row.moderation_status,
+                            ),
+                            tone: i18n.labels.entry(
+                              CONTENT_MODERATION_STATUS,
+                              row.moderation_status,
+                            ).tone as "warning" | "success" | "danger",
+                          }
+                        : undefined
+                    }
+                    trigger={
+                      <Button size="xs" variant="outline">
+                        <EyeIcon />
+                        {i18n.t("Examiner")}
+                      </Button>
+                    }
+                  />
+                  {/* Depuis la liste on peut aussi revenir sur un refus : un
+                      contenu refuse par erreur n'a pas d'autre chemin de
+                      repechage, son auteur ne pouvant que le supprimer. */}
+                  {available && canValidate && row.moderation_status !== "approuve" ? (
+                    <ActionButton action={approvePost.bind(null, row.id)}>
+                      <CheckIcon />
+                      {i18n.t("Valider")}
+                    </ActionButton>
+                  ) : null}
+                  {available && canValidate && row.moderation_status === "approuve" ? (
+                    <RefuseContentDialog action={refusePost.bind(null, row.id)} i18n={i18n} />
+                  ) : null}
                   <ActionButton action={setPostHidden.bind(null, row.id, !row.is_hidden)}>
                     {row.is_hidden ? <EyeIcon /> : <EyeOffIcon />}
                     {row.is_hidden ? i18n.t("Reafficher") : i18n.t("Masquer")}
@@ -679,36 +1021,174 @@ async function PostsView({ params }: { params: Record<string, string | undefined
           })}
         </ul>
       )}
-      <Pagination basePath={i18n.path("/admin/moderation")} params={params} page={page} pageSize={PAGE_SIZE} total={count ?? 0} />
+      <Pagination basePath={i18n.path("/admin/moderation")} params={params} page={page} pageSize={PAGE_SIZE} total={count} />
     </Panel>
+    </>
   );
 }
 
 /* --------------------------------------------------------------- commentaires */
 
-async function CommentsView({ params }: { params: Record<string, string | undefined> }) {
+async function CommentsView({
+  params,
+  canValidate,
+}: {
+  params: Record<string, string | undefined>;
+  canValidate: boolean;
+}) {
   const i18n = await getAdminI18n();
 
-  const supabase = await createClient();
   const page = Math.max(1, Number(params.page ?? 1) || 1);
 
-  let query = supabase
-    .from("post_comments")
-    .select("id, post_id, author_id, content, is_hidden, is_deleted, created_at", { count: "exact" })
-    .order("created_at", { ascending: false })
-    .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
+  const { rows: all, count, available } = await selectWithModeration<CommentRow>(
+    "post_comments",
+    COMMENT_COLUMNS,
+    (q) => {
+      let query = q
+        .order("created_at", { ascending: false })
+        .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
+      if (params.etat === "masque") query = query.eq("is_hidden", true);
+      if (params.etat === "supprime") query = query.eq("is_deleted", true);
+      if (params.etat === "en_ligne") query = query.eq("is_hidden", false).eq("is_deleted", false);
+      if (params.etat === "attente") query = query.eq("moderation_status", "en_attente");
+      if (params.etat === "refuse_validation") query = query.eq("moderation_status", "refuse");
+      return query;
+    },
+  );
 
-  if (params.etat === "masque") query = query.eq("is_hidden", true);
-  if (params.etat === "supprime") query = query.eq("is_deleted", true);
-  if (params.etat === "en_ligne") query = query.eq("is_hidden", false).eq("is_deleted", false);
+  const pending = available
+    ? await fetchPendingContent<CommentRow>("post_comments", COMMENT_COLUMNS)
+    : [];
 
-  const { data, count } = await query;
-  const rows = (data ?? []).filter((row) =>
+  const rows = all.filter((row) =>
     params.q ? row.content?.toLowerCase().includes(params.q.toLowerCase()) : true,
   );
-  const profiles = await fetchProfilesByIds(rows.map((row) => row.author_id));
+
+  /*
+   * La publication que chaque commentaire vise — en UNE requete pour toute la
+   * page, jamais une par ligne. C'est elle qui donne son sens au commentaire :
+   * « bien joue » sous une annonce et « bien joue » sous une insulte ne se
+   * moderent pas pareil, et l'ancien lien renvoyait vers l'onglet Publications
+   * avec l'identifiant en **recherche plein texte** — un filtre qui porte sur
+   * `content` et ne pouvait donc rien trouver.
+   */
+  const postIds = [...new Set([...rows, ...pending].map((row) => row.post_id))];
+  const parents = postIds.length
+    ? (
+        await selectWithModeration<PostRow>("posts", POST_COLUMNS, (q) =>
+          q.in("id", postIds),
+        )
+      ).rows
+    : [];
+  const parentById = new Map(parents.map((row) => [row.id, row]));
+
+  const profiles = await fetchProfilesByIds([
+    ...rows.map((row) => row.author_id),
+    ...pending.map((row) => row.author_id),
+    // L'auteur de la publication n'est pas celui du commentaire.
+    ...parents.map((row) => row.author_id),
+  ]);
+
+  /**
+   * Le declencheur « Voir la publication », ou rien.
+   *
+   * ⚠️ Rien, et pas un bouton inerte, quand la publication est introuvable :
+   * supprimee, ou filtree par la RLS. Un bouton qui n'ouvre rien fait douter
+   * de tout l'ecran — c'est la regle deja tenue pour les pastilles hors
+   * terrain du selecteur de postes cote mobile.
+   */
+  const parentTrigger = (comment: CommentRow, size: "xs" | "sm" = "xs") => {
+    const parent = parentById.get(comment.post_id);
+    if (!parent) return null;
+    const author = profiles.get(parent.author_id);
+    return (
+      <PostPreviewDialog
+        post={previewOf(
+          parent,
+          author,
+          displayName(author, undefined, i18n.locale),
+          mediaUrlOf(parent),
+        )}
+        canValidate={canValidate && available}
+        statusLabel={
+          available && parent.moderation_status
+            ? {
+                label: i18n.labels.label(CONTENT_MODERATION_STATUS, parent.moderation_status),
+                tone: i18n.labels.entry(CONTENT_MODERATION_STATUS, parent.moderation_status)
+                  .tone as "warning" | "success" | "danger",
+              }
+            : undefined
+        }
+        onApprove={approvePost.bind(null, parent.id)}
+        onRefuse={refusePost.bind(null, parent.id)}
+        onToggleHidden={setPostHidden.bind(null, parent.id, !parent.is_hidden)}
+        onToggleDeleted={setPostDeleted.bind(null, parent.id, !parent.is_deleted)}
+        trigger={
+          <Button size={size} variant="outline">
+            <MessageSquareIcon />
+            {i18n.t("Voir la publication")}
+          </Button>
+        }
+      />
+    );
+  };
 
   return (
+    <>
+      {pending.length ? (
+        <Panel highlighted>
+          <PanelHeader
+            icon={ShieldCheckIcon}
+            title={i18n.t("Commentaires a valider ({0})", { "0": pending.length })}
+            description={
+              canValidate
+                ? i18n.t("Un commentaire n'est visible que de son auteur tant qu'il n'est pas valide, et l'auteur de la publication n'en est prevenu qu'a ce moment-la.")
+                : i18n.t("Seul un super administrateur peut valider ou refuser un commentaire.")
+            }
+          />
+          <ul className="divide-y divide-border">
+            {pending.map((row) => {
+              const author = profiles.get(row.author_id);
+              return (
+                <li key={row.id} className="space-y-3 px-4 py-4 sm:px-5">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <UserCell
+                      name={displayName(author, undefined, i18n.locale)}
+                      secondary={i18n.format.formatDateTime(row.created_at)}
+                      avatarUrl={author?.avatar_url}
+                      href={i18n.path(`/admin/utilisateurs/${row.author_id}`)}
+                    />
+                    <StatusPill tone="warning">{i18n.t("En attente de validation")}</StatusPill>
+                  </div>
+
+                  <p className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm leading-relaxed whitespace-pre-line">
+                    {row.content}
+                  </p>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Le commentaire se juge sur la publication qu'il vise :
+                        elle s'ouvre en popup, image comprise, sans quitter la
+                        file. */}
+                    {parentTrigger(row)}
+                    {canValidate ? (
+                      <>
+                        <ActionButton action={approveComment.bind(null, row.id)}>
+                          <CheckIcon />
+                          {i18n.t("Valider")}
+                        </ActionButton>
+                        <RefuseContentDialog action={refuseComment.bind(null, row.id)} i18n={i18n} />
+                      </>
+                    ) : (
+                      <StatusPill tone="warning">{i18n.t("Super administrateur requis")}</StatusPill>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </Panel>
+      ) : null}
+
     <Panel>
       <PanelHeader title={i18n.t("Commentaires")} />
       <FilterBar
@@ -721,6 +1201,12 @@ async function CommentsView({ params }: { params: Record<string, string | undefi
             label: i18n.t("Etat"),
             options: [
               { value: "en_ligne", label: i18n.t("En ligne") },
+              ...(available
+                ? [
+                    { value: "attente", label: i18n.t("En attente de validation") },
+                    { value: "refuse_validation", label: i18n.t("Refuse") },
+                  ]
+                : []),
               { value: "masque", label: i18n.t("Masque") },
               { value: "supprime", label: i18n.t("Supprime") },
             ],
@@ -757,6 +1243,12 @@ async function CommentsView({ params }: { params: Record<string, string | undefi
                   <TableCell>
                     {row.is_deleted ? (
                       <StatusPill tone="danger">{i18n.t("Supprime")}</StatusPill>
+                    ) : available && row.moderation_status && row.moderation_status !== "approuve" ? (
+                      <StatusPill
+                        tone={i18n.labels.entry(CONTENT_MODERATION_STATUS, row.moderation_status).tone}
+                      >
+                        {i18n.labels.label(CONTENT_MODERATION_STATUS, row.moderation_status)}
+                      </StatusPill>
                     ) : row.is_hidden ? (
                       <StatusPill tone="warning">{i18n.t("Masque")}</StatusPill>
                     ) : (
@@ -767,7 +1259,17 @@ async function CommentsView({ params }: { params: Record<string, string | undefi
                     {i18n.format.formatDate(row.created_at)}
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center justify-end gap-2">
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      {/* Le contexte avant la decision : la publication visee
+                          s'ouvre en popup depuis la liste comme depuis la
+                          file. */}
+                      {parentTrigger(row)}
+                      {available && canValidate && row.moderation_status !== "approuve" ? (
+                        <ActionButton action={approveComment.bind(null, row.id)}>
+                          <CheckIcon />
+                          {i18n.t("Valider")}
+                        </ActionButton>
+                      ) : null}
                       <ActionButton action={setCommentHidden.bind(null, row.id, !row.is_hidden)}>
                         {row.is_hidden ? i18n.t("Reafficher") : i18n.t("Masquer")}
                       </ActionButton>
@@ -785,8 +1287,9 @@ async function CommentsView({ params }: { params: Record<string, string | undefi
           </TableBody>
         </Table>
       )}
-      <Pagination basePath={i18n.path("/admin/moderation")} params={params} page={page} pageSize={PAGE_SIZE} total={count ?? 0} />
+      <Pagination basePath={i18n.path("/admin/moderation")} params={params} page={page} pageSize={PAGE_SIZE} total={count} />
     </Panel>
+    </>
   );
 }
 
@@ -843,7 +1346,9 @@ async function MediaView({ params }: { params: Record<string, string | undefined
               {videoRows.map((row) => {
                 const player = profiles.get(row.player_id);
                 const url =
-                  row.youtube_url ?? publicStorageUrl("player-videos", row.storage_path);
+                  // `storageUrl` rend une adresse externe telle quelle : un lien
+                  // YouTube n'a rien a signer.
+                  row.youtube_url ?? storageUrl("player-videos", row.storage_path);
                 return (
                   <TableRow key={row.id}>
                     <TableCell>
@@ -958,12 +1463,18 @@ function ModerationFilter({
   options: { value: string; label: string }[];
 }) {
   return (
-    <label className="flex items-center gap-2 rounded-lg bg-background px-3 py-1.5 md:col-span-3">
-      <span className="micro-label whitespace-nowrap text-muted-foreground">{name_} :</span>
+    // `min-w-0` des deux cotes : sans lui, le libelle `whitespace-nowrap` et la
+    // largeur intrinseque du `<select>` (celle de sa plus longue option) se
+    // disputent une piste qui, elle, accepte de retrecir — et c'est le
+    // `<select>` qui perd.
+    <label className="flex min-w-0 items-center gap-2 rounded-lg bg-background px-3 py-1.5">
+      <span className="micro-label shrink-0 whitespace-nowrap text-muted-foreground">
+        {name_} :
+      </span>
       <select
         name={name}
         defaultValue={value ?? ""}
-        className="w-full cursor-pointer bg-transparent text-xs font-semibold outline-none"
+        className="w-full min-w-0 cursor-pointer bg-transparent text-xs font-semibold outline-none"
       >
         <option value="">{all}</option>
         {choices.map((choice) => (

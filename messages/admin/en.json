@@ -85,6 +85,14 @@
     "deletions": {
       "one": "{count} account deletion request",
       "other": "{count} account deletion requests"
+    },
+    "posts": {
+      "one": "{count} post awaiting approval",
+      "other": "{count} posts awaiting approval"
+    },
+    "comments": {
+      "one": "{count} comment awaiting approval",
+      "other": "{count} comments awaiting approval"
     }
   },
   "diagnostics": {
@@ -1658,7 +1666,29 @@
     "Utilises par les moteurs de recherche et les apercus partages. Laisses vides, le titre et le resume de l'article ci-dessus s'appliquent.": "Used by search engines and shared link previews. Left empty, the article's title and summary above apply instead.",
     "Publication programmee": "Scheduled publication",
     "Laissez vide pour publier immediatement. Une date future rend l'article visible sur le site tout seul a l'heure choisie — inutile de revenir cliquer Publier ce jour-la.": "Leave empty to publish immediately. A future date makes the article go live on its own at the chosen time — no need to come back and click Publish that day.",
-    "Programmer la publication": "Schedule publication"
+    "Programmer la publication": "Schedule publication",
+    "Refuser ce contenu": "Reject this content",
+    "Le contenu reste invisible des autres utilisateurs. Son auteur recoit le motif en notification, tel quel.": "The content stays invisible to other users. Its author receives the reason as a notification, verbatim.",
+    "Propos deplaces, coordonnees personnelles, hors sujet…": "Inappropriate wording, personal contact details, off topic…",
+    "Refuser le contenu": "Reject the content",
+    "Publications a valider ({0})": "Posts awaiting approval ({0})",
+    "Une publication deposee par un utilisateur arrive ici automatiquement et n'est visible que de son auteur, grisee. Valider la publie dans le fil ; refuser la laisse invisible et envoie le motif a son auteur, tel quel.": "A post submitted by a user lands here automatically and is visible to its author only, greyed out. Approving publishes it to the feed; rejecting leaves it invisible and sends the reason to its author, verbatim.",
+    "Une publication deposee par un utilisateur arrive ici automatiquement. Seul un super administrateur peut la valider ou la refuser.": "A post submitted by a user lands here automatically. Only a super administrator can approve or reject it.",
+    "En attente de validation": "Awaiting approval",
+    "Refusee": "Rejected",
+    "Commentaires a valider ({0})": "Comments awaiting approval ({0})",
+    "Un commentaire n'est visible que de son auteur tant qu'il n'est pas valide, et l'auteur de la publication n'en est prevenu qu'a ce moment-la.": "A comment is visible to its author only until it is approved, and the post's author is notified only at that point.",
+    "Seul un super administrateur peut valider ou refuser un commentaire.": "Only a super administrator can approve or reject a comment.",
+    "Voir la publication": "View the post",
+    "Refuse": "Rejected",
+    "Indiquez le motif du refus : l'auteur le recevra tel quel.": "State the reason for rejection: the author receives it verbatim.",
+    "Validation des contenus indisponible : la migration 0089_content_moderation.sql n'est pas appliquee sur ce projet.": "Content approval unavailable: migration 0089_content_moderation.sql has not been applied to this project.",
+    "Refuse par Postgres : seul un super administrateur peut valider un contenu.": "Refused by Postgres: only a super administrator can approve content.",
+    "Aucune ligne modifiee : le contenu n'existe plus, ou le RLS ne vous laisse pas l'ecrire. Rien n'a ete valide.": "No row changed: the content no longer exists, or RLS will not let you write it. Nothing was approved.",
+    "Publication validee : elle est desormais visible dans le fil.": "Post approved: it is now visible in the feed.",
+    "Commentaire valide : il est desormais visible.": "Comment approved: it is now visible.",
+    "Contenu refuse : l'auteur est prevenu du motif.": "Content rejected: the author has been told why.",
+    "Examiner": "Review"
   },
   "validations": {
     "metaTitle": "Validations",
@@ -1880,5 +1910,25 @@
       "weak_password": "This password is too weak. Choose a longer or less common one.",
       "unknown": "The request did not go through. Try again in a moment."
     }
+  },
+  "postPreview": {
+    "title": "Post preview",
+    "description": "The post exactly as its author submitted it. Approval and moderation actions are here.",
+    "noText": "(no text)",
+    "hidden": "Hidden",
+    "deleted": "Removed",
+    "openMedia": "Open the media",
+    "refusedFor": "Reason for rejection:",
+    "reasonLabel": "Reason for rejection",
+    "reasonPlaceholder": "Inappropriate wording, personal contact details, off topic…",
+    "reasonHint": "The author receives this text verbatim, as a notification.",
+    "approve": "Approve",
+    "refuse": "Reject",
+    "confirmRefuse": "Confirm rejection",
+    "hide": "Hide",
+    "unhide": "Unhide",
+    "delete": "Remove",
+    "restore": "Restore",
+    "preview": "Preview"
   }
 }

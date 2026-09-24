@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { accountAvatarUrl } from "@/lib/queries/profiles";
 import { PROFILE_COLUMNS, fetchProfilesByIds, type ProfileSummary } from "@/lib/queries/profiles";
 
 export const USERS_PAGE_SIZE = 25;
@@ -125,9 +126,11 @@ export async function listUsers(params: {
     return {
       ...profile,
       // Joueur : `profile_photo_url` ; professionnel : `photo_url` (migration
-      // mobile 0039). Cf. ProfileSummary.avatar_url.
-      avatar_url:
-        (player?.profile_photo_url as string | null) ?? proPhotoById.get(profile.id) ?? null,
+      // mobile 0039), signee par `accountAvatarUrl` — le bucket est prive.
+      avatar_url: accountAvatarUrl(
+        player?.profile_photo_url as string | null,
+        proPhotoById.get(profile.id),
+      ),
       businessStatus: (player?.status ?? pro?.status ?? null) as string | null,
       detail:
         (player?.current_club as string | null) ??

@@ -96,6 +96,23 @@ const QUEUES: QueueSpec[] = [
     permission: "moderation.validate",
   },
   {
+    // §9 / migration mobile 0089 : une publication et un commentaire attendent
+    // la validation d'un super administrateur. Comme les retraits, la file
+    // n'est montree qu'a qui peut trancher — pointer un moderateur vers un
+    // ecran ou tous les boutons lui seront refuses n'est pas une notification,
+    // c'est une impasse.
+    key: "posts",
+    section: "moderation",
+    href: "/admin/moderation?vue=publications&etat=attente",
+    permission: "content.validate",
+  },
+  {
+    key: "comments",
+    section: "moderation",
+    href: "/admin/moderation?vue=commentaires&etat=attente",
+    permission: "content.validate",
+  },
+  {
     key: "scoutDays",
     section: "scoutDays",
     href: "/admin/scout-days?statut=en_attente_validation",
@@ -125,8 +142,18 @@ export async function fetchAdminQueue(
   const supabase = await createClient();
   const head = { count: "exact" as const, head: true };
 
-  const [players, professionals, documents, identity, reports, removals, scoutDays, deletions] =
-    await Promise.all([
+  const [
+    players,
+    professionals,
+    documents,
+    identity,
+    reports,
+    removals,
+    posts,
+    comments,
+    scoutDays,
+    deletions,
+  ] = await Promise.all([
       supabase
         .from("player_profiles")
         .select("id", head)
@@ -139,6 +166,19 @@ export async function fetchAdminQueue(
       supabase.from("identity_verifications").select("id", head).eq("status", "en_attente"),
       supabase.from("reports").select("id", head).eq("status", "en_attente"),
       supabase.from("reports").select("id", head).eq("status", "a_valider"),
+      // ⚠️ Tant que 0089 n'est pas appliquee, la colonne n'existe pas et
+      // PostgREST rend un 42703 : `count` vaut alors null, donc 0 ci-dessous.
+      // La file disparait, elle ne casse pas la cloche.
+      supabase
+        .from("posts")
+        .select("id", head)
+        .eq("moderation_status", "en_attente")
+        .eq("is_deleted", false),
+      supabase
+        .from("post_comments")
+        .select("id", head)
+        .eq("moderation_status", "en_attente")
+        .eq("is_deleted", false),
       supabase.from("scout_days").select("id", head).eq("status", "en_attente_validation"),
       supabase.from("profiles").select("id", head).not("deletion_requested_at", "is", null),
     ]);
@@ -150,6 +190,8 @@ export async function fetchAdminQueue(
     identity: identity.count ?? 0,
     reports: reports.count ?? 0,
     removals: removals.count ?? 0,
+    posts: posts.count ?? 0,
+    comments: comments.count ?? 0,
     scoutDays: scoutDays.count ?? 0,
     deletions: deletions.count ?? 0,
   };
@@ -171,7 +213,7 @@ export async function fetchAdminQueue(
     /** Pastilles de la navigation : memes chiffres que la cloche. */
     badges: {
       validations: counts.players + counts.professionals + counts.documents + counts.identity,
-      signalements: counts.reports + counts.removals,
+      signalements: counts.reports + counts.removals + counts.posts + counts.comments,
       scoutDays: counts.scoutDays,
     },
   };
