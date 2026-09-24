@@ -61,7 +61,6 @@ export async function StatCard({
   footLabel,
   icon: Icon,
   accent = "primary",
-  glow = false,
   progress,
   href,
   className,
@@ -82,8 +81,6 @@ export async function StatCard({
   footLabel?: string;
   icon?: React.ComponentType<{ className?: string }>;
   accent?: Accent;
-  /** Halo diffus dans le coin, pour les deux tuiles d'alerte de la maquette. */
-  glow?: boolean;
   /** Part de 0 a 1 d'un total reellement connu : dessine une barre en pied. */
   progress?: number;
   /** Rend la tuile cliquable et allume la fleche du coin. */
@@ -93,16 +90,6 @@ export async function StatCard({
   const dict = await getAdminDict();
   const body = (
     <>
-      {glow ? (
-        <span
-          aria-hidden
-          className={cn(
-            "pointer-events-none absolute -top-6 -right-6 size-24 rounded-full blur-2xl",
-            accent === "error" ? "bg-destructive/15" : "bg-warning/10",
-          )}
-        />
-      ) : null}
-
       <div className="relative flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
           {Icon ? (

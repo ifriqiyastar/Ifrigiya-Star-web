@@ -192,7 +192,7 @@ export default async function EvaluationsPage({
                 id="registration_id"
                 name="registration_id"
                 required
-                className="h-11 rounded-md border-border bg-[#101318] text-xs"
+                className="h-11 rounded-md border-border bg-input text-xs"
               >
                 <option value="">{i18n.t("Selectionner une inscription")}</option>
                 {(registrations ?? []).map((registration) => {
@@ -219,7 +219,7 @@ export default async function EvaluationsPage({
                 id="evaluator_id"
                 name="evaluator_id"
                 required
-                className="h-11 rounded-md border-border bg-[#101318] text-xs"
+                className="h-11 rounded-md border-border bg-input text-xs"
               >
                 <option value="">{i18n.t("Selectionner un evaluateur")}</option>
                 {(evaluators ?? []).map((evaluator) => (
@@ -287,7 +287,7 @@ export default async function EvaluationsPage({
                 id="report"
                 name="report"
                 rows={5}
-                className="min-h-32 rounded-md border-border bg-[#101318] text-xs leading-relaxed"
+                className="min-h-32 rounded-md border-border bg-input text-xs leading-relaxed"
                 placeholder={i18n.t("Decrivez les points forts, les axes de progression, le potentiel observe et votre recommandation...")}
               />
               <p className="text-[0.6875rem] text-muted-foreground">
@@ -563,7 +563,7 @@ function ScoreField({
           required
           inputMode="numeric"
           placeholder="00"
-          className="h-12 rounded-md border-border bg-[#101318] pr-12 font-heading text-xl font-extrabold tabular-nums"
+          className="h-12 rounded-md border-border bg-input pr-12 font-heading text-xl font-extrabold tabular-nums"
         />
         <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-[0.625rem] text-muted-foreground">
           / 100
@@ -592,7 +592,7 @@ function RatingBand({
   };
 
   return (
-    <div className="flex items-start gap-3 rounded-md border border-border bg-[#101318] p-3">
+    <div className="flex items-start gap-3 rounded-md border border-border bg-input p-3">
       <span
         className={cn(
           "flex min-w-14 shrink-0 items-center justify-center rounded px-2 py-1 text-[0.625rem] font-bold tabular-nums",

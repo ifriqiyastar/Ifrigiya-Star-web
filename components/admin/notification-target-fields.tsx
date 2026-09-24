@@ -73,7 +73,7 @@ export function NotificationTargetFields({
           name="target_type"
           value={type}
           onChange={(event) => setType(event.target.value as TargetType)}
-          className="h-11 rounded-md border-border bg-[#101318] text-xs"
+          className="h-11 rounded-md border-border bg-input text-xs"
         >
           <option value="all">{i18n.t("Tous les utilisateurs")}</option>
           <option value="role">{i18n.t("Un type de compte")}</option>
@@ -88,7 +88,7 @@ export function NotificationTargetFields({
         {type === "all" ? (
           <>
             <input type="hidden" name="target_value" value="" />
-            <div className="flex h-11 items-center rounded-md border border-border bg-[#101318] px-3.5 text-xs text-muted-foreground">
+            <div className="flex h-11 items-center rounded-md border border-border bg-input px-3.5 text-xs text-muted-foreground">
               {i18n.t("Tous les comptes actifs")}</div>
           </>
         ) : type === "role" ? (
@@ -96,7 +96,7 @@ export function NotificationTargetFields({
             id="target_value"
             name="target_value"
             required
-            className="h-11 rounded-md border-border bg-[#101318] text-xs"
+            className="h-11 rounded-md border-border bg-input text-xs"
           >
             <option value="">{i18n.t("Sélectionner un rôle")}</option>
             <option value="player">{i18n.t("Joueurs")}</option>
@@ -107,7 +107,7 @@ export function NotificationTargetFields({
             id="target_value"
             name="target_value"
             required
-            className="h-11 rounded-md border-border bg-[#101318] text-xs"
+            className="h-11 rounded-md border-border bg-input text-xs"
           >
             <option value="">{i18n.t("Sélectionner un utilisateur")}</option>
             {users.map((user) => (
@@ -121,7 +121,7 @@ export function NotificationTargetFields({
             id="target_value"
             name="target_value"
             required
-            className="h-11 rounded-md border-border bg-[#101318] text-xs"
+            className="h-11 rounded-md border-border bg-input text-xs"
           >
             <option value="">{i18n.t("Sélectionner un Scout Day")}</option>
             {scoutDays.map((event) => (

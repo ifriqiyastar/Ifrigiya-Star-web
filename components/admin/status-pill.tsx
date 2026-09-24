@@ -18,7 +18,7 @@ const pill = cva(
     variants: {
       tone: {
         brand: "bg-brand-gradient font-semibold text-brand-foreground",
-        danger: "bg-[var(--danger-surface,var(--destructive))] font-semibold text-[#e1e2e8]",
+        danger: "bg-[var(--danger-surface,var(--destructive))] font-semibold text-foreground",
         warning: "bg-warning/12 text-warning",
         success: "bg-success/12 text-success",
         info: "bg-info/12 text-info",

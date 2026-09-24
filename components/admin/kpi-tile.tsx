@@ -49,7 +49,7 @@ export function KpiTile({
   className?: string;
 }) {
   return (
-    <div className={cn("rounded-lg border border-border bg-muted p-3", className)}>
+    <div className={cn("rounded-lg border border-border bg-card p-3", className)}>
       <div className="flex items-center justify-between gap-2 text-muted-foreground">
         <span className="micro-label truncate">{label}</span>
         <Icon className={cn("size-4 shrink-0", ICON[accent])} />

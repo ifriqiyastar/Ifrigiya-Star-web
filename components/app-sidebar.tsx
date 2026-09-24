@@ -56,7 +56,7 @@ export function AppSidebar({
           la (`group-data-[collapsible=icon]:hidden`) et celui du bandeau est
           reserve au mobile (`md:hidden`) — une fois replie, le rail ne pouvait
           donc plus etre rouvert qu'au clavier (Ctrl/Cmd + B). */}
-      <SidebarHeader className="border-b border-sidebar-border px-3 py-3 group-data-[collapsible=icon]:px-1.5">
+      <SidebarHeader className="px-3 py-3 group-data-[collapsible=icon]:px-1.5">
         <div className="flex h-10 items-center gap-2 group-data-[collapsible=icon]:justify-center">
           <SidebarMenu className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
             <SidebarMenuItem>
@@ -65,7 +65,7 @@ export function AppSidebar({
                 tooltip="Ifriqiya Soccer Star"
                 render={<Link href="/admin" />}
               >
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#84cc16] font-heading text-[10px] font-black text-[#0b0e12]">
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand font-heading text-[10px] font-black text-brand-foreground">
                   IS
                 </span>
                 <span className="flex min-w-0 flex-col">
@@ -95,7 +95,7 @@ export function AppSidebar({
         </div>
       </SidebarContent>
       <SidebarFooter className="gap-2.5 p-3 group-data-[collapsible=icon]:p-2">
-        <NavUser user={user} />
+        <NavUser user={user} permissions={permissions} />
       </SidebarFooter>
       {/* La bordure elle-meme devient cliquable : deuxieme prise pour replier
           et redeployer, sans avoir a viser le bouton de l'en-tete. */}

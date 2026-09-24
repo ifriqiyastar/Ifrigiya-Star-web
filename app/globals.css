@@ -298,26 +298,33 @@
      volontairement froide : les noirs tirent vers le bleu, jamais vers le
      vert. Les valeurs dominantes des captures sont conservees telles quelles
      pour que le rail, le plan de travail et les panneaux gardent leur ecart. */
-  --background: #0b0e12;
+  --background: #000000;
   --foreground: #e1e2e8;
-  --card: #191c20;
+  /* Les cartes redescendent en noir pur, comme le rail : c'est le panneau
+     (--secondary, juste en dessous) qui est legerement plus clair qu'elles,
+     pas l'inverse — les cartes se detachent donc par leur bordure plutot
+     que par un fond plus clair. */
+  --card: #000000;
   --card-foreground: #e1e2e8;
-  --popover: #191c20;
+  --popover: #000000;
   --popover-foreground: #e1e2e8;
   --primary: #9ee939;
-  --primary-foreground: #0b0e12;
-  --secondary: #1d2024;
+  --primary-foreground: #000000;
+  --secondary: #0a0b0c;
   --secondary-foreground: #e1e2e8;
-  --muted: #1d2024;
+  --muted: #0a0b0c;
   --muted-foreground: #899181;
-  --accent: #272a2e;
+  --accent: #22252a;
   --accent-foreground: #e1e2e8;
-  --border: #272a2e;
-  --input: #323539;
+  /* Plus visible qu'avant : avec des cartes noires sur un panneau a peine
+     plus clair, c'est elle — pas un ecart de fond — qui doit porter la
+     separation. */
+  --border: #242629;
+  --input: #000000;
   --ring: #9ee939;
 
   --brand: #9ee939;
-  --brand-foreground: #0b0e12;
+  --brand-foreground: #000000;
   --brand-from: #9ee939;
   --brand-mid: #9ee939;
   --brand-to: #9ee939;
@@ -338,14 +345,17 @@
   /* Les interfaces de reference sont denses et presque orthogonales. Les
      composants gardent juste assez de rayon pour rester tactiles, sans
      prendre l'allure de cartes grand public. */
-  --radius: 0.375rem;
-  --sidebar: #111418;
+  --radius: 0.625rem;
+  /* Meme couleur que --background : le rail ne se distingue plus du
+     contenu par une teinte differente ou une bordure, seulement par ce
+     qu'il contient. */
+  --sidebar: #000000;
   --sidebar-foreground: #e1e2e8;
   --sidebar-primary: #9ee939;
-  --sidebar-primary-foreground: #0b0e12;
+  --sidebar-primary-foreground: #000000;
   --sidebar-accent: #9ee939;
-  --sidebar-accent-foreground: #0b0e12;
-  --sidebar-border: #272a2e;
+  --sidebar-accent-foreground: #000000;
+  --sidebar-border: #242629;
   --sidebar-ring: #9ee939;
   position: relative;
   width: 100%;
@@ -355,16 +365,21 @@
   background: var(--background);
 }
 
+/* Trois niveaux, tous des tokens deja existants, du plus fonce au plus
+   clair : --background (rail, #000000) < --secondary (ce panneau) <
+   --card (les cartes qu'il contient). Chaque carte reste donc visible sur
+   le panneau au lieu de s'y fondre. */
 .admin-dashboard-shell [data-slot="sidebar-inset"] {
   margin: 0;
-  background: var(--background);
+  background: var(--secondary);
   color: var(--foreground);
   box-shadow: none;
 }
 
-/* Les surfaces superposees gagnent un peu de profondeur sans halo diffus :
-   c'est ce qui preserve la hierarchie sur les longs tableaux sombres. */
-.admin-dashboard-shell [data-slot="card"],
+/* Les cartes restent plates, posees sur la page plutot que flottantes : seule
+   la bordure (--border) les separe du fond, pas une ombre. Les surfaces
+   superposees (dialogues, menus) gardent une ombre : contrairement a une
+   carte, elles se detachent reellement du contenu derriere elles. */
 .admin-dashboard-shell [data-slot="dialog-content"],
 .admin-dashboard-shell [data-slot="dropdown-menu-content"] {
   box-shadow: 0 12px 28px rgb(0 0 0 / 0.16);
@@ -378,9 +393,18 @@
   padding: 0;
 }
 
+/* Pas de bordure a droite du rail : sidebar et contenu partagent la meme
+   couleur de fond (--sidebar = --background), un style plus traditionnel
+   ou seul le contenu des cartes cree la separation. */
 .admin-dashboard-shell [data-slot="sidebar-inner"] {
-  border-right: 1px solid var(--sidebar-border);
   background: var(--sidebar);
+}
+
+/* Le primitif shadcn pose son propre `border-r` sur ce conteneur (variante
+   "sidebar", `components/ui/sidebar.tsx`) — retire ici plutot que dans le
+   composant partage, comme le reste des overrides de cette section. */
+.admin-dashboard-shell [data-slot="sidebar-container"] {
+  border-right: 0;
 }
 
 .admin-dashboard-shell [data-slot="sidebar-content"] {
@@ -395,8 +419,12 @@
   color: inherit;
 }
 
+/* Ne peut pas lire `var(--background)` : `body` est l'ancetre de
+   `.admin-dashboard-shell`, pas son descendant, donc la variable posee sur
+   ce dernier ne remonte pas jusqu'ici. Garder cette valeur alignee a la main
+   sur `--background` ci-dessus si l'une des deux change. */
 body:has(.admin-dashboard-shell) {
-  background: #0b0e12;
+  background: #000000;
 }
 
 /* L'element actif du rail n'est plus un bouton plein lime mais un fond sourd
@@ -406,13 +434,13 @@ body:has(.admin-dashboard-shell) {
 }
 
 .admin-dashboard-shell [data-slot="sidebar-menu-button"]:not([data-active="true"]):hover {
-  background: #1d2024;
-  color: #e1e2e8;
+  background: var(--secondary);
+  color: var(--foreground);
 }
 
 .admin-dashboard-shell [data-slot="input"],
 .admin-dashboard-shell [data-slot="select-trigger"] {
-  background: #101318;
+  background: var(--input);
 }
 
 @media (min-width: 640px) {
@@ -447,6 +475,16 @@ body:has(.admin-dashboard-shell) {
 
   .admin-dashboard-shell [data-slot="sidebar-inner"] {
     border-radius: 0;
+  }
+
+  /* Le panneau flotte sur le noir du gabarit au lieu de le couvrir bord a
+     bord : une marge sur les quatre cotes (le rail compris) laisse voir la
+     page derriere, avec les coins arrondis de `--radius` plutot que droits.
+     Uniquement a partir d'ici : sur mobile le rail est un tiroir superpose,
+     un panneau flottant n'y a pas de sens. */
+  .admin-dashboard-shell [data-slot="sidebar-inset"] {
+    margin: 0.75rem;
+    border-radius: var(--radius);
   }
 }
 
