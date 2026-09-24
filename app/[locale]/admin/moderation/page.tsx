@@ -395,28 +395,15 @@ async function ReportsView({
                         liste ; le detail est a un clic. */}
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        {(isAccount ? accountTarget?.avatar_url : null) ??
-                        (content?.mediaType === "photo" ? content.mediaUrl : null) ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={
-                              (isAccount ? accountTarget?.avatar_url : content?.mediaUrl) ??
-                              undefined
-                            }
-                            alt=""
-                            className="size-10 shrink-0 rounded-lg border border-border object-cover"
-                          />
-                        ) : (
-                          <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-secondary text-muted-foreground">
-                            {isAccount ? (
-                              <UserIcon className="size-4" />
-                            ) : content?.mediaType === "video" || content?.mediaType === "lien" ? (
-                              <VideoIcon className="size-4" />
-                            ) : (
-                              <MessageSquareIcon className="size-4" />
-                            )}
-                          </span>
-                        )}
+                        <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-secondary text-muted-foreground">
+                          {isAccount ? (
+                            <UserIcon className="size-4" />
+                          ) : content?.mediaType === "video" || content?.mediaType === "lien" ? (
+                            <VideoIcon className="size-4" />
+                          ) : (
+                            <MessageSquareIcon className="size-4" />
+                          )}
+                        </span>
                         <div className="min-w-0">
                           <p className="max-w-64 truncate text-sm">{summary}</p>
                           <div className="flex flex-wrap items-center gap-1.5">
