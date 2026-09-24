@@ -108,16 +108,22 @@ export default async function UsersPage({ searchParams }: PageProps<"/[locale]/a
   const adminIds = rows.filter((row) => row.role === "admin").map((row) => row.id);
   const adminRoleById = new Map<string, string>();
   if (adminIds.length) {
-    const { data: assignments } = await supabase
+    const { data: assignments, error: assignmentsError } = await supabase
       .from("admin_user_roles")
       .select("admin_id, role_id")
       .in("admin_id", adminIds);
+    // Erreur avalee volontairement pour l'utilisateur (repli sur le libelle
+    // generique), mais pas pour les logs serveur : un `42501` ici signale un
+    // GRANT manquant, pas une absence de migration, et se confond sinon avec
+    // le cas « role non attribue ».
+    if (assignmentsError) console.error("admin_user_roles read:", assignmentsError);
     const roleIds = [...new Set((assignments ?? []).map((row) => row.role_id))];
     if (roleIds.length) {
-      const { data: roles } = await supabase
+      const { data: roles, error: rolesError } = await supabase
         .from("admin_roles")
         .select("id, code, label")
         .in("id", roleIds);
+      if (rolesError) console.error("admin_roles read:", rolesError);
       const labelById = new Map((roles ?? []).map((row) => [row.id, dict.roles.names[row.code as keyof typeof dict.roles.names] ?? row.label as string]));
       for (const assignment of assignments ?? []) {
         const roleLabel = labelById.get(assignment.role_id);
@@ -356,7 +362,9 @@ export default async function UsersPage({ searchParams }: PageProps<"/[locale]/a
                               : "bg-warning/15 text-warning",
                         )}
                       >
-                        {label(ROLE, row.role)}
+                        {row.role === "admin"
+                          ? (adminRoleById.get(row.id) ?? dict.roles.fallback)
+                          : label(ROLE, row.role)}
                       </span>
                     </TableCell>
 

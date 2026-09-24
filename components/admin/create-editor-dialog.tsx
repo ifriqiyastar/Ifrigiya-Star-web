@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { Loader2Icon, UserPlusIcon } from "lucide-react";
 import { toast } from "sonner";
 
@@ -45,6 +46,7 @@ function asTrigger(trigger: React.ReactNode): React.ReactElement {
 export function CreateEditorDialog() {
   const { dict } = useAdminI18n();
   const d = dict.createEditor;
+  const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const [email, setEmail] = React.useState("");
   const [fullName, setFullName] = React.useState("");
@@ -64,6 +66,10 @@ export function CreateEditorDialog() {
         setOpen(false);
         setEmail("");
         setFullName("");
+        // Le nouveau compte doit apparaitre immediatement dans la liste
+        // (role, colonne conformite) sans depasser une simple revalidation
+        // cote serveur — voir le commentaire dans ActionButton.
+        router.refresh();
       } else {
         toast.error(result.message);
       }

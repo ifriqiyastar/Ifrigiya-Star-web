@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { Loader2Icon } from "lucide-react";
 import { toast } from "sonner";
 
@@ -64,6 +65,7 @@ export function ReasonDialog({
   destructive?: boolean;
 }) {
   const { dict } = useAdminI18n();
+  const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const [reason, setReason] = React.useState("");
   const [pending, setPending] = React.useState(false);
@@ -80,6 +82,10 @@ export function ReasonDialog({
         toast.success(result.message);
         setOpen(false);
         setReason("");
+        // Voir le commentaire dans ActionButton : un appel d'action hors
+        // `<form action>` ne rafraichit pas toujours la page courante tout
+        // seul.
+        router.refresh();
       } else {
         toast.error(result.message);
       }

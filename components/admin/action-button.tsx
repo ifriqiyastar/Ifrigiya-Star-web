@@ -62,7 +62,13 @@ export function ActionButton({
       const result = await action();
       if (result.ok) {
         toast.success(result.message);
+        // L'action a deja fait `revalidatePath` cote serveur, mais un appel
+        // direct (hors `<form action>`) ne redeclenche pas toujours le
+        // rafraichissement du Router Cache pour la page courante — un
+        // `router.refresh()` explicite le garantit plutot que de compter sur
+        // le mecanisme implicite de Next.
         if (redirectTo) router.push(redirectTo);
+        else router.refresh();
       } else {
         toast.error(result.message);
       }
