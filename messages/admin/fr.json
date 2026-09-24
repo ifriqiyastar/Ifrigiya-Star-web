@@ -1688,7 +1688,10 @@
     "Publication validee : elle est desormais visible dans le fil.": "Publication validee : elle est desormais visible dans le fil.",
     "Commentaire valide : il est desormais visible.": "Commentaire valide : il est desormais visible.",
     "Contenu refuse : l'auteur est prevenu du motif.": "Contenu refuse : l'auteur est prevenu du motif.",
-    "Examiner": "Examiner"
+    "Examiner": "Examiner",
+    "Voir le fil": "Voir le fil",
+    "En réponse à": "En réponse à",
+    "(commentaire introuvable)": "(commentaire introuvable)"
   },
   "validations": {
     "metaTitle": "Validations",
@@ -1929,6 +1932,9 @@
     "unhide": "Reafficher",
     "delete": "Supprimer",
     "restore": "Restaurer",
-    "preview": "Apercu"
+    "preview": "Apercu",
+    "thread": "Fil de discussion",
+    "threadFocus": "Ce commentaire",
+    "threadPending": "En attente"
   }
 }

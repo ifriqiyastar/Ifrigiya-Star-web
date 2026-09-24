@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import {
   BanIcon,
   CheckIcon,
+  CornerDownRightIcon,
   DownloadIcon,
   EyeIcon,
   EyeOffIcon,
@@ -28,7 +29,11 @@ import { FilterBar } from "@/components/admin/filter-bar";
 import { NoteCards } from "@/components/admin/note-cards";
 import { HeaderMeta, PageHeader } from "@/components/admin/page-header";
 import { Panel, PanelHeader } from "@/components/admin/panel";
-import { PostPreviewDialog, type PreviewPost } from "@/components/admin/post-preview-dialog";
+import {
+  PostPreviewDialog,
+  type PreviewPost,
+  type ThreadEntry,
+} from "@/components/admin/post-preview-dialog";
 import { Pagination } from "@/components/admin/pagination";
 import { ReasonDialog } from "@/components/admin/reason-dialog";
 import { RemovalProposalDialog } from "@/components/admin/removal-proposal-dialog";
@@ -610,6 +615,13 @@ async function ReportsView({
 const POST_COLUMNS =
   "id, author_id, content, media_type, media_url, is_hidden, is_deleted, created_at";
 const COMMENT_COLUMNS = "id, post_id, author_id, content, is_hidden, is_deleted, created_at";
+/**
+ * ⚠️ Les colonnes de 0093 sont demandées À PART. Les joindre à
+ * `COMMENT_COLUMNS` ferait échouer toute la liste en `42703` sur un projet
+ * où la migration n'est pas posée — le fil de discussion est un confort, il
+ * ne doit pas coûter l'écran de modération.
+ */
+const THREAD_COLUMNS = `${COMMENT_COLUMNS}, parent_comment_id, moderation_status`;
 
 type PostRow = {
   id: string;
@@ -634,6 +646,29 @@ type CommentRow = {
   created_at: string;
   moderation_status?: "en_attente" | "approuve" | "refuse";
   moderation_reason?: string | null;
+  /** 0093. Null pour un commentaire racine ; un seul niveau d'imbrication. */
+  parent_comment_id?: string | null;
+};
+
+/**
+ * Le fil d'une publication : la racine, ses réponses, et celle qu'on modère.
+ *
+ * ⚠️ **Un moderateur ne peut pas juger une reponse seule.** « Bien joue » sous
+ * une annonce et « bien joue » sous une insulte ne se moderent pas pareil, et
+ * la liste ne montrait que le texte de la reponse. C'est le meme raisonnement
+ * qui a fait ouvrir la publication en popup ; il vaut a plus forte raison ici,
+ * ou le contexte immediat est le commentaire parent.
+ */
+export type ThreadComment = {
+  id: string;
+  authorName: string;
+  authorId: string;
+  content: string;
+  createdAt: string;
+  isReply: boolean;
+  moderationStatus?: "en_attente" | "approuve" | "refuse";
+  isHidden: boolean;
+  isDeleted: boolean;
 };
 
 /**
@@ -1082,12 +1117,74 @@ async function CommentsView({
     : [];
   const parentById = new Map(parents.map((row) => [row.id, row]));
 
+  /*
+   * Le fil de discussion de chaque publication concernée — UNE requête pour
+   * toute la page, jamais une par ligne.
+   *
+   * ⚠️ Elle est TOLÉRANTE À L'ÉCHEC : `parent_comment_id` vient de 0093, et sur
+   * un projet sans la migration elle rend 42703. Le fil disparaît alors, la
+   * page reste entière. Un confort de modération ne doit pas coûter l'écran.
+   */
+  const threadRows = postIds.length
+    ? ((
+        await (await createClient())
+          .from("post_comments")
+          .select(THREAD_COLUMNS)
+          .in("post_id", postIds)
+          .eq("is_deleted", false)
+          .order("created_at", { ascending: true })
+          .limit(500)
+      ).data ?? [])
+    : [];
+  const threads = threadRows as unknown as CommentRow[];
+
   const profiles = await fetchProfilesByIds([
     ...rows.map((row) => row.author_id),
     ...pending.map((row) => row.author_id),
     // L'auteur de la publication n'est pas celui du commentaire.
     ...parents.map((row) => row.author_id),
+    ...threads.map((row) => row.author_id),
   ]);
+
+  /** L'auteur et le début du commentaire auquel une réponse répond. */
+  const parentCommentExcerpt = (parentId: string) => {
+    const parent = threads.find((row) => row.id === parentId);
+    if (!parent) return null;
+    const author = displayName(profiles.get(parent.author_id), undefined, i18n.locale);
+    const text = parent.content.trim();
+    return `${author} — ${text.length > 120 ? `${text.slice(0, 120)}…` : text}`;
+  };
+
+  /**
+   * Le fil d'une publication, **racine puis réponses**, exactement l'ordre que
+   * `post_comments_list` rend côté mobile : un seul niveau (0093), donc un
+   * simple regroupement suffit — aucune récursion.
+   */
+  const threadOf = (postId: string): ThreadEntry[] => {
+    const rows = threads.filter((row) => row.post_id === postId);
+    if (!rows.length) return [];
+    const roots = rows.filter((row) => !row.parent_comment_id);
+    const repliesOf = (rootId: string) =>
+      rows.filter((row) => row.parent_comment_id === rootId);
+    const entry = (row: CommentRow, isReply: boolean): ThreadEntry => {
+      const author = profiles.get(row.author_id);
+      return {
+        id: row.id,
+        authorId: row.author_id,
+        authorName: displayName(author, undefined, i18n.locale),
+        content: row.content,
+        createdAt: row.created_at,
+        isReply,
+        moderationStatus: row.moderation_status,
+        isHidden: row.is_hidden,
+        isDeleted: row.is_deleted,
+      };
+    };
+    return roots.flatMap((root) => [
+      entry(root, false),
+      ...repliesOf(root.id).map((reply) => entry(reply, true)),
+    ]);
+  };
 
   /**
    * Le declencheur « Voir la publication », ou rien.
@@ -1123,10 +1220,14 @@ async function CommentsView({
         onRefuse={refusePost.bind(null, parent.id)}
         onToggleHidden={setPostHidden.bind(null, parent.id, !parent.is_hidden)}
         onToggleDeleted={setPostDeleted.bind(null, parent.id, !parent.is_deleted)}
+        thread={threadOf(parent.id)}
+        // C'est ce commentaire-là qu'on modère : la popup le surligne dans le
+        // fil, sinon le modérateur doit le retrouver à la lecture.
+        focusCommentId={comment.id}
         trigger={
           <Button size={size} variant="outline">
             <MessageSquareIcon />
-            {i18n.t("Voir la publication")}
+            {comment.parent_comment_id ? i18n.t("Voir le fil") : i18n.t("Voir la publication")}
           </Button>
         }
       />
@@ -1161,6 +1262,15 @@ async function CommentsView({
                     <StatusPill tone="warning">{i18n.t("En attente de validation")}</StatusPill>
                   </div>
 
+                  {/* ⚠️ Le parent AVANT le texte, parce que c'est lui qui donne
+                      son sens au commentaire. Un modérateur qui lit « bien
+                      joué » sans savoir sous quoi ne peut pas trancher. */}
+                  {row.parent_comment_id ? (
+                    <p className="ms-0 border-s-2 border-border ps-3 text-xs text-muted-foreground">
+                      <span className="font-medium">{i18n.t("En réponse à")}</span>{" "}
+                      {parentCommentExcerpt(row.parent_comment_id) ?? i18n.t("(commentaire introuvable)")}
+                    </p>
+                  ) : null}
                   <p className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm leading-relaxed whitespace-pre-line">
                     {row.content}
                   </p>
@@ -1239,7 +1349,16 @@ async function CommentsView({
                       href={i18n.path(`/admin/utilisateurs/${row.author_id}`)}
                     />
                   </TableCell>
-                  <TableCell className="max-w-md whitespace-normal">{row.content}</TableCell>
+                  <TableCell className="max-w-md whitespace-normal">
+                    {row.parent_comment_id ? (
+                      <span className="mb-1 block text-xs text-muted-foreground">
+                        <CornerDownRightIcon className="me-1 inline size-3" />
+                        {parentCommentExcerpt(row.parent_comment_id) ??
+                          i18n.t("(commentaire introuvable)")}
+                      </span>
+                    ) : null}
+                    {row.content}
+                  </TableCell>
                   <TableCell>
                     {row.is_deleted ? (
                       <StatusPill tone="danger">{i18n.t("Supprime")}</StatusPill>

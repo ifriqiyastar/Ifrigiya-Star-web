@@ -1688,7 +1688,10 @@
     "Publication validee : elle est desormais visible dans le fil.": "Post approved: it is now visible in the feed.",
     "Commentaire valide : il est desormais visible.": "Comment approved: it is now visible.",
     "Contenu refuse : l'auteur est prevenu du motif.": "Content rejected: the author has been told why.",
-    "Examiner": "Review"
+    "Examiner": "Review",
+    "Voir le fil": "View the thread",
+    "En réponse à": "Replying to",
+    "(commentaire introuvable)": "(comment not found)"
   },
   "validations": {
     "metaTitle": "Validations",
@@ -1929,6 +1932,9 @@
     "unhide": "Unhide",
     "delete": "Remove",
     "restore": "Restore",
-    "preview": "Preview"
+    "preview": "Preview",
+    "thread": "Discussion thread",
+    "threadFocus": "This comment",
+    "threadPending": "Pending"
   }
 }

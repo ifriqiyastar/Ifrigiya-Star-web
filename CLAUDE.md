@@ -374,6 +374,21 @@ so the two cannot drift.
 - `next/image` with `unoptimized`: the media lives on Supabase Storage, whose
   host is not declared in `next.config.ts`, so the optimizer would 400 a
   perfectly valid image.
+- **A comment's thread comes with it.** When the popup is opened from a
+  comment, it also renders that post's discussion — root then replies, one
+  indent level (0093 allows no more) — with the comment under moderation
+  highlighted. ⚠️ **A moderator cannot judge a reply alone**: "bien joué" under
+  an announcement and "bien joué" under an insult are not the same decision,
+  and the list only ever showed the reply's own text. Same reasoning that made
+  the post open in a popup, and it applies harder here.
+  - The threads are loaded in **one query for the whole page**, and that query
+    is **tolerant of failure**: `parent_comment_id` comes from 0093, so on a
+    project without it the read returns `42703`. The thread then disappears and
+    the page stays whole — a moderation convenience must not cost the screen.
+    That is why the 0093 columns are requested separately from `COMMENT_COLUMNS`
+    rather than appended to it.
+  - The queue and the table also show **the parent's author and excerpt inline**,
+    before the reply's own text, so the context arrives before the decision does.
 - Measured from 320px to 1280px: the dialog scales from 288px to 672px with no
   child escaping its frame. (At 320px `scrollWidth` exceeds `clientWidth` by
   6px — that is the vertical scrollbar gutter of `overflow-y-auto`, which

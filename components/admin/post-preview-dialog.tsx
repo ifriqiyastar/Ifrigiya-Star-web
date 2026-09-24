@@ -34,6 +34,26 @@ import { useAdminI18n } from "@/lib/i18n/admin-client";
 import { initials } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
+/**
+ * Une ligne du fil de discussion affiché sous la publication.
+ *
+ * ⚠️ Résolue par la page (noms d'auteurs compris) et passée telle quelle : ce
+ * composant est **client**, il ne peut ni requêter ni importer `UserCell`, qui
+ * atteint `server-only`. Même contrainte que pour les Server Actions, déjà
+ * payée deux fois sur ce fichier.
+ */
+export type ThreadEntry = {
+  id: string;
+  authorName: string;
+  authorId: string;
+  content: string;
+  createdAt: string;
+  isReply: boolean;
+  moderationStatus?: "en_attente" | "approuve" | "refuse";
+  isHidden: boolean;
+  isDeleted: boolean;
+};
+
 export type PreviewPost = {
   id: string;
   content: string | null;
@@ -87,6 +107,8 @@ export function PostPreviewDialog({
   canValidate,
   trigger,
   statusLabel,
+  thread,
+  focusCommentId,
   onApprove,
   onRefuse,
   onToggleHidden,
@@ -98,6 +120,14 @@ export function PostPreviewDialog({
   trigger: React.ReactNode;
   /** Libelle et ton de l'etat de validation, resolus par la page (labels FR/EN). */
   statusLabel?: { label: string; tone: "warning" | "success" | "danger" };
+  /**
+   * Le fil de discussion de la publication, racine puis réponses dans
+   * l'ordre. Absent quand il n'y a rien à montrer, ou quand la migration 0093
+   * n'est pas posée.
+   */
+  thread?: ThreadEntry[];
+  /** L'id du commentaire qu'on est en train de modérer, mis en évidence. */
+  focusCommentId?: string | null;
   /**
    * ⚠️ LES ACTIONS ARRIVENT **LIEES, PAR ACCESSOIRE**, jamais importees ici.
    *
@@ -240,6 +270,55 @@ export function PostPreviewDialog({
             <ExternalLinkIcon />
             {t.openMedia}
           </Link>
+        ) : null}
+
+        {thread && thread.length > 0 ? (
+          <div className="space-y-1.5">
+            <p className="micro-label text-muted-foreground">
+              {t.thread} ({thread.length})
+            </p>
+            {/* Le fil entier, dans sa propre zone défilante : une discussion
+                longue ne doit pas repousser les boutons hors de l'écran. */}
+            <ul className="max-h-64 space-y-1 overflow-y-auto rounded-lg border border-border p-1.5">
+              {thread.map((entry) => {
+                const focused = entry.id === focusCommentId;
+                return (
+                  <li
+                    key={entry.id}
+                    className={cn(
+                      "rounded-md px-2 py-1.5 text-xs",
+                      // Le décalage dit « ceci répond à ce qui précède » sans
+                      // un mot. Un seul niveau (0093), donc un seul cran.
+                      entry.isReply && "ms-6 border-s-2 border-border ps-2",
+                      focused
+                        ? "bg-brand/10 ring-1 ring-brand/40"
+                        : "bg-muted/30",
+                    )}
+                  >
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <Link
+                        href={`/admin/utilisateurs/${entry.authorId}`}
+                        className="font-medium hover:text-brand"
+                      >
+                        {entry.authorName}
+                      </Link>
+                      {focused ? (
+                        <StatusPill tone="brand">{t.threadFocus}</StatusPill>
+                      ) : null}
+                      {entry.moderationStatus && entry.moderationStatus !== "approuve" ? (
+                        <StatusPill tone="warning">{t.threadPending}</StatusPill>
+                      ) : null}
+                      {entry.isHidden ? <StatusPill tone="warning">{t.hidden}</StatusPill> : null}
+                      {entry.isDeleted ? <StatusPill tone="danger">{t.deleted}</StatusPill> : null}
+                    </div>
+                    <p className="mt-0.5 whitespace-pre-line text-muted-foreground">
+                      {entry.content}
+                    </p>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
         ) : null}
 
         {post.moderationStatus === "refuse" && post.moderationReason ? (
