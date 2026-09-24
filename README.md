@@ -148,10 +148,13 @@ la fiche compte du back-office (le trigger est alors satisfait).
 
 ### Creer un compte editeur (blog uniquement)
 
-Le role RBAC `editeur` ([`202609230004_admin_editor_role.sql`](supabase/migrations/202609230004_admin_editor_role.sql))
-ne porte que `dashboard.read` et `blog.manage` : la personne voit le tableau
-de bord et l'ecran Blog, rien d'autre — ni validations, ni moderation, ni
-Scout Days, ni finances.
+Le role RBAC `editeur` ([`202609230004_admin_editor_role.sql`](supabase/migrations/202609230004_admin_editor_role.sql),
+`dashboard.read` retire depuis [`202609230006_editeur_blog_only.sql`](supabase/migrations/202609230006_editeur_blog_only.sql))
+ne porte que `blog.manage` : la personne ne voit que l'ecran Blog, rien
+d'autre — ni tableau de bord, ni validations, ni moderation, ni Scout Days,
+ni finances. A la connexion, elle est envoyee directement sur `/admin/blog`
+(`firstAccessiblePath()`, `components/admin/nav-items.ts`) plutot que sur
+`/admin`, qui lui est ferme.
 
 Deux etapes, dans cet ordre :
 
@@ -217,6 +220,8 @@ Dans cet ordre, sur le projet Supabase partage. Toutes sont idempotentes.
 | [`202609230002_blog_scheduling_seo.sql`](supabase/migrations/202609230002_blog_scheduling_seo.sql) | back-office | `blog_posts.meta_title` / `meta_description` (repli sur `title`/`excerpt` quand vides) et `scheduled_at` avec le statut `programme` : publication reellement differee, sans tache planifiee — les deux pages du blog etant `force-dynamic`, la regle RLS suffit a rendre l'article visible a l'heure dite. |
 | [`202609230003_blog_category.sql`](supabase/migrations/202609230003_blog_category.sql) | back-office | `blog_posts.category` : texte libre choisi par l'administration, pas une liste fermee. Alimente le filtre « Categories » de `/blog`. |
 | [`202609230004_admin_editor_role.sql`](supabase/migrations/202609230004_admin_editor_role.sql) | back-office | Role RBAC `editeur` : `dashboard.read` + `blog.manage` uniquement. Voir « Creer un compte editeur ». |
+| [`202609230005_admin_roles_grants.sql`](supabase/migrations/202609230005_admin_roles_grants.sql) | back-office | `grant select` manquant depuis 202608240001 sur `admin_roles`/`admin_user_roles` pour `authenticated` : sans lui, la colonne « role RBAC » de `/admin/utilisateurs` echoue en silence (`42501`) et retombe sur le libelle generique « Administrateur » — invisible pour `super_admin` (libelle quasi identique), flagrant pour `editeur`. |
+| [`202609230006_editeur_blog_only.sql`](supabase/migrations/202609230006_editeur_blog_only.sql) | back-office | Retire `dashboard.read` du role `editeur` : ne garde que `blog.manage`. A appliquer avec le changement de code qui redirige un compte sans `dashboard.read` vers sa premiere section accessible au lieu de `/admin/acces-refuse` (`firstAccessiblePath()`). |
 
 ### Validation des retraits de contenu
 

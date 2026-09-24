@@ -1,10 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { Resend } from "resend";
 
 import { isSuperAdmin, logAdminAction, requireAdmin } from "@/lib/auth";
 import { getRequestAdminI18n } from "@/lib/i18n/admin";
-import { requestPasswordReset } from "@/lib/password-reset";
 import { fail, ok, type ActionResult } from "@/lib/actions/result";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -15,9 +15,29 @@ const text = (formData: FormData, key: string) => {
 };
 
 /**
+ * Meme domaine d'envoi verifie (SPF/DKIM) que `lib/actions/contact.ts` — voir
+ * son commentaire. Contrairement au formulaire de contact, l'e-mail part ici
+ * vers l'adresse **du compte cree**, pas vers une boite fixe.
+ */
+const FROM_ADDRESS = "contact@ifriqiya-soccer.com";
+
+/**
+ * Mot de passe genere pour le nouvel administrateur : lisible et tapable (12
+ * caracteres, alphabet sans caracteres ambigus 0/O/1/l/I), pas un UUID —
+ * c'est cette valeur-la qui part dans l'e-mail, l'utilisateur la saisit telle
+ * quelle sur `/connexion`.
+ */
+function generatePassword(): string {
+  const alphabet = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789";
+  const bytes = crypto.getRandomValues(new Uint32Array(12));
+  return Array.from(bytes, (n) => alphabet[n % alphabet.length]).join("");
+}
+
+/**
  * Cree un compte administrateur restreint au role RBAC `editeur`
- * (`dashboard.read` + `blog.manage` uniquement, voir
- * `202609230004_admin_editor_role.sql`) — l'unique role que ce geste attribue.
+ * (`blog.manage` uniquement depuis `202609230006_editeur_blog_only.sql` — le
+ * role portait aussi `dashboard.read` a sa creation, retire ensuite a la
+ * demande du client) — l'unique role que ce geste attribue.
  * Reserve au super administrateur : creer un compte revient a donner acces au
  * back-office, un cran au-dessus de `users.write`.
  *
@@ -41,11 +61,19 @@ const text = (formData: FormData, key: string) => {
  *    moyen applicatif de faire ce que l'editeur SQL de Supabase fait pour les
  *    autres roles.
  *
- * Le mot de passe n'est jamais choisi ici : un mot de passe jetable est
- * genere pour satisfaire GoTrue, puis remplace par un code a six chiffres
- * envoye par e-mail (`requestPasswordReset`, le meme mecanisme que « Envoyer
- * un code de reinitialisation » sur une fiche compte existante) — la
- * personne invitee choisit elle-meme son mot de passe reel.
+ * Le mot de passe est genere ici (`generatePassword()`) et envoye **en clair**
+ * par e-mail via Resend, pas via le code a six chiffres de GoTrue
+ * (`lib/password-reset.ts`) : demande explicite du client, pour que la
+ * personne invitee puisse se connecter directement avec adresse + mot de
+ * passe sur `/connexion`, sans etape intermediaire. Deux consequences a
+ * connaitre :
+ * - l'e-mail transite en clair — c'est strictement moins sur que le code a
+ *   six chiffres a usage unique utilise partout ailleurs dans ce depot
+ *   (`sendPasswordReset`, mot de passe oublie), d'ou la recommandation de
+ *   changer le mot de passe explicite dans le corps du message ;
+ * - l'envoi passe par Resend, pas par le SMTP de Supabase Auth (`recover`) :
+ *   ce geste ne depend donc pas de la configuration SMTP du projet, separee
+ *   et actuellement en panne (voir README, section SMTP).
  */
 export async function createEditorAccount(formData: FormData): Promise<ActionResult> {
   const i18n = await getRequestAdminI18n();
@@ -68,12 +96,10 @@ export async function createEditorAccount(formData: FormData): Promise<ActionRes
     );
   }
 
-  // Mot de passe jetable : GoTrue en exige un a la creation, mais personne ne
-  // doit le connaitre — voir le code a six chiffres envoye plus bas.
-  const throwawayPassword = `${crypto.randomUUID()}${crypto.randomUUID()}`;
+  const password = generatePassword();
   const { data: created, error: createError } = await service.auth.admin.createUser({
     email,
-    password: throwawayPassword,
+    password,
     email_confirm: true,
     user_metadata: fullName ? { full_name: fullName } : undefined,
   });
@@ -133,18 +159,36 @@ export async function createEditorAccount(formData: FormData): Promise<ActionRes
     );
   }
 
-  const resetFailed = await requestPasswordReset(service, email);
   await logAdminAction("create_editor_account", "profile", userId, { email, full_name: fullName });
   revalidatePath("/[locale]/admin", "layout");
 
-  if (resetFailed) {
-    console.error("createEditorAccount:", resetFailed.reason, resetFailed.detail);
+  const loginUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? ""}${i18n.path("/connexion")}`;
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
     return ok(
-      i18n.t("Compte editeur cree pour {0}, mais l'envoi automatique du code de creation de mot de passe a echoue : envoyez-le manuellement depuis sa fiche compte.", { "0": email }),
+      i18n.t("Compte editeur cree pour {0}, mais aucun service d'e-mail n'est configure : communiquez ce mot de passe vous-meme : {1}", { "0": email, "1": password }),
+    );
+  }
+
+  const resend = new Resend(apiKey);
+  const { error: sendError } = await resend.emails.send({
+    from: `Ifriqiya Star <${FROM_ADDRESS}>`,
+    to: email,
+    subject: i18n.t("Acces a l'espace administrateur Ifriqiya Star"),
+    text: i18n.t(
+      "Un compte administrateur a ete cree pour vous sur Ifriqiya Star.\n\nAdresse : {0}\nMot de passe : {1}\n\nConnectez-vous ici : {2}\n\nPar securite, changez ce mot de passe des votre premiere connexion.",
+      { "0": email, "1": password, "2": loginUrl },
+    ),
+  });
+
+  if (sendError) {
+    console.error("createEditorAccount: resend send failed", sendError);
+    return ok(
+      i18n.t("Compte editeur cree pour {0}, mais l'envoi de l'e-mail a echoue : communiquez ce mot de passe vous-meme : {1}", { "0": email, "1": password }),
     );
   }
 
   return ok(
-    i18n.t("Compte editeur cree pour {0}. Un code de creation de mot de passe lui a ete envoye par e-mail.", { "0": email }),
+    i18n.t("Compte editeur cree pour {0}. Ses identifiants de connexion lui ont ete envoyes par e-mail.", { "0": email }),
   );
 }

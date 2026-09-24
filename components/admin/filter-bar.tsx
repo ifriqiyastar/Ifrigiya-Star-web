@@ -36,6 +36,7 @@ export function FilterBar({
   searchName = "q",
   searchPlaceholder,
   className,
+  instant = false,
 }: {
   basePath: string;
   params: Record<string, string | undefined>;
@@ -43,6 +44,14 @@ export function FilterBar({
   searchName?: string;
   searchPlaceholder?: string;
   className?: string;
+  /**
+   * Recherche instantanee : navigue pendant la frappe (debounce 150 ms, sous
+   * le seuil ou un delai se voit) au lieu d'attendre Entree ou un clic sur
+   * "Filtrer". Faux par defaut pour ne pas changer le comportement des
+   * autres ecrans qui partagent ce composant (Scout Days, moderation,
+   * finances) — active uniquement la ou on le demande explicitement.
+   */
+  instant?: boolean;
 }) {
   const router = useRouter();
   const { dict } = useAdminI18n();
@@ -66,6 +75,21 @@ export function FilterBar({
     },
     [basePath, params],
   );
+
+  // Meme mecanisme que la recherche de l'en-tete (`components/site-header.tsx`) :
+  // `previousSearchRef` empeche l'effet de se declencher au premier rendu,
+  // ou l'etat initial (repris de l'URL) ne represente pas une frappe.
+  const previousSearchRef = React.useRef(search);
+  React.useEffect(() => {
+    if (!instant) return;
+    if (search === previousSearchRef.current) return;
+    previousSearchRef.current = search;
+    const timeout = setTimeout(() => {
+      router.push(buildUrl({ [searchName]: search.trim() || null }));
+    }, 150);
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, instant]);
 
   const activeCount = filters.filter((filter) => params[filter.name]).length + (params[searchName] ? 1 : 0);
 

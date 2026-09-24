@@ -16,6 +16,7 @@ import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { useAdminQueue } from "@/components/admin/queue-live"
 import { LanguageMenu } from "@/components/admin/language-menu"
+import type { AdminPermission } from "@/lib/auth"
 import { initials } from "@/lib/format"
 import { useAdminI18n } from "@/lib/i18n/admin-client"
 import { localePath, stripLocale } from "@/lib/i18n/config"
@@ -47,8 +48,18 @@ import { cn } from "@/lib/utils"
  */
 export function SiteHeader({
   user,
+  permissions,
+  showBell,
 }: {
   user: { name: string; email: string; roleLabel: string }
+  /** Meme garde que le rail : le raccourci « Voir les campagnes » en bas de
+   * la cloche menait a `/admin/notifications` quel que soit le droit du
+   * compte connecte. */
+  permissions: AdminPermission[]
+  /** Faux quand aucune permission du compte n'ouvre de file (`hasQueueAccess()`,
+   * `lib/queries/admin-queue.ts`) : la cloche n'aurait jamais rien a montrer,
+   * donc elle disparait plutot que d'afficher en permanence « rien en attente ». */
+  showBell: boolean
 }) {
   const { tasks } = useAdminQueue()
   const { locale, dict } = useAdminI18n()
@@ -84,13 +95,47 @@ export function SiteHeader({
   // pastilles du rail, qui additionnent les dossiers de leur section : les
   // deux disaient donc deux choses differentes.
   const pending = tasks.reduce((total, task) => total + task.count, 0)
+  // La recherche ⌘K menait toujours a `/admin/utilisateurs?q=...`, un ecran
+  // qu'un editeur (`blog.manage` seul, pas `users.read`) ne peut pas ouvrir.
+  // Plutot que de la repointer vers le Blog, elle disparait pour ce compte :
+  // la recherche d'articles vit maintenant dans la barre de filtre de
+  // `/admin/blog` elle-meme (`FilterBar instant`), qui est deja la ou on
+  // regarde les resultats — un deuxieme champ de recherche dans l'en-tete
+  // n'aurait fait que dupliquer le meme geste.
+  const search = permissions.includes("users.read")
+    ? { path: "/admin/utilisateurs", label: dict.header.searchLabel, placeholder: dict.header.searchPlaceholder }
+    : null
+
+  function runSearch(value: string) {
+    if (!search) return
+    const trimmed = value.trim()
+    router.push(trimmed ? `${href(search.path)}?q=${encodeURIComponent(trimmed)}` : href(search.path))
+  }
+
+  // Recherche automatique et instantanee : on navigue des que la frappe
+  // s'arrete, y compris pour un champ vide — sinon vider le champ laissait
+  // la liste filtree affichee sans rien pour la recharger. Le debounce (150
+  // ms, sous le seuil ou un delai se voit) evite seulement de naviguer a
+  // chaque caractere tape trop vite pour compter. `previousQueryRef` empeche
+  // ce meme effet de relancer une recherche vide au premier rendu, ou l'etat
+  // initial ("") ne represente pas un champ qu'on vient de vider.
+  const previousQueryRef = React.useRef("")
+  React.useEffect(() => {
+    const changed = query !== previousQueryRef.current
+    previousQueryRef.current = query
+    if (!changed) return
+    const timeout = setTimeout(() => runSearch(query), 150)
+    return () => clearTimeout(timeout)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query])
+
   const title =
     route === "/admin"
       ? dict.header.dashboard
       : route.split("/").filter(Boolean).at(-1)?.replaceAll("-", " ") ??
         dict.header.fallbackTitle
   return (
-    <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b border-border bg-[#101318] transition-[width,height] ease-linear">
+    <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b border-border bg-secondary transition-[width,height] ease-linear">
       <div className="flex w-full items-center gap-2 px-3 sm:px-5 lg:px-6">
         <SidebarTrigger className="-ml-1 md:hidden" />
         <Separator
@@ -98,15 +143,18 @@ export function SiteHeader({
           className="mx-2 h-4 data-vertical:self-auto md:hidden"
         />
         <h1 className="text-sm font-semibold capitalize sm:text-base lg:hidden">{title}</h1>
-        <form className="relative ml-1 hidden w-full max-w-sm lg:block" onSubmit={(event) => { event.preventDefault(); if (query.trim()) router.push(`${href("/admin/utilisateurs")}?q=${encodeURIComponent(query.trim())}`); }}>
-          <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
-          <kbd className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 rounded border border-border bg-secondary px-1.5 py-0.5 text-[0.625rem] text-muted-foreground">⌘K</kbd>
-          <input ref={searchRef} value={query} onChange={(event) => setQuery(event.target.value)} aria-label={dict.header.searchLabel} placeholder={dict.header.searchPlaceholder} className="h-8 w-full rounded-md border border-border bg-card pr-14 pl-9 text-[0.6875rem] text-foreground outline-none placeholder:text-muted-foreground focus:border-brand/50" />
-        </form>
+        {search ? (
+          <form className="relative ml-1 hidden w-full max-w-sm lg:block" onSubmit={(event) => { event.preventDefault(); runSearch(query); }}>
+            <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            <kbd className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 rounded border border-border bg-secondary px-1.5 py-0.5 text-[0.625rem] text-muted-foreground">⌘K</kbd>
+            <input ref={searchRef} value={query} onChange={(event) => setQuery(event.target.value)} aria-label={search.label} placeholder={search.placeholder} className="h-8 w-full rounded-md border border-border bg-card pr-14 pl-9 text-[0.6875rem] text-foreground outline-none placeholder:text-muted-foreground focus:border-brand/50" />
+          </form>
+        ) : null}
         <div className="ml-auto flex items-center gap-2 sm:gap-3">
           {/* Meme place que sur le site public : le selecteur de langue
               precede immediatement la cloche, dans la grappe de droite. */}
           <LanguageMenu />
+          {showBell ? (
           <DropdownMenu>
             <DropdownMenuTrigger
               aria-label={dict.header.bellLabel}
@@ -156,16 +204,19 @@ export function SiteHeader({
                 </ul>
               )}
 
-              <div className="border-t border-border p-2">
-                <Link
-                  href={href("/admin/notifications")}
-                  className={cn(buttonVariants({ variant: "ghost", size: "xs" }), "w-full")}
-                >
-                  {dict.header.campaigns}
-                </Link>
-              </div>
+              {permissions.includes("notifications.manage") ? (
+                <div className="border-t border-border p-2">
+                  <Link
+                    href={href("/admin/notifications")}
+                    className={cn(buttonVariants({ variant: "ghost", size: "xs" }), "w-full")}
+                  >
+                    {dict.header.campaigns}
+                  </Link>
+                </div>
+              ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
+          ) : null}
           <div className="hidden items-center gap-2.5 sm:flex">
             <Avatar size="sm" className="rounded-lg"><AvatarFallback className="rounded-lg bg-primary font-semibold text-primary-foreground">{initials(user.name || user.email)}</AvatarFallback></Avatar>
             <div className="hidden leading-tight md:block">

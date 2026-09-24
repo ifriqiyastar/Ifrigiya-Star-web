@@ -26,9 +26,11 @@ import { EllipsisVerticalIcon, ShieldCheckIcon, BellIcon, LogOutIcon } from "luc
 import { createClient } from "@/lib/supabase/client"
 import { initials } from "@/lib/format"
 import { useAdminI18n } from "@/lib/i18n/admin-client"
+import type { AdminPermission } from "@/lib/auth"
 
 export function NavUser({
   user,
+  permissions,
 }: {
   user: {
     name: string
@@ -37,6 +39,11 @@ export function NavUser({
     roleLabel?: string
     avatar?: string
   }
+  /** Memes permissions que `AppSidebar` : ces raccourcis menent aux memes
+   * ecrans que le rail, donc suivent la meme garde — sans quoi un compte
+   * sans `verifications.review` (un editeur, par ex.) voyait quand meme
+   * « Validations » ici et tombait sur l'ecran de refus en cliquant. */
+  permissions: AdminPermission[]
 }) {
   const { isMobile } = useSidebar()
   const { dict } = useAdminI18n()
@@ -97,19 +104,27 @@ export function NavUser({
               </DropdownMenuLabel>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem render={<Link href="/admin/validations" />}>
-                <ShieldCheckIcon />
-                {dict.userMenu.validations}
-              </DropdownMenuItem>
-              {/* Le lien manquait : l'entree n'etait cliquable que pour ne
-                  rien faire. */}
-              <DropdownMenuItem render={<Link href="/admin/notifications" />}>
-                <BellIcon />
-                {dict.userMenu.notifications}
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
+            {permissions.includes("verifications.review") || permissions.includes("notifications.manage") ? (
+              <>
+                <DropdownMenuGroup>
+                  {permissions.includes("verifications.review") ? (
+                    <DropdownMenuItem render={<Link href="/admin/validations" />}>
+                      <ShieldCheckIcon />
+                      {dict.userMenu.validations}
+                    </DropdownMenuItem>
+                  ) : null}
+                  {/* Le lien manquait : l'entree n'etait cliquable que pour ne
+                      rien faire. */}
+                  {permissions.includes("notifications.manage") ? (
+                    <DropdownMenuItem render={<Link href="/admin/notifications" />}>
+                      <BellIcon />
+                      {dict.userMenu.notifications}
+                    </DropdownMenuItem>
+                  ) : null}
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+              </>
+            ) : null}
             <DropdownMenuItem onClick={signOut}>
               <LogOutIcon />
               {dict.userMenu.signOut}

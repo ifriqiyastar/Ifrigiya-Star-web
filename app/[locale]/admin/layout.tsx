@@ -6,7 +6,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { getAdminAccess, requireAdmin } from "@/lib/auth";
 import { AdminI18nProvider } from "@/lib/i18n/admin-client";
 import { getAdminDict, getAdminLocale } from "@/lib/i18n/admin";
-import { fetchAdminQueue } from "@/lib/queries/admin-queue";
+import { fetchAdminQueue, hasQueueAccess } from "@/lib/queries/admin-queue";
 import { fetchDiagnostics } from "@/lib/queries/diagnostics";
 
 /**
@@ -66,6 +66,8 @@ export default async function AdminLayout({
                 email: admin.email ?? "",
                 roleLabel: access.roleLabel,
               }}
+              permissions={access.permissions}
+              showBell={hasQueueAccess(access.permissions)}
             />
             {/* La cloche se met a jour toute seule, mais l'ecran sous elle restait
             celui du rendu initial : un signalement compte dans la pastille sans

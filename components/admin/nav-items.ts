@@ -104,4 +104,14 @@ export type NavKey = (typeof NAV_ITEMS)[number]["key"];
 /** Le libelle d'une section, resolu dans la langue du back-office. */
 export const navLabel = (dict: AdminDictionary, key: NavKey) => dict.nav.items[key];
 
+/**
+ * La premiere section que ces permissions ouvrent, dans l'ordre ci-dessus —
+ * utilisee pour rediriger un compte sans `dashboard.read` (un editeur, par
+ * exemple) vers sa vraie page d'accueil plutot que vers `/admin`, qui lui
+ * refuserait l'acces.
+ */
+export function firstAccessiblePath(permissions: AdminPermission[]): string {
+  return NAV_ITEMS.find((item) => permissions.includes(item.permission))?.href ?? "/admin/acces-refuse";
+}
+
 export type NavBadges = { validations: number; signalements: number; scoutDays: number };

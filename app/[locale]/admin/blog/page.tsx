@@ -2,11 +2,12 @@ import { getAdminI18n } from "@/lib/i18n/admin";
 import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { NewspaperIcon, PenLineIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import { CalendarClockIcon, CheckCheckIcon, NewspaperIcon, PenLineIcon, PlusIcon, Trash2Icon } from "lucide-react";
 
 import { ActionButton } from "@/components/admin/action-button";
 import { EmptyState } from "@/components/admin/empty-state";
 import { FilterBar } from "@/components/admin/filter-bar";
+import { KpiTile } from "@/components/admin/kpi-tile";
 import { PageHeader } from "@/components/admin/page-header";
 import { Panel } from "@/components/admin/panel";
 import { Pagination } from "@/components/admin/pagination";
@@ -23,8 +24,10 @@ import {
 
 import { deleteBlogPost, unpublishBlogPost } from "@/lib/actions/blog";
 import { requirePermission } from "@/lib/auth";
+import { makeFormat } from "@/lib/format";
+import { getAdminLocale } from "@/lib/i18n/admin";
 import { BLOG_STATUS } from "@/lib/labels";
-import { effectiveBlogStatus, listBlogPosts } from "@/lib/queries/blog";
+import { effectiveBlogStatus, fetchBlogMonths, fetchBlogStats, listBlogPosts } from "@/lib/queries/blog";
 import { publicStorageUrl } from "@/lib/supabase/config";
 import { cn } from "@/lib/utils";
 
@@ -41,11 +44,20 @@ export default async function BlogPage({ searchParams }: PageProps<"/[locale]/ad
   const params = {
     q: str(resolved.q),
     statut: str(resolved.statut),
+    mois: str(resolved.mois),
     page: str(resolved.page),
   };
   const page = Math.max(1, Number(params.page ?? 1) || 1);
 
-  const { rows, count, error } = await listBlogPosts({ q: params.q, statut: params.statut, page });
+  const [{ rows, count, error }, stats, months, locale] = await Promise.all([
+    listBlogPosts({ q: params.q, statut: params.statut, mois: params.mois, page }),
+    fetchBlogStats(),
+    fetchBlogMonths(),
+    getAdminLocale(),
+  ]);
+  const { formatNumber, formatMonth } = makeFormat(locale);
+  const share = (value: number) => (stats.total ? value / stats.total : undefined);
+  const percent = (value: number) => (stats.total ? i18n.t("{0} % du total", { "0": Math.round((value / stats.total) * 100) }) : undefined);
 
   return (
     <>
@@ -61,6 +73,40 @@ export default async function BlogPage({ searchParams }: PageProps<"/[locale]/ad
         }
       />
 
+      {/* Bandeau de KPI : seule vue d'ensemble d'un compte `editeur`, qui n'a
+          pas acces au tableau de bord general (`dashboard.read`). */}
+      <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <KpiTile
+          label={i18n.t("Total articles")}
+          value={formatNumber(stats.total)}
+          icon={NewspaperIcon}
+        />
+        <KpiTile
+          label={i18n.t("Publies")}
+          value={formatNumber(stats.published)}
+          qualifier={percent(stats.published)}
+          share={share(stats.published)}
+          icon={CheckCheckIcon}
+          accent="secondary"
+        />
+        <KpiTile
+          label={i18n.t("Programmes")}
+          value={formatNumber(stats.scheduled)}
+          qualifier={percent(stats.scheduled)}
+          share={share(stats.scheduled)}
+          icon={CalendarClockIcon}
+          accent="tertiary"
+        />
+        <KpiTile
+          label={i18n.t("Brouillons")}
+          value={formatNumber(stats.drafts)}
+          qualifier={percent(stats.drafts)}
+          share={share(stats.drafts)}
+          icon={PenLineIcon}
+          accent="neutral"
+        />
+      </section>
+
       <Panel>
         <FilterBar
           basePath={i18n.path("/admin/blog")}
@@ -68,7 +114,13 @@ export default async function BlogPage({ searchParams }: PageProps<"/[locale]/ad
           searchPlaceholder={i18n.t("Rechercher un titre…")}
           filters={[
             { name: "statut", label: i18n.t("Statut"), options: i18n.labels.options(BLOG_STATUS) },
+            {
+              name: "mois",
+              label: i18n.t("Mois"),
+              options: months.map((mois) => ({ value: mois, label: formatMonth(`${mois}-01`) })),
+            },
           ]}
+          instant
         />
 
         {error ? (

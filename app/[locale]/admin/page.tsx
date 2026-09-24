@@ -1,5 +1,6 @@
 import { getAdminI18n } from "@/lib/i18n/admin";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import {
   ArrowRightIcon,
@@ -23,12 +24,13 @@ import {
 
 import { BreakdownMeter, type BreakdownRow } from "@/components/admin/breakdown-meter";
 import { DashboardPeriod } from "@/components/admin/dashboard-period";
+import { firstAccessiblePath } from "@/components/admin/nav-items";
 import { PageHeader } from "@/components/admin/page-header";
 import { Panel } from "@/components/admin/panel";
 import { RevenueChart, type RevenueRow } from "@/components/admin/revenue-chart";
 import { StatCard } from "@/components/admin/stat-card";
 import { getDashboard } from "@/lib/queries/dashboard";
-import { requirePermission } from "@/lib/auth";
+import { getAdminAccess, requireAdmin } from "@/lib/auth";
 import { makeFormat } from "@/lib/format";
 import { fill, getAdminDict, getAdminLocale } from "@/lib/i18n/admin";
 import type { AdminDictionary } from "@/lib/i18n/admin-shared";
@@ -44,8 +46,16 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function DashboardPage({ searchParams }: PageProps<"/[locale]/admin">) {
   const i18n = await getAdminI18n();
 
-  await requirePermission("dashboard.read");
+  const admin = await requireAdmin();
   const [locale, dict] = await Promise.all([getAdminLocale(), getAdminDict()]);
+  const access = await getAdminAccess(admin.userId, dict);
+  // Pas de redirection generique vers `/admin/acces-refuse` ici : un compte
+  // sans `dashboard.read` (un editeur, par ex.) n'a rien fait de refuse, sa
+  // page d'accueil est juste ailleurs — `/admin` reste le lien code en dur
+  // apres connexion (`sign-in-form.tsx`).
+  if (!access.permissions.includes("dashboard.read")) {
+    redirect(localePath(locale, firstAccessiblePath(access.permissions)));
+  }
   const d = dict.dashboard;
   const { formatAmount, formatDuration, formatNumber } = makeFormat(locale);
   const { entry, label } = makeLabels(locale);
@@ -252,7 +262,6 @@ export default async function DashboardPage({ searchParams }: PageProps<"/[local
           value={formatNumber(pendingPlayers + data.docsPending)}
           icon={ClockIcon}
           accent="tertiary"
-          glow
           delta={pendingPlayers + data.docsPending > 0 ? d.priority : undefined}
           deltaTone="warning"
           hint={fill(d.pendingHint, {
@@ -267,7 +276,6 @@ export default async function DashboardPage({ searchParams }: PageProps<"/[local
           value={formatNumber(data.pendingReports)}
           icon={FlagIcon}
           accent="error"
-          glow
           delta={data.pendingReports ? d.arbitration : undefined}
           deltaTone="danger"
           hint={d.reportsHint}

@@ -357,7 +357,7 @@
     "emailPlaceholder": "first.last@example.com",
     "nameLabel": "Full name",
     "namePlaceholder": "Optional",
-    "hint": "A password-creation code is sent to this address: the person picks their own password, you never see it.",
+    "hint": "A password is generated and emailed to this address: the person can sign in right away with their address and that password.",
     "submit": "Create account"
   },
   "screens": {
@@ -370,8 +370,11 @@
     "Compte cree mais passage en administrateur refuse ({0}).": "Account created but promoting it to administrator was refused ({0}).",
     "Compte cree et promu administrateur, mais le role \"editeur\" n'existe pas encore : appliquez la migration 202609230004_admin_editor_role.sql.": "Account created and promoted to administrator, but the \"editeur\" role doesn't exist yet: apply migration 202609230004_admin_editor_role.sql.",
     "Compte cree et promu administrateur, mais l'attribution du role editeur a echoue ({0}).": "Account created and promoted to administrator, but assigning the editor role failed ({0}).",
-    "Compte editeur cree pour {0}, mais l'envoi automatique du code de creation de mot de passe a echoue : envoyez-le manuellement depuis sa fiche compte.": "Editor account created for {0}, but the automatic password-creation code failed to send: send it manually from their account record.",
-    "Compte editeur cree pour {0}. Un code de creation de mot de passe lui a ete envoye par e-mail.": "Editor account created for {0}. A password-creation code has been emailed to them.",
+    "Compte editeur cree pour {0}, mais aucun service d'e-mail n'est configure : communiquez ce mot de passe vous-meme : {1}": "Editor account created for {0}, but no email service is configured: hand them this password yourself: {1}",
+    "Acces a l'espace administrateur Ifriqiya Star": "Access to the Ifriqiya Star admin area",
+    "Un compte administrateur a ete cree pour vous sur Ifriqiya Star.\n\nAdresse : {0}\nMot de passe : {1}\n\nConnectez-vous ici : {2}\n\nPar securite, changez ce mot de passe des votre premiere connexion.": "An administrator account has been created for you on Ifriqiya Star.\n\nEmail: {0}\nPassword: {1}\n\nSign in here: {2}\n\nFor your security, change this password as soon as you sign in.",
+    "Compte editeur cree pour {0}, mais l'envoi de l'e-mail a echoue : communiquez ce mot de passe vous-meme : {1}": "Editor account created for {0}, but the email failed to send: hand them this password yourself: {1}",
+    "Compte editeur cree pour {0}. Ses identifiants de connexion lui ont ete envoyes par e-mail.": "Editor account created for {0}. Their sign-in credentials have been emailed to them.",
     "Parametres bucket et path requis.": "Bucket and path parameters are required.",
     "Bucket non autorise.": "Bucket not allowed.",
     "Le bucket « {0} » n'existe pas sur ce projet Supabase. Creez-le depuis Storage → New bucket, en le laissant **prive**, puis reessayez. (Verification : select id, public from storage.buckets;)": "The bucket “{0}” does not exist in this Supabase project. Create it under Storage → New bucket, keep it **private**, then try again. (Check: select id, public from storage.buckets;)",
@@ -1658,7 +1661,11 @@
     "Utilises par les moteurs de recherche et les apercus partages. Laisses vides, le titre et le resume de l'article ci-dessus s'appliquent.": "Used by search engines and shared link previews. Left empty, the article's title and summary above apply instead.",
     "Publication programmee": "Scheduled publication",
     "Laissez vide pour publier immediatement. Une date future rend l'article visible sur le site tout seul a l'heure choisie — inutile de revenir cliquer Publier ce jour-la.": "Leave empty to publish immediately. A future date makes the article go live on its own at the chosen time — no need to come back and click Publish that day.",
-    "Programmer la publication": "Schedule publication"
+    "Programmer la publication": "Schedule publication",
+    "Total articles": "Total articles",
+    "Programmes": "Scheduled",
+    "{0} % du total": "{0}% of total",
+    "Mois": "Month"
   },
   "validations": {
     "metaTitle": "Validations",

@@ -109,6 +109,19 @@ const QUEUES: QueueSpec[] = [
   },
 ];
 
+const QUEUE_PERMISSIONS = new Set(QUEUES.map((queue) => queue.permission));
+
+/**
+ * Vrai si ces permissions ouvrent au moins une file — decide si la cloche du
+ * bandeau a sa place dans l'en-tete. Un compte `editeur` (`blog.manage`
+ * seul) n'en tient aucune : la cloche n'aurait jamais rien a montrer, ni
+ * aujourd'hui ni apres l'ajout d'une future file, donc elle disparait plutot
+ * que d'afficher en permanence « rien en attente ».
+ */
+export function hasQueueAccess(permissions: AdminPermission[]): boolean {
+  return permissions.some((permission) => QUEUE_PERMISSIONS.has(permission));
+}
+
 /**
  * Compte les files d'attente une seule fois pour le layout : la cloche et les
  * pastilles de la navigation lisent le meme resultat, donc ne peuvent pas se

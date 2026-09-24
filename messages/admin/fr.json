@@ -357,7 +357,7 @@
     "emailPlaceholder": "prenom.nom@exemple.com",
     "nameLabel": "Nom complet",
     "namePlaceholder": "Optionnel",
-    "hint": "Un code de creation de mot de passe est envoye a cette adresse : la personne choisit elle-meme son mot de passe, vous ne le connaissez pas.",
+    "hint": "Un mot de passe est genere et envoye a cette adresse par e-mail : la personne peut se connecter immediatement avec son adresse et ce mot de passe.",
     "submit": "Creer le compte"
   },
   "screens": {
@@ -370,8 +370,11 @@
     "Compte cree mais passage en administrateur refuse ({0}).": "Compte cree mais passage en administrateur refuse ({0}).",
     "Compte cree et promu administrateur, mais le role \"editeur\" n'existe pas encore : appliquez la migration 202609230004_admin_editor_role.sql.": "Compte cree et promu administrateur, mais le role \"editeur\" n'existe pas encore : appliquez la migration 202609230004_admin_editor_role.sql.",
     "Compte cree et promu administrateur, mais l'attribution du role editeur a echoue ({0}).": "Compte cree et promu administrateur, mais l'attribution du role editeur a echoue ({0}).",
-    "Compte editeur cree pour {0}, mais l'envoi automatique du code de creation de mot de passe a echoue : envoyez-le manuellement depuis sa fiche compte.": "Compte editeur cree pour {0}, mais l'envoi automatique du code de creation de mot de passe a echoue : envoyez-le manuellement depuis sa fiche compte.",
-    "Compte editeur cree pour {0}. Un code de creation de mot de passe lui a ete envoye par e-mail.": "Compte editeur cree pour {0}. Un code de creation de mot de passe lui a ete envoye par e-mail.",
+    "Compte editeur cree pour {0}, mais aucun service d'e-mail n'est configure : communiquez ce mot de passe vous-meme : {1}": "Compte editeur cree pour {0}, mais aucun service d'e-mail n'est configure : communiquez ce mot de passe vous-meme : {1}",
+    "Acces a l'espace administrateur Ifriqiya Star": "Acces a l'espace administrateur Ifriqiya Star",
+    "Un compte administrateur a ete cree pour vous sur Ifriqiya Star.\n\nAdresse : {0}\nMot de passe : {1}\n\nConnectez-vous ici : {2}\n\nPar securite, changez ce mot de passe des votre premiere connexion.": "Un compte administrateur a ete cree pour vous sur Ifriqiya Star.\n\nAdresse : {0}\nMot de passe : {1}\n\nConnectez-vous ici : {2}\n\nPar securite, changez ce mot de passe des votre premiere connexion.",
+    "Compte editeur cree pour {0}, mais l'envoi de l'e-mail a echoue : communiquez ce mot de passe vous-meme : {1}": "Compte editeur cree pour {0}, mais l'envoi de l'e-mail a echoue : communiquez ce mot de passe vous-meme : {1}",
+    "Compte editeur cree pour {0}. Ses identifiants de connexion lui ont ete envoyes par e-mail.": "Compte editeur cree pour {0}. Ses identifiants de connexion lui ont ete envoyes par e-mail.",
     "Parametres bucket et path requis.": "Parametres bucket et path requis.",
     "Bucket non autorise.": "Bucket non autorise.",
     "Le bucket « {0} » n'existe pas sur ce projet Supabase. Creez-le depuis Storage → New bucket, en le laissant **prive**, puis reessayez. (Verification : select id, public from storage.buckets;)": "Le bucket « {0} » n'existe pas sur ce projet Supabase. Creez-le depuis Storage → New bucket, en le laissant **prive**, puis reessayez. (Verification : select id, public from storage.buckets;)",
@@ -1658,7 +1661,11 @@
     "Utilises par les moteurs de recherche et les apercus partages. Laisses vides, le titre et le resume de l'article ci-dessus s'appliquent.": "Utilises par les moteurs de recherche et les apercus partages. Laisses vides, le titre et le resume de l'article ci-dessus s'appliquent.",
     "Publication programmee": "Publication programmee",
     "Laissez vide pour publier immediatement. Une date future rend l'article visible sur le site tout seul a l'heure choisie — inutile de revenir cliquer Publier ce jour-la.": "Laissez vide pour publier immediatement. Une date future rend l'article visible sur le site tout seul a l'heure choisie — inutile de revenir cliquer Publier ce jour-la.",
-    "Programmer la publication": "Programmer la publication"
+    "Programmer la publication": "Programmer la publication",
+    "Total articles": "Total articles",
+    "Programmes": "Programmes",
+    "{0} % du total": "{0} % du total",
+    "Mois": "Mois"
   },
   "validations": {
     "metaTitle": "Validations",
