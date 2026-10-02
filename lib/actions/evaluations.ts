@@ -1,5 +1,6 @@
 "use server";
 
+import { EVALUATION_AXES } from "@/lib/evaluation-axes";
 import { getRequestAdminI18n } from "@/lib/i18n/admin";
 
 
@@ -26,6 +27,20 @@ import { createClient } from "@/lib/supabase/server";
  * `overall_score` n'est jamais transmis : c'est une colonne
  * GENERATED ALWAYS STORED, Postgres la recalcule. Et le rapport tient dans
  * `comment`, seule colonne de texte de la table.
+ *
+ * ⚠️ **SIX AXES DEPUIS LA MIGRATION MOBILE 0091** (decision client du
+ * 2026-09-24) : vitesse, finition, precision, passe, defense, cognitif. Les
+ * quatre de 0030 — technique / physique / tactique / mental — sont devenus
+ * facultatifs et ne servent plus qu'a **lire** les evaluations anterieures.
+ * `chk_evaluation_axis_set` exige un jeu **complet** ou l'autre : envoyer les
+ * six partiellement, ou melanger les deux, est refuse par Postgres.
+ *
+ * ⚠️⚠️ **Aucune conversion entre les deux jeux, et c'est le point.** Personne
+ * ne peut deduire une note de « Precision » d'une note de « technique ».
+ * C'est pourquoi la correction d'une evaluation anterieure est **refusee**
+ * plutot que re-notee sur six axes : la re-noter reviendrait a inventer six
+ * chiffres a partir de quatre, et a changer le sens de ce qui avait ete
+ * observe.
  */
 export async function saveEvaluation(formData: FormData): Promise<ActionResult> {
   const i18n = await getRequestAdminI18n();
@@ -34,24 +49,38 @@ export async function saveEvaluation(formData: FormData): Promise<ActionResult> 
   const supabase = await createClient();
 
   const id = String(formData.get("id") ?? "").trim();
-  const scores = ["technical_score", "physical_score", "tactical_score", "mental_score"].map(
-    (key) => Number(formData.get(key)),
+  // Le formulaire nomme ses champs d'apres les colonnes (`speed_score`...) :
+  // la liste des axes est celle du module, jamais reecrite ici.
+  const scores = Object.fromEntries(
+    EVALUATION_AXES.map((axis) => [`${axis.key}_score`, Number(formData.get(`${axis.key}_score`))]),
   );
-  if (scores.some((value) => !Number.isFinite(value) || value < 0 || value > 100)) {
-    return fail(i18n.t("Les quatre notes sont attendues entre 0 et 100."));
+  const values = Object.values(scores);
+  if (values.some((value) => !Number.isFinite(value) || value < 0 || value > 100)) {
+    return fail(i18n.t("Les six notes sont attendues entre 0 et 100."));
   }
   const comment = String(formData.get("report") ?? "").trim() || null;
 
   // Correction : on ne touche ni a l'inscription ni a l'evaluateur, qui
   // identifient l'evaluation.
   if (id) {
+    // Une evaluation anterieure a 0091 porte quatre axes ; la re-noter sur six
+    // inventerait des chiffres, et laisser les deux jeux renseignes ferait
+    // basculer `overall_score` sur les six sans que personne l'ait decide.
+    const { data: existing } = await supabase
+      .from("scout_evaluations")
+      .select("speed_score")
+      .eq("id", id)
+      .maybeSingle();
+    if (existing && existing.speed_score === null) {
+      return fail(
+        i18n.t("Cette evaluation a ete saisie sur l'ancienne grille en quatre domaines. Elle ne peut pas etre renotee sur les six actuels : les deux grilles ne mesurent pas la meme chose."),
+      );
+    }
+
     const { error } = await supabase
       .from("scout_evaluations")
       .update({
-        technical_score: scores[0],
-        physical_score: scores[1],
-        tactical_score: scores[2],
-        mental_score: scores[3],
+        ...scores,
         comment,
         updated_at: new Date().toISOString(),
       })
@@ -84,10 +113,7 @@ export async function saveEvaluation(formData: FormData): Promise<ActionResult> 
     .insert({
       registration_id: registrationId,
       evaluator_id: evaluatorId,
-      technical_score: scores[0],
-      physical_score: scores[1],
-      tactical_score: scores[2],
-      mental_score: scores[3],
+      ...scores,
       comment,
     })
     .select("id")

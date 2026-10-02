@@ -15,10 +15,10 @@ import { QrStoreRedirect } from "@/components/site/qr-store-redirect";
 import { PLACEHOLDER_PARTNER_LOGOS } from "@/components/site/partner-logos";
 import { IconFeed, IconCalendar, IconMessage } from "@/components/site/feature-icons";
 import { Reveal } from "@/components/site/reveal";
-import { APP_SCREENS } from "@/lib/app-screens";
+import { appScreens, type AppScreen } from "@/lib/app-screens";
 import { getDictionary, getLocale } from "@/lib/i18n/dictionaries";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
-import { LOCALES, localePath, ogImagePath } from "@/lib/i18n/config";
+import { LOCALES, localePath, ogImagePath, type Locale } from "@/lib/i18n/config";
 
 /**
  * Page publique d'Ifriqiya Soccer Star.
@@ -71,19 +71,25 @@ export async function generateMetadata(): Promise<Metadata> {
 
 /**
  * Les captures associees aux trois fonctionnalites. Le texte vit dans les
- * dictionnaires (`messages/*.json`), l'image reste ici : elle ne se traduit
- * pas, et l'ordre des deux listes doit rester le meme.
+ * dictionnaires (`messages/*.json`) et l'ordre des deux listes doit rester le
+ * meme — mais l'image **se traduit aussi** desormais, d'ou une fonction de la
+ * langue plutot qu'une constante de module.
+ *
+ * La deuxieme est la fiche d'un Scout Day : elle porte la date, le lieu, les
+ * places restantes, le tarif et les criteres d'eligibilite, c'est-a-dire
+ * exactement ce qu'annonce la legende. Elle remplace un cadrage serre sur les
+ * seuls criteres, qui n'existait qu'en francais.
  */
-const FEATURE_SCREENS = [
-  APP_SCREENS["fil-actualite"],
-  APP_SCREENS.eligibilite,
-  APP_SCREENS.messages,
-] as const;
+function featureScreens(locale: Locale): readonly AppScreen[] {
+  const screens = appScreens(locale);
+  return [screens["fil-actualite"], screens["scout-day-detail"], screens.messages];
+}
 
-/** Pictogrammes des trois legendes, meme ordre que `FEATURE_SCREENS`. */
+/** Pictogrammes des trois legendes, meme ordre que `featureScreens()`. */
 const FEATURE_ICONS = [IconFeed, IconCalendar, IconMessage] as const;
 
 export default async function LandingPage() {
+  const locale = await getLocale();
   const dict = await getDictionary();
 
   // `overflow-x-clip` et non `overflow-x-hidden` : `hidden` ferait de ce div un
@@ -107,10 +113,10 @@ export default async function LandingPage() {
         <StepsTimeMachine />
         <Pourquoi dict={dict} />
         <ScoutDaysVideosSection />
-        <Fonctionnalites dict={dict} />
+        <Fonctionnalites dict={dict} locale={locale} />
         <NotreVision dict={dict} />
         <TestimonialsSection />
-        <AppelFinal dict={dict} />
+        <AppelFinal dict={dict} locale={locale} />
         <Faq dict={dict} />
         <ContactSection />
       </main>
@@ -292,8 +298,9 @@ function Pourquoi({ dict }: { dict: Dictionary }) {
 
 /* ---------------------------------------------------------- fonctionnalites */
 
-function Fonctionnalites({ dict }: { dict: Dictionary }) {
+function Fonctionnalites({ dict, locale }: { dict: Dictionary; locale: Locale }) {
   const t = dict.features;
+  const screens = featureScreens(locale);
   return (
     <section id="fonctionnalites" className="scroll-mt-20 relative overflow-hidden py-16 sm:py-24 lg:py-28">
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
@@ -311,19 +318,19 @@ function Fonctionnalites({ dict }: { dict: Dictionary }) {
         <Reveal className="relative mx-auto mt-10 flex h-[26rem] max-w-3xl items-center justify-center sm:mt-0 sm:h-[31rem]">
           <div aria-hidden className="site-glow-center absolute inset-0 opacity-70" />
           <Phone
-            screen={FEATURE_SCREENS[0]}
+            screen={screens[0]}
             alt={`${t.items[0].title} — Ifriqiya Soccer Star`}
             width={190}
             className="site-lift absolute start-0 top-12 -rotate-[8deg] shadow-2xl sm:start-[2%]"
           />
           <Phone
-            screen={FEATURE_SCREENS[2]}
+            screen={screens[2]}
             alt={`${t.items[2].title} — Ifriqiya Soccer Star`}
             width={190}
             className="site-lift absolute end-0 top-12 rotate-[8deg] shadow-2xl sm:end-[2%]"
           />
           <Phone
-            screen={FEATURE_SCREENS[1]}
+            screen={screens[1]}
             alt={`${t.items[1].title} — Ifriqiya Soccer Star`}
             width={215}
             className="site-lift relative z-10 shadow-2xl"
@@ -470,8 +477,9 @@ function Faq({ dict }: { dict: Dictionary }) {
 
 /* ------------------------------------------------------------- appel final */
 
-function AppelFinal({ dict }: { dict: Dictionary }) {
+function AppelFinal({ dict, locale }: { dict: Dictionary; locale: Locale }) {
   const t = dict.cta;
+  const screens = appScreens(locale);
   return (
     <section id="telecharger" className="scroll-mt-20 px-5 pt-16 pb-16 sm:px-8 sm:pt-24 sm:pb-24 lg:pt-28 lg:pb-28">
       <QrStoreRedirect />
@@ -541,7 +549,7 @@ function AppelFinal({ dict }: { dict: Dictionary }) {
           >
             <figure className="flex shrink-0 flex-col items-center gap-3">
               <Phone
-                screen={APP_SCREENS.connexion}
+                screen={screens.connexion}
                 alt={t.signInAlt}
                 width={230}
                 className="-rotate-2"
@@ -553,7 +561,7 @@ function AppelFinal({ dict }: { dict: Dictionary }) {
 
             <figure className="flex shrink-0 flex-col items-center gap-3">
               <Phone
-                screen={APP_SCREENS.inscription}
+                screen={screens.inscription}
                 alt={t.signUpAlt}
                 width={252}
                 className="rotate-2"

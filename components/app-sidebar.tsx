@@ -3,6 +3,7 @@
 import Link from "next/link"
 import * as React from "react"
 
+import { BrandMark } from "@/components/admin/brand-mark"
 import { NAV_ITEMS, navLabel } from "@/components/admin/nav-items"
 import { useAdminQueue } from "@/components/admin/queue-live"
 import { RailDiagnostics } from "@/components/admin/rail-diagnostics"
@@ -47,6 +48,18 @@ export function AppSidebar({
     // element non traite reste visible du public.
     badgeTone: item.badge === "signalements" ? ("danger" as const) : ("brand" as const),
     section: item.section,
+    // Une section a sous-entrees porte ses enfants ; les autres n'en ont pas,
+    // et `NavMain` retombe alors sur une simple ligne.
+    children:
+      "children" in item
+        ? item.children.map((child) => ({
+            title: navLabel(dict, child.key),
+            url: child.href,
+            icon: <child.icon className="size-4 shrink-0" />,
+            badge: child.badge ? badges[child.badge] : 0,
+            badgeTone: child.badge === "signalements" ? ("danger" as const) : ("brand" as const),
+          }))
+        : undefined,
   }))
 
   return (
@@ -65,14 +78,13 @@ export function AppSidebar({
                 tooltip="Ifriqiya Soccer Star"
                 render={<Link href="/admin" />}
               >
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand font-heading text-[10px] font-black text-brand-foreground">
-                  IS
-                </span>
-                <span className="flex min-w-0 flex-col">
-                  <span className="font-heading truncate text-[0.8125rem] leading-tight font-extrabold tracking-wide">
-                    IFRIQIYA SOCCER STAR
-                  </span>
-                  <span className="micro-label text-brand">{dict.nav.tagline}</span>
+                <BrandMark size={32} priority className="size-8" />
+                {/* Plus de baseline sous le nom : « Scouting pro » etait une
+                    accroche marketing dans un rail d'administration, et elle
+                    poussait le nom de la marque a occuper la moitie haute d'un
+                    bloc de 40 px. Le nom seul se centre sur le logo. */}
+                <span className="font-heading min-w-0 truncate text-[0.8125rem] leading-tight font-extrabold tracking-wide">
+                  IFRIQIYA SOCCER STAR
                 </span>
               </SidebarMenuButton>
             </SidebarMenuItem>

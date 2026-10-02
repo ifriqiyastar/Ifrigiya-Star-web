@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { cn } from "@/lib/utils";
 
 /**
@@ -14,6 +16,7 @@ export function MetricStrip({
   hint,
   icon: Icon,
   tone = "default",
+  href,
   className,
 }: {
   label: string;
@@ -22,6 +25,9 @@ export function MetricStrip({
   icon: React.ComponentType<{ className?: string }>;
   /** Couleur de la valeur et de la pastille : neutre, marque, alerte, info. */
   tone?: "default" | "brand" | "danger" | "info";
+  /** Rend le bandeau cliquable : une mesure qui designe un reste de travail
+   *  doit mener a la liste filtree qui le contient. */
+  href?: string;
   className?: string;
 }) {
   const valueTone = {
@@ -37,13 +43,8 @@ export function MetricStrip({
     info: "bg-info/15 text-info",
   }[tone];
 
-  return (
-    <div
-      className={cn(
-        "flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-3",
-        className,
-      )}
-    >
+  const body = (
+    <>
       <div className="flex min-w-0 flex-col">
         <span className="micro-label truncate text-muted-foreground">{label}</span>
         <span
@@ -61,6 +62,21 @@ export function MetricStrip({
       <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-lg", chipTone)}>
         <Icon className="size-5" />
       </span>
-    </div>
+    </>
   );
+
+  const shell = cn(
+    "flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-3",
+    href && "transition-colors hover:bg-muted",
+    className,
+  );
+
+  if (href) {
+    return (
+      <Link href={href} className={shell}>
+        {body}
+      </Link>
+    );
+  }
+  return <div className={shell}>{body}</div>;
 }

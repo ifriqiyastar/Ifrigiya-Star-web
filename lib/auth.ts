@@ -18,6 +18,7 @@ export type AdminPermission =
   | "verifications.review"
   | "moderation.manage"
   | "moderation.validate"
+  | "content.validate"
   | "events.manage"
   | "events.validate"
   | "evaluations.manage"
@@ -28,7 +29,8 @@ export type AdminPermission =
 
 export const ALL_ADMIN_PERMISSIONS: AdminPermission[] = [
   "dashboard.read", "users.read", "users.write", "verifications.review",
-  "moderation.manage", "moderation.validate", "events.manage", "events.validate",
+  "moderation.manage", "moderation.validate", "content.validate",
+  "events.manage", "events.validate",
   "evaluations.manage", "finance.manage",
   "notifications.manage", "audit.read", "blog.manage",
 ];

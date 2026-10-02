@@ -1,4 +1,6 @@
 import { getAdminI18n } from "@/lib/i18n/admin";
+import { AxisScores } from "@/components/admin/axis-scores";
+import { EVALUATION_SCORE_COLUMNS } from "@/lib/evaluation-axes";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
@@ -110,7 +112,7 @@ export default async function ScoutDayDetailPage({
     supabase
       .from("scout_evaluations")
       .select(
-        "id, registration_id, evaluator_id, technical_score, physical_score, tactical_score, mental_score, overall_score, comment, visible_to_player, created_at",
+        `id, registration_id, evaluator_id, ${EVALUATION_SCORE_COLUMNS}, overall_score, comment, visible_to_player, created_at`,
       )
       .in("registration_id", rows.length ? rows.map((row) => row.id) : [EMPTY_UUID]),
   ]);
@@ -556,10 +558,11 @@ export default async function ScoutDayDetailPage({
             <TableHeader>
               <TableRow>
                 <TableHead>{i18n.t("Joueur")}</TableHead>
-                <TableHead>{i18n.t("Technique")}</TableHead>
-                <TableHead>{i18n.t("Physique")}</TableHead>
-                <TableHead>{i18n.t("Tactique")}</TableHead>
-                <TableHead>{i18n.t("Mental")}</TableHead>
+                {/* UNE colonne, et non quatre fixes : depuis la migration
+                    mobile 0091 une evaluation porte six axes ou quatre selon
+                    sa date, et quatre en-tetes figes affichaient « Technique
+                    0 » sur celles qui n'en ont pas. */}
+                <TableHead>{i18n.t("Notes")}</TableHead>
                 <TableHead>{i18n.t("Global")}</TableHead>
                 <TableHead>{i18n.t("Visible au joueur")}</TableHead>
               </TableRow>
@@ -571,10 +574,9 @@ export default async function ScoutDayDetailPage({
                 return (
                   <TableRow key={evaluation.id}>
                     <TableCell>{displayName(player, undefined, i18n.locale)}</TableCell>
-                    <TableCell className="tabular-nums">{evaluation.technical_score}</TableCell>
-                    <TableCell className="tabular-nums">{evaluation.physical_score}</TableCell>
-                    <TableCell className="tabular-nums">{evaluation.tactical_score}</TableCell>
-                    <TableCell className="tabular-nums">{evaluation.mental_score}</TableCell>
+                    <TableCell>
+                      <AxisScores row={evaluation} />
+                    </TableCell>
                     <TableCell className="font-semibold tabular-nums">
                       {evaluation.overall_score}
                     </TableCell>

@@ -1,15 +1,14 @@
-import { getAdminI18n } from "@/lib/i18n/admin";
-import Link from "next/link";
 import type { Metadata } from "next";
+import Link from "next/link";
 import {
-  CopyIcon,
-  DownloadIcon,
-  FilterIcon,
   BellRingIcon,
   CalendarDaysIcon,
   CheckCircle2Icon,
+  CopyIcon,
+  DownloadIcon,
   Globe2Icon,
   HistoryIcon,
+  MailIcon,
   MegaphoneIcon,
   RotateCcwIcon,
   SendIcon,
@@ -21,12 +20,13 @@ import {
 
 import { ActionButton } from "@/components/admin/action-button";
 import { EmptyState } from "@/components/admin/empty-state";
+import { FilterBar } from "@/components/admin/filter-bar";
+import { MetricStrip } from "@/components/admin/metric-strip";
 import { NoteCards } from "@/components/admin/note-cards";
 import { NotificationComposer } from "@/components/admin/notification-composer";
 import { HeaderMeta, PageHeader } from "@/components/admin/page-header";
 import { Pagination } from "@/components/admin/pagination";
 import { Panel, PanelHeader } from "@/components/admin/panel";
-import { StatCard } from "@/components/admin/stat-card";
 import { StatusPill } from "@/components/admin/status-pill";
 import {
   Table,
@@ -37,21 +37,32 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  previewCampaignEmail,
   retryNotification,
+  searchAccounts,
   sendNotification,
   sendTestNotification,
 } from "@/lib/actions/notifications";
-import { requirePermission } from "@/lib/auth";
-
-import { createClient } from "@/lib/supabase/server";
+import { isSuperAdmin, requirePermission } from "@/lib/auth";
+import { getAdminI18n } from "@/lib/i18n/admin";
+import { fetchProfilesByIds } from "@/lib/queries/profiles";
+import {
+  CAMPAIGNS_PAGE_SIZE,
+  CAMPAIGN_STATUSES,
+  CAMPAIGN_TARGETS,
+  fetchBroadcastAudience,
+  fetchCampaignJournal,
+  fetchCampaignMetrics,
+  fetchChannelStates,
+  fetchPushReach,
+} from "@/lib/queries/notifications";
+import { fetchEmailTemplates } from "@/lib/queries/email-template";
 import { cn } from "@/lib/utils";
 
 export async function generateMetadata(): Promise<Metadata> {
   const i18n = await getAdminI18n();
   return { title: i18n.t("Notifications") };
 }
-
-const PAGE_SIZE = 20;
 
 export default async function NotificationsPage({
   searchParams,
@@ -64,129 +75,81 @@ export default async function NotificationsPage({
     1,
     Number(typeof resolved.page === "string" ? resolved.page : 1) || 1,
   );
-  const statut =
-    typeof resolved.statut === "string" && resolved.statut ? resolved.statut : undefined;
-  const supabase = await createClient();
+  const statut = str(resolved.statut);
+  const cible = str(resolved.cible);
+  const q = str(resolved.q);
 
-  const since30d = new Date();
-  since30d.setDate(since30d.getDate() - 30);
+  // Le choix des canaux est un geste de super administrateur, comme la
+  // validation d'un Scout Day ou d'une publication : un envoi ordinaire part
+  // sur les canaux par defaut, sans decision a prendre.
+  const canChooseChannels = await isSuperAdmin();
 
-  const [
-    campaignResult,
-    profileResult,
-    scoutDayResult,
-    sentResult,
-    failedResult,
-    activeAccounts,
-    activePlayers,
-    activePros,
-    tokens,
-    registrations,
-    recent,
-  ] = await Promise.all([
-      (statut
-        ? supabase
-            .from("admin_notification_campaigns")
-            .select("*", { count: "exact" })
-            .eq("status", statut)
-        : supabase.from("admin_notification_campaigns").select("*", { count: "exact" })
-      )
-        .order("created_at", { ascending: false })
-        .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1),
-      supabase
-        .from("profiles")
-        .select("id, full_name, email, role")
-        .eq("is_active", true)
-        .order("full_name")
-        .limit(2000),
-      supabase
-        .from("scout_days")
-        .select("id, title, event_date")
-        .order("event_date", { ascending: false })
-        .limit(1000),
-      supabase
-        .from("admin_notification_campaigns")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "sent"),
-      supabase
-        .from("admin_notification_campaigns")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "failed"),
-      // Volumetrie des segments : ce sont les memes conditions que celles de
-      // `admin_broadcast_notification` — comptes **actifs** uniquement.
-      supabase.from("profiles").select("id", { count: "exact", head: true }).eq("is_active", true),
-      supabase
-        .from("profiles")
-        .select("id", { count: "exact", head: true })
-        .eq("is_active", true)
-        .eq("role", "player"),
-      supabase
-        .from("profiles")
-        .select("id", { count: "exact", head: true })
-        .eq("is_active", true)
-        .eq("role", "professional"),
-      // Portee push reelle : un compte peut avoir plusieurs appareils, on
-      // compte les comptes distincts.
-      supabase.from("push_tokens").select("profile_id").limit(5000),
-      supabase.from("scout_day_registrations").select("scout_day_id, status").limit(5000),
-      supabase
-        .from("admin_notification_campaigns")
-        .select("status, recipient_count, created_at")
-        .gte("created_at", since30d.toISOString())
-        .limit(1000),
-    ]);
+  const [journal, metrics, audience, channelStates, pushReach, catalogue] = await Promise.all([
+    fetchCampaignJournal({ page, statut, cible, q }),
+    fetchCampaignMetrics(),
+    fetchBroadcastAudience(),
+    fetchChannelStates(canChooseChannels),
+    fetchPushReach(),
+    fetchEmailTemplates(),
+  ]);
 
-  const campaigns = campaignResult.data ?? [];
-  const total = campaignResult.count ?? 0;
-  const sentCampaigns = sentResult.count ?? 0;
-  const failedCampaigns = failedResult.count ?? 0;
-  const servedOnPage = campaigns.reduce(
-    (sum, campaign) => sum + Number(campaign.recipient_count ?? 0),
-    0,
-  );
+  const channelReason = (reason: string) =>
+    reason === "migration"
+      ? i18n.t("Migration non appliquée")
+      : reason === "permission"
+        ? i18n.t("Super administrateur")
+        : i18n.t("Aucun fournisseur d'envoi configuré");
 
-  const reachDevices = new Set((tokens.data ?? []).map((row) => row.profile_id as string)).size;
-  const registrationsByEvent = new Map<string, number>();
-  for (const row of registrations.data ?? []) {
-    if (["annule", "refuse"].includes(row.status as string)) continue;
-    const key = row.scout_day_id as string;
-    registrationsByEvent.set(key, (registrationsByEvent.get(key) ?? 0) + 1);
-  }
-  const recentRows = recent.data ?? [];
-  const recipients30d = recentRows.reduce(
-    (sum, row) => sum + Number(row.recipient_count ?? 0),
-    0,
-  );
-  const sent30d = recentRows.filter((row) => row.status === "sent").length;
-  const failed30d = recentRows.filter((row) => row.status === "failed").length;
-
-  const userOptions = (profileResult.data ?? []).map((profile) => ({
-    id: profile.id,
-    label: `${profile.full_name ?? profile.email ?? i18n.t("Compte")} — ${profile.role}`,
-  }));
-  const scoutDayOptions = (scoutDayResult.data ?? []).map((event) => ({
-    id: event.id,
+  const scoutDayOptions = audience.scoutDays.map((event) => ({
+    id: event.id as string,
     label: `${event.title} — ${i18n.format.formatDate(event.event_date)}`,
-    count: registrationsByEvent.get(event.id) ?? 0,
+    count: audience.registrationsByEvent.get(event.id as string) ?? 0,
   }));
-  const userById = new Map(userOptions.map((option) => [option.id, option.label]));
-  const scoutDayById = new Map(
-    scoutDayOptions.map((option) => [option.id, option.label]),
+  /**
+   * ⚠️ Les identites du journal sont resolues pour **les campagnes de la
+   * page**, jamais par un chargement global. L'ecran lisait deux mille
+   * comptes pour en nommer quelques-uns ; ici la requete porte sur les seules
+   * cibles nominatives affichees, et sur rien d'autre.
+   */
+  const targetedAccounts = await fetchProfilesByIds(
+    journal.rows
+      .filter((row) => row.target_type === "user" && row.target_value)
+      .map((row) => row.target_value as string),
   );
+  const userById = new Map(
+    [...targetedAccounts].map(([id, profile]) => [
+      id,
+      `${profile.full_name ?? profile.email ?? i18n.t("Compte")} — ${profile.role}`,
+    ]),
+  );
+  const scoutDayById = new Map(scoutDayOptions.map((option) => [option.id, option.label]));
 
   const targetLabel = (type: string, value: string | null) => {
     if (type === "all") return i18n.t("Toute la plateforme");
     if (type === "role") {
       return value === "player" ? i18n.t("Tous les joueurs") : i18n.t("Tous les professionnels");
     }
-    if (type === "user") {
-      return userById.get(value ?? "") ?? i18n.t("Utilisateur supprimé");
-    }
-    if (type === "scout_day") {
-      return scoutDayById.get(value ?? "") ?? i18n.t("Scout Day supprimé");
-    }
+    if (type === "user") return userById.get(value ?? "") ?? i18n.t("Utilisateur supprimé");
+    if (type === "scout_day") return scoutDayById.get(value ?? "") ?? i18n.t("Scout Day supprimé");
     return value ?? type;
   };
+
+  const statusLabel = {
+    sent: i18n.t("Envoyée"),
+    failed: i18n.t("Échec"),
+    processing: i18n.t("En cours"),
+    queued: i18n.t("En attente"),
+  } as const;
+  const targetTypeLabel = {
+    all: i18n.t("Toute la plateforme"),
+    role: i18n.t("Segment par rôle"),
+    user: i18n.t("Envoi individuel"),
+    scout_day: i18n.t("Participants Scout Day"),
+  } as const;
+
+  const exportQuery = new URLSearchParams(
+    Object.entries({ statut, cible, q }).filter(([, value]) => value) as [string, string][],
+  ).toString();
 
   return (
     <>
@@ -195,113 +158,158 @@ export default async function NotificationsPage({
         title={i18n.t("Diffusion & notifications push")}
         meta={
           <HeaderMeta tone="brand" dot>
-            {i18n.t(total === 1 ? "{0} campagne enregistree" : "{0} campagnes enregistrees", { "0": i18n.format.formatNumber(total) })}
+            {i18n.t(
+              metrics.total === 1 ? "{0} campagne enregistree" : "{0} campagnes enregistrees",
+              { "0": i18n.format.formatNumber(metrics.total) },
+            )}
           </HeaderMeta>
         }
         description={i18n.t("Envois individuels ou segmentés : notification dans l'application et push mobile. Chaque diffusion indique combien de destinataires ont réellement été servis.")}
-        actions={
-          // Trois mesures, toutes issues des campagnes enregistrées. Pas de
-          // taux d'ouverture : rien ne relit les accusés de réception, et
-          // aucune passerelle n'est interrogée depuis cet écran.
-          <div className="flex items-center divide-x divide-border rounded-lg border border-border bg-card">
-            <HeaderStat label={i18n.t("Destinataires (30 j)")} value={i18n.format.formatNumber(recipients30d)} />
-            <HeaderStat label={i18n.t("Envois réussis (30 j)")} value={i18n.format.formatNumber(sent30d)} tone="brand" />
-            <HeaderStat
-              label={i18n.t("Échecs (30 j)")}
-              value={i18n.format.formatNumber(failed30d)}
-              tone={failed30d ? "danger" : "muted"}
-            />
-          </div>
-        }
       />
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          label={i18n.t("Campagnes")}
-          value={i18n.format.formatNumber(total)}
-          hint={i18n.t("Historique complet")}
-          icon={MegaphoneIcon}
-        />
-        <StatCard
-          label={i18n.t("Envois réussis")}
-          value={i18n.format.formatNumber(sentCampaigns)}
-          hint={total ? i18n.t("{0}% des campagnes", { "0": Math.round((sentCampaigns / total) * 100) }) : i18n.t("Aucun envoi")}
-          icon={CheckCircle2Icon}
-          progress={total ? sentCampaigns / total : 0}
-        />
-        <StatCard
-          label={i18n.t("Destinataires servis")}
-          value={i18n.format.formatNumber(servedOnPage)}
-          hint={i18n.t("Sur les campagnes affichées")}
-          icon={UsersIcon}
-        />
-        <StatCard
-          label={i18n.t("Échecs de diffusion")}
-          value={i18n.format.formatNumber(failedCampaigns)}
-          hint={failedCampaigns ? i18n.t("Une relance est disponible") : i18n.t("Aucune action requise")}
-          icon={TriangleAlertIcon}
-          delta={failedCampaigns ? i18n.t("À traiter") : i18n.t("Stable")}
-          deltaTone={failedCampaigns ? "danger" : "brand"}
-        />
-      </section>
-
+      {/* Le composeur d'abord : c'est le geste pour lequel on ouvre l'ecran.
+          Sept chiffres le repoussaient auparavant sous la ligne de flottaison,
+          alors que les mesures decrivent le journal, pas la redaction. */}
       <NotificationComposer
         action={sendNotification}
         testAction={sendTestNotification}
-        audiences={{
-          all: activeAccounts.count ?? 0,
-          players: activePlayers.count ?? 0,
-          professionals: activePros.count ?? 0,
-        }}
-        users={userOptions}
+        audiences={audience.audiences}
+        searchAccounts={searchAccounts}
         scoutDays={scoutDayOptions}
-        reach={{ devices: reachDevices, activeAccounts: activeAccounts.count ?? 0 }}
+        reach={{ devices: pushReach, activeAccounts: audience.activeAccounts }}
+        channels={{
+          // La raison est nommee separement pour chaque canal : ce sont des
+          // gestes differents — appliquer un fichier SQL, renseigner une cle,
+          // ou demander un role.
+          push: {
+            selectable: channelStates.push.selectable,
+            reason: channelReason(channelStates.push.reason),
+          },
+          email: {
+            selectable: channelStates.email.selectable,
+            reason: channelReason(channelStates.email.reason),
+          },
+        }}
+        templates={catalogue.templates.map((template) => ({
+          id: template.id,
+          name: template.name,
+          isDefault: template.is_default,
+        }))}
+        templatesHref={i18n.path("/admin/notifications/modele")}
+        previewAction={previewCampaignEmail}
         defaults={{ title: str(resolved.titre), body: str(resolved.message) }}
       />
+
+      {/* Quatre mesures sur la meme fenetre de 30 jours, posees juste au-dessus
+          du journal qu'elles resument. Aucune ne se calcule sur la page
+          affichee : « destinataires servis sur les campagnes affichees »
+          changeait de valeur a chaque page tournee. */}
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricStrip
+          icon={MegaphoneIcon}
+          label={i18n.t("Campagnes (30 j)")}
+          value={i18n.format.formatNumber(metrics.campaigns30d)}
+          hint={i18n.t("{0} depuis l'origine", { "0": i18n.format.formatNumber(metrics.total) })}
+        />
+        <MetricStrip
+          icon={UsersIcon}
+          label={i18n.t("Destinataires (30 j)")}
+          value={i18n.format.formatNumber(metrics.recipients30d)}
+          hint={i18n.t("Notifications réellement écrites")}
+          tone="info"
+        />
+        <MetricStrip
+          icon={CheckCircle2Icon}
+          label={i18n.t("Réussite (30 j)")}
+          value={
+            metrics.successRate === null ? "—" : `${Math.round(metrics.successRate * 100)} %`
+          }
+          hint={
+            metrics.successRate === null
+              ? i18n.t("Aucune diffusion sur la période")
+              : i18n.t("{0} envoyées · {1} en échec", {
+                  "0": metrics.sent30d,
+                  "1": metrics.failed30d,
+                })
+          }
+          tone={metrics.successRate === null ? "default" : "brand"}
+        />
+        <MetricStrip
+          icon={TriangleAlertIcon}
+          label={i18n.t("Échecs à relancer")}
+          value={i18n.format.formatNumber(metrics.failedTotal)}
+          hint={
+            metrics.failedTotal
+              ? i18n.t("Voir ces campagnes")
+              : i18n.t("Aucune relance en attente")
+          }
+          tone={metrics.failedTotal ? "danger" : "default"}
+          href={
+            metrics.failedTotal
+              ? i18n.path("/admin/notifications?statut=failed")
+              : undefined
+          }
+        />
+      </section>
 
       <Panel>
         <PanelHeader
           icon={HistoryIcon}
           title={i18n.t("Journal de livraison")}
-          description={i18n.t("Traçabilité des campagnes, de leur audience et du résultat de diffusion.")}
+          description={i18n.t("Traçabilité des campagnes, de leur audience, de leur expéditeur et du résultat de diffusion.")}
           action={
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Filtre de statut en GET : il vit dans l'URL, et l'export
-                  reprend exactement le meme filtre. */}
-              <form method="get" className="flex items-center gap-1.5 rounded-lg bg-background px-2.5 py-1.5">
-                <FilterIcon className="size-3.5 text-muted-foreground" />
-                <select
-                  name="statut"
-                  defaultValue={statut ?? ""}
-                  className="cursor-pointer bg-transparent text-xs font-semibold outline-none"
-                >
-                  <option value="">{i18n.t("Tous les statuts")}</option>
-                  <option value="sent">{i18n.t("Envoyées")}</option>
-                  <option value="failed">{i18n.t("En échec")}</option>
-                </select>
-                <button type="submit" className="text-[0.6875rem] font-semibold text-brand">
-                  {i18n.t("OK")}</button>
-              </form>
-              <Link
-                href={i18n.path(`/admin/notifications/export${statut ? `?statut=${statut}` : ""}`)}
-                className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-accent px-2.5 text-xs font-semibold hover:bg-accent/70"
-              >
-                <DownloadIcon className="size-3.5" />
-                {i18n.t("Exporter CSV")}</Link>
-            </div>
+            <Link
+              href={i18n.path(`/admin/notifications/export${exportQuery ? `?${exportQuery}` : ""}`)}
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-accent px-2.5 text-xs font-semibold hover:bg-accent/70"
+            >
+              <DownloadIcon className="size-3.5" />
+              {i18n.t("Exporter CSV")}
+            </Link>
           }
         />
 
-        {campaignResult.error ? (
+        {/* La recherche part dans la requete, pas dans une passe sur la page :
+            sinon `count` — qui alimente la pagination et le pied — ignorerait
+            le filtre, et un terme present a la 200e campagne serait
+            introuvable. */}
+        <FilterBar
+          basePath={i18n.path("/admin/notifications")}
+          params={{ statut, cible, q }}
+          searchPlaceholder={i18n.t("Rechercher un titre ou un message…")}
+          filters={[
+            {
+              name: "statut",
+              label: i18n.t("Statut"),
+              options: CAMPAIGN_STATUSES.map((value) => ({
+                value,
+                label: statusLabel[value],
+              })),
+            },
+            {
+              name: "cible",
+              label: i18n.t("Cible"),
+              options: CAMPAIGN_TARGETS.map((value) => ({
+                value,
+                label: targetTypeLabel[value],
+              })),
+            },
+          ]}
+        />
+
+        {journal.error ? (
           <p className="p-5 text-sm text-destructive">
             {i18n.t("Appliquez la migration administrateur pour activer ce module :")}{" "}
-            {campaignResult.error.message}
+            {journal.error.message}
           </p>
-        ) : !campaigns.length ? (
+        ) : !journal.rows.length ? (
           <EmptyState
             icon={BellRingIcon}
-            title={i18n.t("Aucune campagne")}
-            description={i18n.t("Votre première diffusion apparaîtra ici avec son audience et son statut.")}
+            title={statut || cible || q ? i18n.t("Aucune campagne ne correspond") : i18n.t("Aucune campagne")}
+            description={
+              statut || cible || q
+                ? i18n.t("Élargissez la recherche ou retirez les filtres pour revoir tout le journal.")
+                : i18n.t("Votre première diffusion apparaîtra ici avec son audience et son statut.")
+            }
           />
         ) : (
           <Table>
@@ -309,7 +317,6 @@ export default async function NotificationsPage({
               <TableRow>
                 <TableHead>{i18n.t("Campagne & message")}</TableHead>
                 <TableHead>{i18n.t("Audience")}</TableHead>
-                <TableHead>{i18n.t("Canaux")}</TableHead>
                 <TableHead>{i18n.t("Statut")}</TableHead>
                 <TableHead>{i18n.t("Destinataires")}</TableHead>
                 <TableHead>{i18n.t("Expédition")}</TableHead>
@@ -317,88 +324,118 @@ export default async function NotificationsPage({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {campaigns.map((campaign) => (
-                <TableRow key={campaign.id}>
-                  <TableCell>
-                    <div className="max-w-96">
-                      <p className="truncate text-xs font-semibold text-foreground">
-                        {campaign.title}
+              {journal.rows.map((campaign) => {
+                const author = campaign.created_by
+                  ? journal.authors.get(campaign.created_by)
+                  : undefined;
+                return (
+                  <TableRow
+                    key={campaign.id}
+                    // La ligne en echec porte le liseré des files : c'est la
+                    // seule du journal qui attende encore un geste.
+                    className={cn(campaign.status === "failed" && "row-flagged")}
+                  >
+                    <TableCell>
+                      <div className="max-w-96">
+                        <p className="truncate text-xs font-semibold text-foreground">
+                          {campaign.title}
+                        </p>
+                        <p className="mt-1 line-clamp-2 whitespace-normal text-[0.6875rem] leading-relaxed text-muted-foreground">
+                          {campaign.body}
+                        </p>
+                        {/* Les canaux tenaient une colonne entiere pour une
+                            valeur identique sur toutes les lignes ; ils vivent
+                            sous le message, ou ils qualifient l'envoi. */}
+                        <div className="mt-1.5 flex flex-wrap gap-1">
+                          {(campaign.channels ?? []).map((channel) => (
+                            <ChannelPill key={channel} channel={channel} />
+                          ))}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <AudienceCell
+                        type={campaign.target_type}
+                        label={targetLabel(campaign.target_type, campaign.target_value)}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <CampaignStatus status={campaign.status} />
+                      {campaign.error_message ? (
+                        <p className="mt-1 max-w-44 whitespace-normal text-[0.625rem] leading-relaxed text-destructive">
+                          {campaign.error_message}
+                        </p>
+                      ) : null}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-baseline gap-1">
+                        <span className="font-heading text-lg font-extrabold text-brand tabular-nums">
+                          {i18n.format.formatNumber(campaign.recipient_count ?? 0)}
+                        </span>
+                        <span className="text-[0.625rem] text-muted-foreground">
+                          {i18n.t("servis")}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <p className="text-xs text-foreground">
+                        {i18n.format.formatDateTime(campaign.created_at)}
                       </p>
-                      <p className="mt-1 line-clamp-2 whitespace-normal text-[0.6875rem] leading-relaxed text-muted-foreground">
-                        {campaign.body}
+                      {/* Depuis le retrait du journal d'administration, cette
+                          ligne est la seule trace de qui a diffuse. */}
+                      <p className="mt-0.5 max-w-40 truncate text-[0.625rem] text-muted-foreground">
+                        {author?.full_name || author?.email || i18n.t("Auteur inconnu")}
                       </p>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <AudienceCell
-                      type={campaign.target_type}
-                      label={targetLabel(campaign.target_type, campaign.target_value)}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {(campaign.channels ?? []).map((channel: string) => (
-                        <ChannelPill key={channel} channel={channel} />
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <CampaignStatus status={campaign.status} />
-                    {campaign.error_message ? (
-                      <p className="mt-1 max-w-44 whitespace-normal text-[0.625rem] leading-relaxed text-destructive">
-                        {campaign.error_message}
-                      </p>
-                    ) : null}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-baseline gap-1">
-                      <span className="font-heading text-lg font-extrabold text-brand tabular-nums">
-                        {i18n.format.formatNumber(campaign.recipient_count ?? 0)}
-                      </span>
-                      <span className="text-[0.625rem] text-muted-foreground">{i18n.t("servis")}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <p className="text-xs text-foreground">
-                      {i18n.format.formatDateTime(campaign.created_at)}
-                    </p>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center justify-end gap-1.5">
-                      {/* Dupliquer prefixe le composeur par l'URL : pas d'etat
-                          partage a inventer, et le lien est partageable. */}
-                      <Link
-                        href={i18n.path(`/admin/notifications?titre=${encodeURIComponent(campaign.title)}&message=${encodeURIComponent(campaign.body ?? "")}`)}
-                        title={i18n.t("Reprendre ce message dans le composeur")}
-                        aria-label={i18n.t("Reprendre ce message dans le composeur")}
-                        className="inline-flex size-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"
-                      >
-                        <CopyIcon className="size-4" />
-                      </Link>
-                      {campaign.status !== "sent" ? (
-                        <ActionButton
-                          action={retryNotification.bind(null, campaign.id)}
-                          variant="outline"
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center justify-end gap-1.5">
+                        {/* Dupliquer prefixe le composeur par l'URL : pas d'etat
+                            partage a inventer, et le lien est partageable. */}
+                        <Link
+                          href={i18n.path(`/admin/notifications?titre=${encodeURIComponent(campaign.title)}&message=${encodeURIComponent(campaign.body ?? "")}`)}
+                          title={i18n.t("Reprendre ce message dans le composeur")}
+                          className="inline-flex h-7 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-muted-foreground hover:bg-accent hover:text-foreground"
                         >
-                          <RotateCcwIcon />
-                          {i18n.t("Réessayer")}</ActionButton>
-                      ) : (
-                        <span className="micro-label text-muted-foreground">{i18n.t("Terminé")}</span>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+                          <CopyIcon className="size-3.5" />
+                          <span className="hidden lg:inline">{i18n.t("Dupliquer")}</span>
+                        </Link>
+                        {campaign.status !== "sent" ? (
+                          <ActionButton
+                            action={retryNotification.bind(null, campaign.id)}
+                            variant="outline"
+                            // Une relance rediffuse a toute la cible : elle se
+                            // confirme, comme l'envoi initial.
+                            confirm={{
+                              title: i18n.t("Relancer cette campagne ?"),
+                              description: i18n.t("Le message repart vers « {0} ». Une notification partie ne peut pas etre rappelee.", {
+                                "0": targetLabel(campaign.target_type, campaign.target_value),
+                              }),
+                              actionLabel: i18n.t("Réessayer"),
+                            }}
+                          >
+                            <RotateCcwIcon />
+                            {i18n.t("Réessayer")}
+                          </ActionButton>
+                        ) : (
+                          <span className="micro-label text-muted-foreground">
+                            {i18n.t("Terminé")}
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         )}
 
         <Pagination
           basePath={i18n.path("/admin/notifications")}
-          params={{ statut, page: String(page) }}
+          params={{ statut, cible, q, page: String(page) }}
           page={page}
-          pageSize={PAGE_SIZE}
-          total={total}
+          pageSize={CAMPAIGNS_PAGE_SIZE}
+          total={journal.total}
         />
       </Panel>
 
@@ -407,7 +444,7 @@ export default async function NotificationsPage({
           {
             icon: SendIcon,
             title: i18n.t("Diffusion synchrone"),
-            body: i18n.t("La campagne est envoyée au moment de la validation. Le journal indique le nombre réel de destinataires servis, sans file d'attente fictive."),
+            body: i18n.t("Il n'y a pas de file d'attente : l'envoi écrit une notification par destinataire au moment de la validation, et c'est cette écriture qui déclenche le push. Le journal indique le nombre réel de destinataires servis."),
           },
           {
             icon: SmartphoneIcon,
@@ -415,16 +452,19 @@ export default async function NotificationsPage({
             body: i18n.t("Tous les destinataires reçoivent la notification dans l'application. Le push dépend de la présence d'un jeton valide sur leur appareil."),
           },
           {
-            icon: BellRingIcon,
-            title: i18n.t("Email volontairement indisponible"),
-            body: i18n.t("Aucun fournisseur email n'est configuré. Le canal reste absent de la composition afin de ne jamais promettre une livraison inexistante."),
+            icon: MailIcon,
+            title: channelStates.email.selectable
+              ? i18n.t("Canal email")
+              : i18n.t("Canal email désactivé"),
+            body: channelStates.email.selectable
+              ? i18n.t("L'e-mail part dans la langue du destinataire, une seule adresse par message, et porte un lien de désabonnement signé. Les comptes désabonnés sont exclus de la diffusion ; l'administration le constate, elle ne le décide pas.")
+              : i18n.t("Le canal email est montré désactivé tant qu'aucun envoi n'est branché derrière : il dit ce qui manque au lieu de promettre une livraison que personne ne recevrait."),
           },
         ]}
       />
     </>
   );
 }
-
 
 function AudienceCell({ type, label }: { type: string; label: string }) {
   const Icon =
@@ -449,15 +489,22 @@ function AudienceCell({ type, label }: { type: string; label: string }) {
 async function ChannelPill({ channel }: { channel: string }) {
   const i18n = await getAdminI18n();
 
-  const isPush = channel === "push";
+  const tone =
+    channel === "push"
+      ? "bg-brand/12 text-brand"
+      : channel === "email"
+        ? "bg-warning/15 text-warning"
+        : "bg-info/12 text-info";
+
   return (
-    <span
-      className={cn(
-        "micro-label rounded px-1.5 py-1",
-        isPush ? "bg-brand/12 text-brand" : "bg-info/12 text-info",
-      )}
-    >
-      {channel === "in_app" ? "In-App" : channel === "push" ? i18n.t("Push") : channel}
+    <span className={cn("micro-label rounded px-1.5 py-1", tone)}>
+      {channel === "in_app"
+        ? "In-App"
+        : channel === "push"
+          ? i18n.t("Push")
+          : channel === "email"
+            ? i18n.t("Email")
+            : channel}
     </span>
   );
 }
@@ -480,37 +527,6 @@ async function CampaignStatus({ status }: { status: string }) {
     <StatusPill tone={entry.tone} dot>
       {entry.label}
     </StatusPill>
-  );
-}
-
-/** Une mesure du bandeau d'entete : intitule minuscule, valeur en gras. */
-function HeaderStat({
-  label,
-  value,
-  tone = "default",
-}: {
-  label: string;
-  value: string;
-  tone?: "default" | "brand" | "danger" | "muted";
-}) {
-  return (
-    <div className="flex flex-col px-3 py-1.5">
-      <span className="micro-label whitespace-nowrap text-muted-foreground">{label}</span>
-      <span
-        className={cn(
-          "font-heading mt-0.5 text-base leading-none font-bold tabular-nums",
-          tone === "brand"
-            ? "text-brand"
-            : tone === "danger"
-              ? "text-destructive"
-              : tone === "muted"
-                ? "text-muted-foreground"
-                : "text-foreground",
-        )}
-      >
-        {value}
-      </span>
-    </div>
   );
 }
 

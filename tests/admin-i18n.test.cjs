@@ -185,3 +185,44 @@ test('client component imports never pull in request-only translation modules', 
     if (/^["']use client["']/.test(fs.readFileSync(file, 'utf8'))) walk(file, [path.relative(root, file)]);
   }
 });
+
+// ⚠️ Le piege du dictionnaire a cle-source : deux ecrans emploient le meme mot
+// francais dans deux sens, partagent donc la meme entree, et l'anglais ne peut
+// en porter qu'un. Le build ne voit rien — la cle **existe**. C'est arrive
+// quatre fois d'un coup : « Accueil » (la formule d'accueil d'un courriel)
+// rendait « Home », « Lien » rendait « Relationship », « Moyen » rendait
+// « Method », parce que ces cles servaient deja ailleurs.
+//
+// On ne peut pas detecter l'ambiguite en general ; on peut detecter le signe
+// qui la trahit : une traduction anglaise dont le sens n'a aucun rapport avec
+// sa cle francaise est invisible, mais une cle **tres courte et tres commune**
+// est le terrain ou la collision se produit. Ce test fige donc les cles
+// courtes deja connues pour etre ambigues, avec leur sens retenu : en ajouter
+// une nouvelle oblige a verifier qu'elle ne collisionne pas.
+test('les cles courtes et ambigues gardent le sens qui leur a ete attribue', () => {
+  const EXPECTED = {
+    Accueil: 'Home',
+    Lien: 'Relationship',
+    Moyen: 'Method',
+    Nom: 'Name',
+    Modifier: 'Edit',
+    Supprimer: 'Delete',
+    Enregistrer: 'Save',
+    Annuler: 'Cancel',
+    Adresse: 'Address',
+    Image: 'Image',
+    Texte: 'Text',
+    Bouton: 'Button',
+    Signature: 'Signature',
+  };
+  for (const [key, meaning] of Object.entries(EXPECTED)) {
+    if (!(key in en.screens)) continue;
+    assert.equal(
+      en.screens[key],
+      meaning,
+      `« ${key} » a change de sens en anglais. Si c'est voulu, verifiez que ` +
+        `tous ses appelants parlent bien de « ${en.screens[key]} » ; sinon ` +
+        `donnez a votre ecran une cle-source distincte.`,
+    );
+  }
+});

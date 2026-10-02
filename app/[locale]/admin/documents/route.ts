@@ -25,6 +25,17 @@ const ALLOWED_BUCKETS = new Set([
   "guardian-documents",
   "player-photos",
   "player-cv",
+  // ⚠️ Ajoutes le 2026-09-24 : ces trois-la etaient traites comme **publics**
+  // partout dans le back-office alors que la migration mobile 0051 les a
+  // rendus prives. Sonde du jour sur le projet live : `/object/public/...`
+  // rend NoSuchBucket, `/object/sign/...` rend une erreur Postgres — donc ils
+  // existent et sont prives. Consequence directe : ni la photo d'un joueur,
+  // ni celle d'un professionnel, ni le media d'une publication ne
+  // s'affichaient. `blog-media` reste absent de cette liste : il est
+  // reellement public et n'a rien a signer.
+  "avatars",
+  "post-media",
+  "player-videos",
 ]);
 
 const EXPIRY_SECONDS = 60 * 5;

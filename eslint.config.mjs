@@ -13,6 +13,14 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  {
+    // Les harnais de `tests/` sont des modules CommonJS lances par
+    // `node --test` : `require()` y est la forme correcte, pas un oubli. La
+    // regle les signalait depuis toujours (18 erreurs sur le seul
+    // `admin-i18n.test.cjs`), ce qui noyait les vraies.
+    files: ["tests/**/*.cjs"],
+    rules: { "@typescript-eslint/no-require-imports": "off" },
+  },
 ]);
 
 export default eslintConfig;

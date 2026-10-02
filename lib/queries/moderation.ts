@@ -1,7 +1,7 @@
 import type { AdminTranslations } from "@/lib/i18n/admin-shared";
 import { ACCOUNT_TARGETS } from "@/lib/moderation-targets";
 import { createClient } from "@/lib/supabase/server";
-import { publicStorageUrl } from "@/lib/supabase/config";
+import { storageUrl } from "@/lib/supabase/config";
 
 /**
  * Ce qu'un signalement designe : resoudre la cible dans sa table, sans quoi
@@ -169,7 +169,7 @@ export async function fetchReportTargets(
     // signe par le bucket public, une URL absolue est deja bonne.
     const mediaUrl =
       row.media_url && !row.media_url.startsWith("http")
-        ? publicStorageUrl("post-media", row.media_url)
+        ? storageUrl("post-media", row.media_url)
         : (row.media_url ?? null);
 
     targets.set(`publication:${row.id}`, {
@@ -203,7 +203,7 @@ export async function fetchReportTargets(
       placeholder: i18n.t("Video sans titre."),
       // Une video YouTube ne se lit pas dans une balise `<video>` : on la
       // presente en lien plutot que d'afficher un lecteur muet.
-      mediaUrl: row.youtube_url ?? publicStorageUrl("player-videos", row.storage_path),
+      mediaUrl: row.youtube_url ?? storageUrl("player-videos", row.storage_path),
       mediaType: row.youtube_url ? "lien" : "video",
       authorId: row.player_id,
       createdAt: row.created_at,

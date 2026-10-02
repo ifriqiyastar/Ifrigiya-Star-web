@@ -84,6 +84,8 @@ export type SubscriptionPlanCode =
   | "pro_premium_mensuel"
   | "pro_premium_annuel";
 export type BlogPostStatus = "brouillon" | "publie" | "programme";
+/** Validation d'un contenu du fil (migration mobile 0089). */
+export type ContentModerationStatus = "en_attente" | "approuve" | "refuse";
 
 export type Entry = { label: string; tone: Tone };
 type SpecEntry = { fr: string; en: string; tone: Tone };
@@ -164,6 +166,12 @@ export const REGISTRATION_STATUS: Spec<RegistrationStatus> = {
   annule: { fr: "Annule", en: "Cancelled", tone: "neutral" },
   present: { fr: "Present", en: "Attended", tone: "brand" },
   absent: { fr: "Absent", en: "No-show", tone: "danger" },
+};
+
+export const CONTENT_MODERATION_STATUS: Spec<ContentModerationStatus> = {
+  en_attente: { fr: "En attente de validation", en: "Awaiting approval", tone: "warning" },
+  approuve: { fr: "Valide", en: "Approved", tone: "success" },
+  refuse: { fr: "Refuse", en: "Rejected", tone: "danger" },
 };
 
 export const REPORT_STATUS: Spec<ReportStatus> = {

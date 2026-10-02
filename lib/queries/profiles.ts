@@ -1,5 +1,6 @@
 import { DEFAULT_ADMIN_LOCALE, type AdminLocale } from "@/lib/i18n/config";
 import { createClient } from "@/lib/supabase/server";
+import { storageUrl } from "@/lib/supabase/config";
 
 export type ProfileSummary = {
   id: string;
@@ -14,7 +15,14 @@ export type ProfileSummary = {
    * reelle). Elle est reconstituee a partir des deux tables metier :
    * `player_profiles.profile_photo_url` pour un joueur,
    * `professional_profiles.photo_url` pour un professionnel (migration mobile
-   * `0039`, meme bucket public `avatars`). Elle reste nulle pour un admin.
+   * `0039`, bucket `avatars`). Elle reste nulle pour un admin.
+   *
+   * ⚠️ **Elle est SIGNEE ici, une fois pour toutes.** `avatars` est prive
+   * depuis la migration mobile 0051 (sonde du 2026-09-24), donc l'URL publique
+   * stockee en base repond 400 et aucune vignette ne s'affichait nulle part
+   * dans le back-office. La signature est faite a la source parce que
+   * `avatar_url` est consomme par une vingtaine de `<UserCell>` : corriger
+   * chaque appelant, c'est en oublier un.
    */
   avatar_url: string | null;
   is_active: boolean;
@@ -64,9 +72,32 @@ export async function fetchProfilesByIds(ids: string[]) {
   return new Map(
     (profiles.data ?? []).map((row) => [
       row.id as string,
-      { ...row, avatar_url: photoById.get(row.id as string) ?? null } as ProfileSummary,
+      {
+        ...row,
+        avatar_url: accountAvatarUrl(photoById.get(row.id as string)),
+      } as ProfileSummary,
     ]),
   );
+}
+
+/**
+ * La photo d'un compte, signee, quelle que soit la table d'ou elle vient.
+ *
+ * ⚠️ **Une seule implementation, et c'est le point.** Trois endroits
+ * calculaient la meme chose — ici, `lib/queries/users.ts` et la fiche
+ * `utilisateurs/[id]` — donc trois endroits a corriger le jour ou le bucket
+ * est passe prive, et trois a oublier. Tout nouveau lecteur d'avatar passe
+ * par cette fonction.
+ *
+ * `avatars` etant prive depuis la migration mobile 0051, la valeur stockee
+ * (une URL publique) ne s'affiche pas telle quelle : `storageUrl()` la
+ * ramene a son chemin et la fait signer par la route d'administration.
+ */
+export function accountAvatarUrl(
+  playerPhoto: string | null | undefined,
+  professionalPhoto?: string | null | undefined,
+) {
+  return storageUrl("avatars", playerPhoto ?? professionalPhoto ?? null);
 }
 
 /** Nom affichable d'un profil, avec repli sur l'email puis l'identifiant. */

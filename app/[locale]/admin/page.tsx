@@ -279,7 +279,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/[local
           delta={data.pendingReports ? d.arbitration : undefined}
           deltaTone="danger"
           hint={d.reportsHint}
-          footHref={href("/admin/moderation")}
+          footHref={href("/admin/moderation/signalements")}
           footLabel={d.openReports}
         />
       </section>

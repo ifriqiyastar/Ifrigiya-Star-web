@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { BrandMark } from "@/components/admin/brand-mark"
 import { useRouter } from "next/navigation"
 import {
   Avatar,
@@ -24,7 +25,6 @@ import {
 } from "@/components/ui/sidebar"
 import { EllipsisVerticalIcon, ShieldCheckIcon, BellIcon, LogOutIcon } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
-import { initials } from "@/lib/format"
 import { useAdminI18n } from "@/lib/i18n/admin-client"
 import type { AdminPermission } from "@/lib/auth"
 
@@ -65,10 +65,18 @@ export function NavUser({
               />
             }
           >
+            {/* LE LOGO PLUTOT QUE DES INITIALES.
+                `app/[locale]/admin/layout.tsx` ne passe aucun `avatar` — la
+                photo d'un administrateur n'existe nulle part dans le schema —
+                donc ce repli est ce qui s'affiche **toujours**, et il
+                affichait une lettre seule dans un carre lime : `initials()`
+                ne garde que les deux premiers mots, et une adresse e-mail
+                n'en a qu'un. `AvatarImage` reste au-dessus pour qu'une photo,
+                le jour ou il y en aurait une, l'emporte encore. */}
             <Avatar className="size-8 rounded-lg">
               <AvatarImage src={user.avatar} alt={user.name} />
-              <AvatarFallback className="rounded-lg bg-primary font-semibold text-black">
-                {initials(user.name || user.email)}
+              <AvatarFallback className="rounded-lg bg-transparent">
+                <BrandMark size={32} className="size-full" />
               </AvatarFallback>
             </Avatar>
             <div className="grid flex-1 text-left leading-tight">
@@ -92,7 +100,9 @@ export function NavUser({
                 <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                   <Avatar className="size-8">
                     <AvatarImage src={user.avatar} alt={user.name} />
-                    <AvatarFallback className="rounded-lg">{initials(user.name || user.email)}</AvatarFallback>
+                    <AvatarFallback className="rounded-lg bg-transparent">
+                      <BrandMark size={32} className="size-full" />
+                    </AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight">
                     <span className="truncate font-medium">{user.name}</span>
@@ -108,7 +118,7 @@ export function NavUser({
               <>
                 <DropdownMenuGroup>
                   {permissions.includes("verifications.review") ? (
-                    <DropdownMenuItem render={<Link href="/admin/validations" />}>
+                    <DropdownMenuItem render={<Link href="/admin/validations/joueurs" />}>
                       <ShieldCheckIcon />
                       {dict.userMenu.validations}
                     </DropdownMenuItem>
