@@ -40,13 +40,16 @@ export function Pill({ children, className }: { children: React.ReactNode; class
  *    est texte fin et aplats contrastes, cela bave visiblement. Le PNG
  *    d'origine fait 100 a 260 Ko et se sert tel quel, sans perte.
  *
- * 2. La largeur d'affichage est plafonnee. Les captures font 426 px de large
- *    a la source : au-dela d'environ 215 px CSS, un ecran haute densite
+ * 2. La largeur d'affichage est plafonnee. Les captures font 413 px de large
+ *    a la source : au-dela d'environ 205 px CSS, un ecran haute densite
  *    demande plus de pixels qu'il n'en existe et le navigateur interpole.
  *    Les maquettes sont donc dimensionnees pour rester proches de 2x.
  *
- * Les dimensions natives viennent de `APP_SCREENS` : elles ne sont pas
- * identiques d'une capture a l'autre, et les uniformiser deformait l'image.
+ * La capture est **traduite** : `screen` vient de `appScreen(locale, ...)`,
+ * jamais d'une constante de module (cf. `lib/app-screens.ts`). Ses dimensions
+ * natives voyagent avec elle plutot que d'etre ecrites ici, pour qu'une
+ * recapture a la resolution de l'appareil n'ait rien a changer dans ce
+ * composant.
  */
 export function Phone({
   screen,

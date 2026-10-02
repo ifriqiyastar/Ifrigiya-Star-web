@@ -74,7 +74,11 @@ export default async function AdminLayout({
             sans rechargement ni perte de l'etat client. */}
             <AutoRefresh intervalMs={30_000} />
             <div className="@container/main flex flex-1 flex-col">
-              <main className="admin-content flex flex-1 flex-col gap-4 p-3 sm:p-4 lg:gap-5 lg:p-5">
+              {/* `xl:px-8` : les ecrans de file occupent desormais toute la largeur
+                utile, et 20 px de marge laissaient un tableau pleine largeur
+                coller au bord sur un grand ecran. Le rythme vertical ne bouge
+                pas. */}
+            <main className="admin-content flex flex-1 flex-col gap-4 p-3 sm:p-4 lg:gap-5 lg:p-5 xl:px-8">
                 {children}
               </main>
             </div>

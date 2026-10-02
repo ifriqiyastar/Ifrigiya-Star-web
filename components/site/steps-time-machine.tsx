@@ -5,26 +5,27 @@ import { Fragment, useCallback, useRef, useState } from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 
 import { SectionHeading } from "@/components/site/pieces";
-import { APP_SCREENS } from "@/lib/app-screens";
+import { APP_SCREEN_ASPECT, appScreens, type AppScreen, type AppScreenName } from "@/lib/app-screens";
 import { useI18n } from "@/lib/i18n/client";
 
 /**
- * La capture montree a chaque etape. **Une seule pour l'instant, la meme pour
- * les quatre** : le client fournira une capture par etape, et il n'y aura qu'a
- * remplir ce tableau. Son ordre suit celui de `steps.items` dans les
- * dictionnaires, exactement comme `FEATURE_SCREENS` dans la page — et comme
- * lui, les deux listes doivent garder le meme ordre.
+ * L'ecran montre a chaque etape. Son ordre suit celui de `steps.items` dans
+ * les dictionnaires, exactement comme `featureScreens()` dans la page — et
+ * comme elle, les deux listes doivent garder le meme ordre.
  *
- * Quand les quatre captures arriveront, chacune montrera un ecran different :
- * il faudra alors une description par etape dans les dictionnaires, la ou
- * `steps.phoneAlt` en decrit une seule aujourd'hui.
+ * Les quatre etaient la meme capture tant qu'il n'en existait qu'une ; les
+ * quatre ecrans annonces par les textes existent maintenant dans les trois
+ * langues, donc chaque etape montre le sien. C'est la raison d'etre de
+ * `items[i].phoneAlt` dans les dictionnaires : la description lue par un
+ * lecteur d'ecran suit l'etape affichee, la ou un `steps.phoneAlt` unique
+ * decrivait une capture pour quatre.
  */
-const STEP_SCREENS = [
-  APP_SCREENS["recherche-joueurs"],
-  APP_SCREENS["recherche-joueurs"],
-  APP_SCREENS["recherche-joueurs"],
-  APP_SCREENS["recherche-joueurs"],
-] as const;
+const STEP_SCREEN_NAMES = [
+  "inscription",
+  "videos",
+  "scout-days",
+  "recherche-joueurs",
+] as const satisfies readonly AppScreenName[];
 
 /** Combien de traits fins separent deux etapes sur la reglette. */
 const SUB_TICKS = 2;
@@ -66,8 +67,12 @@ const SUB_TICKS = 2;
  * mots. La pile bouge donc quand on la fait bouger, jamais autrement.
  */
 export function StepsTimeMachine() {
-  const { dict } = useI18n();
+  const { dict, locale } = useI18n();
   const t = dict.steps;
+  // Les captures sont traduites : c'est la langue du contexte qui choisit le
+  // dossier, comme pour les maquettes de la page (cf. `lib/app-screens.ts`).
+  const screens = appScreens(locale);
+  const stepScreens = STEP_SCREEN_NAMES.map((name) => screens[name]);
   const steps = t.items;
   const count = steps.length;
 
@@ -156,8 +161,8 @@ export function StepsTimeMachine() {
           <div className="order-2 flex items-center justify-center gap-2 pt-10 sm:gap-3 sm:pt-16">
             <Stack
               steps={steps}
+              screens={stepScreens}
               active={active}
-              alt={t.phoneAlt}
               onAdvance={() => goTo(active + 1)}
               next={t.next}
             />
@@ -233,7 +238,7 @@ export function StepsTimeMachine() {
 
 /* --------------------------------------------------------------- la pile */
 
-type Step = { number: string; title: string; text: string };
+type Step = { number: string; title: string; text: string; phoneAlt: string };
 
 /**
  * La pile en profondeur. Une seule `perspective`, portee par le cadre : les
@@ -249,19 +254,19 @@ type Step = { number: string; title: string; text: string };
  * compte de la reglette, qui prend 64 px a cote de la pile sur un ecran de
  * 320 px.
  *
- * ⚠️ A cette taille, les captures sont **agrandies**. Elles font 426 px de
+ * ⚠️ A cette taille, les captures sont **agrandies**. Elles font 413 px de
  * large a la source (cf. l'avertissement en tete de `lib/app-screens.ts`), donc
- * au-dela d'environ 215 px CSS un ecran haute densite reclame plus de pixels
+ * au-dela d'environ 205 px CSS un ecran haute densite reclame plus de pixels
  * qu'il n'en existe et le navigateur interpole. La seule correction est de
  * recapturer a la resolution de l'appareil — aucun reglage cote web ne
  * rattrape des pixels absents.
  */
 function Stack({
-  steps, active, alt, onAdvance, next,
+  steps, screens, active, onAdvance, next,
 }: {
   steps: readonly Step[];
+  screens: readonly AppScreen[];
   active: number;
-  alt: string;
   onAdvance: () => void;
   next: string;
 }) {
@@ -274,7 +279,7 @@ function Stack({
       style={{ perspective: "1100px" }}
     >
       {/* Le cadre donne sa hauteur a la pile : les cartes en sont detachees. */}
-      <span className="block aspect-[426/863] w-full" />
+      <span className="block w-full" style={{ aspectRatio: APP_SCREEN_ASPECT }} />
 
       {/* Un halo derriere la pile. Les captures sont des telephones noirs sur
           un fond noir : sans cette lueur, les tranches qui depassent derriere
@@ -320,10 +325,10 @@ function Stack({
             }}
           >
             <Image
-              src={STEP_SCREENS[index].src}
+              src={screens[index].src}
               alt=""
-              width={STEP_SCREENS[index].width}
-              height={STEP_SCREENS[index].height}
+              width={screens[index].width}
+              height={screens[index].height}
               sizes="(min-width: 1024px) 304px, 62vw"
               priority={index === 0}
               unoptimized
@@ -342,7 +347,7 @@ function Stack({
       {/* La seule description utile est celle de la carte visible : les trois
           autres montrent la meme chose, annoncees quatre fois elles ne
           diraient rien de plus. */}
-      <span className="sr-only">{alt}</span>
+      <span className="sr-only">{steps[active]?.phoneAlt}</span>
     </button>
   );
 }

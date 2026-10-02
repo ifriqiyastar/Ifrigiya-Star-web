@@ -1,9 +1,7 @@
 import { getAdminI18n } from "@/lib/i18n/admin";
 import type { Metadata } from "next";
 import {
-  ActivityIcon,
   AwardIcon,
-  BrainIcon,
   ClipboardCheckIcon,
   ClipboardPenIcon,
   EyeIcon,
@@ -11,8 +9,6 @@ import {
   GaugeIcon,
   HistoryIcon,
   ShieldCheckIcon,
-  TargetIcon,
-  WaypointsIcon,
 } from "lucide-react";
 
 import { ActionButton } from "@/components/admin/action-button";
@@ -37,6 +33,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { AxisScores } from "@/components/admin/axis-scores";
+import { EVALUATION_AXES } from "@/lib/evaluation-axes";
 import { saveEvaluation, setEvaluationVisibility } from "@/lib/actions/evaluations";
 import { requirePermission } from "@/lib/auth";
 
@@ -243,37 +241,24 @@ export default async function EvaluationsPage({
                     {i18n.t("Notes par domaine")}</h2>
                 </div>
                 <p className="text-[0.6875rem] text-muted-foreground">
-                  {i18n.t("Quatre notes obligatoires, de 0 a 100")}</p>
+                  {i18n.t("Six notes obligatoires, de 0 a 100")}</p>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                <ScoreField
-                  label={i18n.t("Technique")}
-                  name="technical_score"
-                  icon={TargetIcon}
-                  hint={i18n.t("Gestuelle et maitrise")}
-                />
-                <ScoreField
-                  label={i18n.t("Physique")}
-                  name="physical_score"
-                  icon={ActivityIcon}
-                  hint={i18n.t("Intensite et endurance")}
-                  tone="info"
-                />
-                <ScoreField
-                  label={i18n.t("Tactique")}
-                  name="tactical_score"
-                  icon={WaypointsIcon}
-                  hint={i18n.t("Lecture et placement")}
-                  tone="warning"
-                />
-                <ScoreField
-                  label={i18n.t("Mental")}
-                  name="mental_score"
-                  icon={BrainIcon}
-                  hint={i18n.t("Decision et resilience")}
-                  tone="success"
-                />
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {/* Les six axes de 0091, dans l'ordre du module — jamais
+                    reecrits ici : cote mobile, quatre ecrans redefinissaient
+                    leur propre liste, soit quatre endroits a corriger le jour
+                    d'un changement d'axes et quatre a oublier. */}
+                {EVALUATION_AXES.map((axis) => (
+                  <ScoreField
+                    key={axis.key}
+                    label={i18n.t(axis.label)}
+                    name={`${axis.key}_score`}
+                    icon={axis.icon}
+                    hint={i18n.t(axis.hint)}
+                    tone={axis.tone}
+                  />
+                ))}
               </div>
             </div>
 
@@ -425,12 +410,7 @@ export default async function EvaluationsPage({
                       </p>
                     </TableCell>
                     <TableCell>
-                      <ScoreSummary
-                        technical={Number(row.technical_score)}
-                        physical={Number(row.physical_score)}
-                        tactical={Number(row.tactical_score)}
-                        mental={Number(row.mental_score)}
-                      />
+                      <AxisScores row={row} />
                     </TableCell>
                     <TableCell>
                       <OverallScore value={overall} />
@@ -607,39 +587,6 @@ function RatingBand({
           {description}
         </p>
       </div>
-    </div>
-  );
-}
-
-async function ScoreSummary({
-  technical,
-  physical,
-  tactical,
-  mental,
-}: {
-  technical: number;
-  physical: number;
-  tactical: number;
-  mental: number;
-}) {
-  const i18n = await getAdminI18n();
-
-  return (
-    <div className="grid w-32 grid-cols-4 gap-1" aria-label={i18n.t("Detail des quatre notes")}>
-      {[
-        [i18n.t("TEC"), technical],
-        [i18n.t("PHY"), physical],
-        [i18n.t("TAC"), tactical],
-        [i18n.t("MEN"), mental],
-      ].map(([label, value]) => (
-        <span
-          key={label}
-          className="flex flex-col items-center rounded bg-secondary px-1.5 py-1"
-        >
-          <span className="text-[0.5rem] text-muted-foreground">{label}</span>
-          <span className="text-[0.6875rem] font-semibold tabular-nums">{value}</span>
-        </span>
-      ))}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 "use client"
 
+import { BrandMark } from "@/components/admin/brand-mark";
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -16,7 +17,6 @@ import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { useAdminQueue } from "@/components/admin/queue-live"
 import { LanguageMenu } from "@/components/admin/language-menu"
-import { initials } from "@/lib/format"
 import { useAdminI18n } from "@/lib/i18n/admin-client"
 import { localePath, stripLocale } from "@/lib/i18n/config"
 import { cn } from "@/lib/utils"
@@ -167,7 +167,14 @@ export function SiteHeader({
             </DropdownMenuContent>
           </DropdownMenu>
           <div className="hidden items-center gap-2.5 sm:flex">
-            <Avatar size="sm" className="rounded-lg"><AvatarFallback className="rounded-lg bg-primary font-semibold text-primary-foreground">{initials(user.name || user.email)}</AvatarFallback></Avatar>
+            {/* Meme repli que le bloc compte du rail : aucune photo n'est jamais
+                passee, et les initiales d'une adresse e-mail se resument a une
+                lettre. */}
+            <Avatar size="sm" className="rounded-lg">
+              <AvatarFallback className="rounded-lg bg-transparent">
+                <BrandMark size={24} className="size-full" />
+              </AvatarFallback>
+            </Avatar>
             <div className="hidden leading-tight md:block">
               <p className="max-w-36 truncate text-xs font-semibold lg:text-sm">{user.name}</p>
               <p className="micro-label text-brand">{user.roleLabel}</p>

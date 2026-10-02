@@ -153,7 +153,7 @@ export async function EligibilityCriteria({ criteria }: { criteria: Criteria }) 
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm leading-relaxed break-words whitespace-pre-line">
+                <p className="text-sm leading-relaxed wrap-break-word whitespace-pre-line">
                   {section.text}
                 </p>
               )}

@@ -40,7 +40,7 @@ export function DefinitionList({
             <dt className="text-[0.625rem] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
               {item.label}
             </dt>
-            <dd className="text-sm break-words text-foreground">{item.value ?? "—"}</dd>
+            <dd className="text-sm wrap-break-word text-foreground">{item.value ?? "—"}</dd>
           </div>
         </div>
       ))}

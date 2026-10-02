@@ -33,7 +33,128 @@ les deux jeux de variables :
 | `NEXT_PUBLIC_APP_STORE_URL` | non — a renseigner le jour de la publication | Fiche App Store ; des qu'elle existe, le badge Apple du site devient un vrai lien et le QR de l'entete redirige un iPhone qui le scanne directement vers elle (`lib/store-urls.ts`) |
 | `NEXT_PUBLIC_PLAY_STORE_URL` | non — a renseigner le jour de la publication | Meme mecanique, cote Google Play / Android |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | oui tant que la protection anti-robot est active sur le projet Supabase | Cle **publique** du widget Cloudflare Turnstile, la meme que l'app mobile. Voir « Protection anti-robot » ci-dessous |
-| `RESEND_API_KEY` | oui | Envoi de l'e-mail du formulaire `/contact` via Resend (`lib/actions/contact.ts`) |
+| `RESEND_API_KEY` | oui | Envoi des e-mails via Resend : formulaire `/contact` (`lib/actions/contact.ts`) et canal email des campagnes (`lib/email/campaign.ts`) |
+| `NEXT_PUBLIC_SITE_URL` | oui des que le canal email sert | Racine publique du site. Les metadonnees Open Graph l'utilisent, et surtout les **URL absolues des courriels** : un client de messagerie ne resout pas un chemin relatif. A defaut, le domaine de production est utilise |
+| `EMAIL_UNSUBSCRIBE_SECRET` | recommande | Signature du lien de desabonnement des campagnes. A defaut, `SUPABASE_SERVICE_ROLE_KEY` sert de secret ; sans ni l'un ni l'autre, aucun lien n'est produit et le courriel ne porte que l'en-tete `mailto:`. ⚠️ Le changer invalide les liens deja envoyes |
+| `RESEND_TOPIC_ID` | non | Thematique Resend sous laquelle les annonces partent. A defaut elle est retrouvee par son nom, puis creee au premier envoi |
+
+**Voir et modifier le gabarit.** `npm run email` ouvre le serveur de
+previsualisation React Email sur <http://localhost:3001> : rendu en direct,
+bascule bureau/mobile, vue du HTML, du texte brut, et des controles de
+delivrabilite (linter, compatibilite clients, score spam). Rien n'est envoye.
+
+| Fichier | Role |
+|---|---|
+| `emails/campaign-email.tsx` | **le gabarit reel**, celui que l'envoi rend |
+| `emails/copy.ts` | l'habillage (entete, pied, desabonnement) en fr / en / ar |
+| `emails/apercus/` | variantes de previsualisation seulement — jamais importees par l'application |
+
+Le gabarit se modifie a la main, dans le code : il n'y a **pas** d'editeur de
+gabarits dans le back-office, et rien n'en stocke en base. Ce que
+l'administrateur compose sur `/admin/notifications`, c'est le titre et le
+message ; l'habillage autour est le meme pour toutes les campagnes.
+
+⚠️ Le logo des courriels est `public/brand/ifriqiya-star-mark.png` — le signe
+seul, rogne, et non l'icone d'application dont la plaque noire disparait sur
+le bandeau noir en laissant un point lime minuscule. Il est charge par son URL
+absolue, donc il n'apparait dans les **courriels reels** qu'une fois le site
+deploye ; l'apercu du back-office, lui, charge ses images depuis le serveur
+qu'on interroge et les montre tout de suite. Sans image, le nom de la marque
+ecrit a cote reste lisible — c'est aussi ce que voient les destinataires qui
+bloquent les images, soit la plupart par defaut.
+
+**Notification, e-mail, ou les deux.** Le composeur ouvre sur ce choix. En
+mode « un e-mail », **aucune notification n'est ecrite** : rien dans la cloche,
+rien sur le telephone, seulement le courriel — et l'intitule devient « objet »,
+avec 120 caracteres au lieu des 64 d'un titre d'ecran verrouille. En mode
+« les deux », une case permet de rediger un objet et un corps propres au
+courriel plutot que de reprendre ceux de la notification. Demande la migration
+`202609300007_campaign_email_subject.sql`.
+
+⚠️ Le push reste indissociable de l'in-app — c'est l'ecriture de la
+notification qui le declenche. C'est le **couple** qui est facultatif.
+
+**Avant d'envoyer.** Le bouton « Envoi test » envoie la notification **et le
+vrai courriel** a votre propre compte, par le meme chemin que la diffusion :
+meme modele, meme mise en forme, meme gabarit. Rien n'est enregistre dans
+l'historique. Le panneau de droite previsualise les deux rendus — ecran
+verrouille et e-mail — dans la langue de votre choix.
+
+**Composer le corps d'un modele.** L'ecran de modele ouvre sur un
+compositeur : on ajoute des blocs (texte, image, bouton, deux colonnes,
+trait, espace), on les glisse pour les reordonner, on les supprime. Un bloc
+special, **« Message de la campagne »**, marque l'endroit ou se posera le
+texte ecrit au moment de l'envoi. La mise en page est commune aux trois
+langues ; seuls les textes changent d'un onglet a l'autre. Demande la
+migration `202609300006_email_blocks.sql`, qui cree aussi le bucket public
+`email-media` (images de courriel, 2 Mo maximum, ecriture super admin).
+
+Ce n'est volontairement **pas** un editeur libre : chaque bloc est un
+composant, donc tout agencement reste lisible chez Outlook, se replie sur un
+telephone et respecte la charte. Un courriel part chez des milliers de
+personnes et personne ne le relira dans dix clients de messagerie.
+
+**Couleurs et message mis en forme.** L'ecran de modele permet de choisir
+cinq couleurs (fond d'entete, fond du message, texte, fond et texte du
+bouton) ; une couleur laissee vide reprend celle de la charte, et le nom de
+la marque bascule tout seul entre blanc et noir pour rester lisible sur le
+fond choisi. Dans le composeur, le message s'ecrit avec le meme editeur que
+le blog (Tiptap) : gras, italique, intertitre, listes, liens et couleur.
+⚠️ **La mise en forme ne part que dans l'e-mail** : la notification in-app et
+le push recoivent le meme texte sans balisage, parce qu'un ecran verrouille
+n'en rend aucun. Le texte brut est derive de la saisie, jamais tape a part.
+Demande la migration `202609300005_email_colors_and_rich_body.sql`.
+
+**Modeles d'e-mail (`/admin/notifications/modele`).** Un **super
+administrateur** y gere plusieurs habillages : une galerie ou chaque carte
+montre le courriel reel, et un editeur ou l'on modifie, langue par langue, le
+nom d'expediteur, l'adresse de reponse, l'accueil, le bouton (libelle,
+adresse, ou pas de bouton), la signature, le pied de page et la mention de
+desabonnement. Un apercu rendu par le meme code que l'envoi est affiche a
+cote, avec une bascule bureau / mobile. Demande les migrations
+`202609300003_email_template.sql` **et**
+`202609300004_email_template_catalogue.sql`.
+
+A l'envoi, le composeur propose de **choisir le modele** — uniquement quand le
+canal email est coche, puisque l'in-app et le push n'ont pas d'habillage. Sans
+choix, c'est le modele marque « par defaut » qui part ; sans modele du tout,
+les textes livres. Le journal retient lequel a servi, et « Reessayer » rejoue
+celui de la campagne d'origine plutot que le defaut du moment.
+
+Ce qui **n'est pas** modifiable, et pourquoi : les couleurs, les polices, le
+logo et la structure suivent la charte graphique du client ; le sens de
+lecture decoule de la langue (l'arabe reste de droite a gauche) ; l'adresse
+d'expedition reste sur le domaine verifie, sinon Resend refuse l'envoi. Il n'y
+a pas d'editeur HTML libre : chaque champ est du texte, echappe au rendu —
+un balisage saisi a la main ne survit pas a Outlook et un courriel part chez
+des milliers de personnes. Un champ laisse vide reprend le texte livre.
+
+**Choix des canaux (`/admin/notifications`).** Un **super administrateur**
+peut decocher le push mobile et cocher l'e-mail ; un administrateur ordinaire
+envoie sur les canaux par defaut. L'in-app, lui, n'est jamais decochable — la
+ligne de notification est a la fois l'element de la cloche et le declencheur du
+push. Demande la migration
+`supabase/migrations/202609300002_push_channel_choice.sql`, qui apporte aussi
+`admin_push_reach()` : sans elle, « comptes joignables par push » affiche
+« — » plutot qu'un zero trompeur, car `push_tokens` n'est **volontairement**
+pas lisible par l'administration (migration mobile 0023).
+
+**Canal email des campagnes (`/admin/notifications`).** Deux conditions, et
+l'ecran nomme celle qui manque : `RESEND_API_KEY`, et la migration
+`supabase/migrations/202609300001_notification_email_channel.sql` appliquee sur
+le projet Supabase (elle apporte la table des desabonnements et la fonction
+`admin_broadcast_recipients()`). Tant qu'il en manque une, la case « Email »
+reste desactivee dans le composeur, avec sa raison — la notification in-app et
+le push partent normalement. Le courriel est redige dans la langue du
+**destinataire** (`profiles.locale`, les trois langues du site, arabe compris
+avec `dir="rtl"`), part **une adresse par message** — jamais un `to` collectif
+— et porte un lien de desabonnement signe plus les en-tetes `List-Unsubscribe`
+et `List-Unsubscribe-Post` exiges des expediteurs de masse. Un desabonnement
+exclut le compte des campagnes suivantes et **de celles-la seulement** : les
+messages lies au compte (validation, securite) continuent de partir.
+⚠️ Une diffusion email est plafonnee a 2 000 destinataires par envoi
+(`MAX_EMAIL_RECIPIENTS`) — au-dela, l'in-app et le push partent quand meme a
+tout le monde et l'ecran dit combien de courriels n'ont pas ete servis.
 
 **Formulaire de contact (`/contact`).** Envoi uniquement par le serveur, via
 Resend — pas de repli `mailto:`. Le domaine d'expedition

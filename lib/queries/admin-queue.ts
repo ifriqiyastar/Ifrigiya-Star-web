@@ -60,31 +60,31 @@ const QUEUES: QueueSpec[] = [
   {
     key: "players",
     section: "validations",
-    href: "/admin/validations?vue=joueurs",
+    href: "/admin/validations/joueurs",
     permission: "verifications.review",
   },
   {
     key: "professionals",
     section: "validations",
-    href: "/admin/validations?vue=professionnels",
+    href: "/admin/validations/professionnels",
     permission: "verifications.review",
   },
   {
     key: "documents",
     section: "validations",
-    href: "/admin/validations?vue=justificatifs",
+    href: "/admin/validations/justificatifs",
     permission: "verifications.review",
   },
   {
     key: "identity",
     section: "validations",
-    href: "/admin/validations?vue=identite",
+    href: "/admin/validations/identite",
     permission: "verifications.review",
   },
   {
     key: "reports",
     section: "moderation",
-    href: "/admin/moderation?vue=signalements&statut=en_attente",
+    href: "/admin/moderation/signalements?statut=en_attente",
     permission: "moderation.manage",
   },
   {
@@ -92,7 +92,7 @@ const QUEUES: QueueSpec[] = [
     // super administrateur tranche, donc seul lui voit la ligne.
     key: "removals",
     section: "moderation",
-    href: "/admin/moderation?vue=signalements&statut=a_valider",
+    href: "/admin/moderation/signalements?statut=a_valider",
     permission: "moderation.validate",
   },
   {
@@ -103,13 +103,13 @@ const QUEUES: QueueSpec[] = [
     // c'est une impasse.
     key: "posts",
     section: "moderation",
-    href: "/admin/moderation?vue=publications&etat=attente",
+    href: "/admin/moderation/publications?etat=attente",
     permission: "content.validate",
   },
   {
     key: "comments",
     section: "moderation",
-    href: "/admin/moderation?vue=commentaires&etat=attente",
+    href: "/admin/moderation/commentaires?etat=attente",
     permission: "content.validate",
   },
   {

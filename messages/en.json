@@ -51,7 +51,6 @@
     "pill": "The journey",
     "title": "How it works",
     "lead": "Four steps, from signing up to being scouted. The same path for everyone, and a profile verified before it is shown to anyone.",
-    "phoneAlt": "A recruiter searching for players in the Ifriqiya Soccer Star app",
     "navAria": "The four steps of the journey",
     "prev": "Previous step",
     "next": "Next step",
@@ -60,22 +59,26 @@
       {
         "number": "01",
         "title": "Create your profile",
-        "text": "Sign up as a player or a professional, and fill in your position, your level and your background. Your profile is verified by the academy before it becomes visible."
+        "text": "Sign up as a player or a professional, and fill in your position, your level and your background. Your profile is verified by the academy before it becomes visible.",
+        "phoneAlt": "The sign-up screen of the Ifriqiya Soccer Star app: the choice between player and professional, then full name, email, phone and password."
       },
       {
         "number": "02",
         "title": "Let the pitch speak",
-        "text": "Add your match videos and photos. Recruiters, clubs and agents view them straight from your profile."
+        "text": "Add your match videos and photos. Recruiters, clubs and agents view them straight from your profile.",
+        "phoneAlt": "The My videos screen of the Ifriqiya Soccer Star app: uploading a video or adding a YouTube link, and the player's video library."
       },
       {
         "number": "03",
         "title": "Attend a scouting day",
-        "text": "Sign up for the Scout Days run by clubs and academies. The eligibility criteria tell you immediately whether your profile fits."
+        "text": "Sign up for the Scout Days run by clubs and academies. The eligibility criteria tell you immediately whether your profile fits.",
+        "phoneAlt": "The list of upcoming Scout Days in the Ifriqiya Soccer Star app: date, times, venue, places left, price and organising club."
       },
       {
         "number": "04",
         "title": "Get noticed",
-        "text": "Receive your assessment after the scouting day, talk directly with recruiters, and follow your progress season after season."
+        "text": "Receive your assessment after the scouting day, talk directly with recruiters, and follow your progress season after season.",
+        "phoneAlt": "A recruiter searching for players in the Ifriqiya Soccer Star app: filtered results carrying position, level, height, weight and strong foot."
       }
     ]
   },

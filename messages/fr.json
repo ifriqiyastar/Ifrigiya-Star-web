@@ -51,7 +51,6 @@
     "pill": "Le parcours",
     "title": "Comment ca marche",
     "lead": "Quatre etapes, de l'inscription a la detection. Le meme chemin pour tous, et un profil verifie avant d'etre montre a qui que ce soit.",
-    "phoneAlt": "Recherche de joueurs par un recruteur dans l'application Ifriqiya Soccer Star",
     "navAria": "Les quatre etapes du parcours",
     "prev": "Etape precedente",
     "next": "Etape suivante",
@@ -60,22 +59,26 @@
       {
         "number": "01",
         "title": "Cree ton profil",
-        "text": "Inscris-toi en joueur ou en professionnel, renseigne ton poste, ton niveau et ton parcours. Ton profil est verifie par l'academie avant d'etre visible."
+        "text": "Inscris-toi en joueur ou en professionnel, renseigne ton poste, ton niveau et ton parcours. Ton profil est verifie par l'academie avant d'etre visible.",
+        "phoneAlt": "Ecran d'inscription de l'application Ifriqiya Soccer Star : le choix entre joueur et professionnel, puis le nom, l'e-mail, le telephone et le mot de passe."
       },
       {
         "number": "02",
         "title": "Fais parler le terrain",
-        "text": "Ajoute tes videos et tes photos de match. Les recruteurs, les clubs et les agents les consultent directement depuis ton profil."
+        "text": "Ajoute tes videos et tes photos de match. Les recruteurs, les clubs et les agents les consultent directement depuis ton profil.",
+        "phoneAlt": "Ecran « Mes videos » de l'application Ifriqiya Soccer Star : l'envoi d'une video ou d'un lien YouTube, et la videotheque du joueur."
       },
       {
         "number": "03",
         "title": "Passe une detection",
-        "text": "Inscris-toi aux Scout Days organises par les clubs et les academies. Les criteres d'eligibilite te disent tout de suite si le profil correspond."
+        "text": "Inscris-toi aux Scout Days organises par les clubs et les academies. Les criteres d'eligibilite te disent tout de suite si le profil correspond.",
+        "phoneAlt": "Liste des Scout Days a venir dans l'application Ifriqiya Soccer Star : date, horaires, lieu, places restantes, tarif et club organisateur."
       },
       {
         "number": "04",
         "title": "Sois remarque",
-        "text": "Recois ton evaluation apres la journee de detection, echange en direct avec les recruteurs, et suis ta progression saison apres saison."
+        "text": "Recois ton evaluation apres la journee de detection, echange en direct avec les recruteurs, et suis ta progression saison apres saison.",
+        "phoneAlt": "Recherche de joueurs par un recruteur dans l'application Ifriqiya Soccer Star : des resultats filtres portant le poste, le niveau, la taille, le poids et le pied fort."
       }
     ]
   },

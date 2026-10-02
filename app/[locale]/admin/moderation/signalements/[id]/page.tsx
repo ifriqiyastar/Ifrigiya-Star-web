@@ -219,7 +219,7 @@ export default async function ReportDossierPage({
       {/* Fil d'ariane : d'ou l'on vient, et la reference du dossier. */}
       <nav className="flex flex-wrap items-center gap-2">
         <Link
-          href={i18n.path("/admin/moderation?vue=signalements")}
+          href={i18n.path("/admin/moderation/signalements")}
           className="micro-label inline-flex items-center gap-1.5 text-muted-foreground transition-colors hover:text-brand"
         >
           <ArrowLeftIcon className="size-3.5" />

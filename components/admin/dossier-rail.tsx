@@ -37,9 +37,12 @@ export function DossierRail({
   return (
     <aside
       className={cn(
-        // `sticky` : la file de gauche peut etre longue, le dossier reste en
-        // vue pendant qu'on la parcourt.
-        "flex flex-col gap-4 self-start rounded-xl border border-border bg-card p-4 xl:sticky xl:top-4",
+        // ⚠️ Ni `sticky` ni `self-start` : le dossier etait une colonne a
+        // droite d'une file plus longue que lui, il devait donc rester en vue
+        // pendant qu'on la parcourait. Il est maintenant **sous** la file —
+        // `sticky` n'y colle plus a rien, et `self-start` le ferait retrecir a
+        // la largeur de son contenu dans une colonne flex.
+        "flex flex-col gap-4 rounded-xl border border-border bg-card p-4",
         className,
       )}
     >

@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "email": "email dev --dir emails --port 3001",
     "test:i18n": "node tests/admin-i18n.test.cjs",
     "test:storage": "node --test tests/storage-url.test.cjs",
     "test": "node --test tests/*.test.cjs && node tests/admin-i18n.test.cjs"
@@ -17,12 +18,15 @@
     "@dnd-kit/modifiers": "^9.0.0",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
+    "@react-email/components": "^1.0.12",
     "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.112.3",
     "@tanstack/react-table": "^9.1.2",
+    "@tiptap/extension-color": "^3.31.3",
     "@tiptap/extension-image": "^3.31.3",
     "@tiptap/extension-link": "^3.31.3",
     "@tiptap/extension-placeholder": "^3.31.3",
+    "@tiptap/extension-text-style": "^3.31.3",
     "@tiptap/html": "^3.31.3",
     "@tiptap/pm": "^3.31.3",
     "@tiptap/react": "^3.31.3",
@@ -45,12 +49,14 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@react-email/ui": "^6.11.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.2",
+    "react-email": "^6.11.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
