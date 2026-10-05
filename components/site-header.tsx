@@ -165,7 +165,7 @@ export function SiteHeader({
               aria-label={dict.header.bellLabel}
               className={cn(
                 buttonVariants({ variant: "ghost", size: "icon-sm" }),
-                "relative rounded-full border border-border bg-card",
+                "relative cursor-pointer rounded-full border border-border bg-card",
               )}
             >
               <BellIcon className="size-4" />

@@ -61,7 +61,7 @@ export function NavUser({
             render={
               <SidebarMenuButton
                 size="lg"
-                className="h-12 rounded-lg border border-sidebar-border bg-secondary/40 px-2 text-sidebar-foreground hover:bg-secondary aria-expanded:bg-secondary"
+                className="h-12 cursor-pointer rounded-lg border border-sidebar-border bg-secondary/40 px-2 text-sidebar-foreground hover:bg-secondary aria-expanded:bg-secondary"
               />
             }
           >
@@ -118,7 +118,7 @@ export function NavUser({
               <>
                 <DropdownMenuGroup>
                   {permissions.includes("verifications.review") ? (
-                    <DropdownMenuItem render={<Link href="/admin/validations/joueurs" />}>
+                    <DropdownMenuItem className="cursor-pointer" render={<Link href="/admin/validations/joueurs" />}>
                       <ShieldCheckIcon />
                       {dict.userMenu.validations}
                     </DropdownMenuItem>
@@ -126,7 +126,7 @@ export function NavUser({
                   {/* Le lien manquait : l'entree n'etait cliquable que pour ne
                       rien faire. */}
                   {permissions.includes("notifications.manage") ? (
-                    <DropdownMenuItem render={<Link href="/admin/notifications" />}>
+                    <DropdownMenuItem className="cursor-pointer" render={<Link href="/admin/notifications" />}>
                       <BellIcon />
                       {dict.userMenu.notifications}
                     </DropdownMenuItem>
@@ -135,7 +135,7 @@ export function NavUser({
                 <DropdownMenuSeparator />
               </>
             ) : null}
-            <DropdownMenuItem onClick={signOut}>
+            <DropdownMenuItem className="cursor-pointer" onClick={signOut}>
               <LogOutIcon />
               {dict.userMenu.signOut}
             </DropdownMenuItem>
