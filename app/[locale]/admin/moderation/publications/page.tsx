@@ -240,13 +240,13 @@ async function PostsView({
                   hidden={row.is_hidden}
                   moderationStatus={row.moderation_status}
                   moderationReason={row.moderation_reason}
-                />
                   moderatedBy={
                     row.moderated_by
                       ? displayName(profiles.get(row.moderated_by), undefined, i18n.locale)
                       : null
                   }
                   moderatedAt={row.moderated_at}
+                />
 
                 <p className="line-clamp-3 text-sm leading-relaxed whitespace-pre-line">
                   {row.content ?? i18n.t("(sans texte)")}
