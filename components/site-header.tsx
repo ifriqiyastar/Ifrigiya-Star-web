@@ -16,6 +16,7 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { useAdminQueue } from "@/components/admin/queue-live"
+import { useQueueSeen } from "@/components/admin/queue-seen"
 import { LanguageMenu } from "@/components/admin/language-menu"
 import type { AdminPermission } from "@/lib/auth"
 import { useAdminI18n } from "@/lib/i18n/admin-client"
@@ -34,8 +35,10 @@ import { cn } from "@/lib/utils"
  * l'usage. Les lignes viennent maintenant de `fetchAdminQueue()`, qui compte
  * les files de validation, de moderation et d'evenements.
  *
- * Il n'y a donc plus de « marquer comme lu » : une tache disparait de la liste
- * quand elle est traitee, pas quand on la regarde.
+ * Une tache disparait de la **liste** quand elle est traitee, pas quand on la
+ * regarde. La **pastille**, elle, s'eteint a l'ouverture de la cloche et ne se
+ * rallume que pour les dossiers arrives depuis (`useQueueSeen()`) : sans cela
+ * elle restait allumee en permanence et ne signalait plus rien.
  *
  * Les lignes ne sont plus figees au rendu de la page : elles viennent de
  * `useAdminQueue()`, que `AdminQueueProvider` reactualise en arriere-plan. Un
@@ -94,7 +97,9 @@ export function SiteHeader({
   // comme une pastille en panne. C'est aussi ce que comptent deja les
   // pastilles du rail, qui additionnent les dossiers de leur section : les
   // deux disaient donc deux choses differentes.
-  const pending = tasks.reduce((total, task) => total + task.count, 0)
+  // Seuls les dossiers arrives depuis la derniere ouverture de la cloche sont
+  // comptes : la liste deroulee, elle, montre toujours tout ce qui attend.
+  const { unseen: pending, markSeen } = useQueueSeen(tasks, user.email)
   // La recherche ⌘K menait toujours a `/admin/utilisateurs?q=...`, un ecran
   // qu'un editeur (`blog.manage` seul, pas `users.read`) ne peut pas ouvrir.
   // Plutot que de la repointer vers le Blog, elle disparait pour ce compte :
@@ -155,7 +160,7 @@ export function SiteHeader({
               precede immediatement la cloche, dans la grappe de droite. */}
           <LanguageMenu />
           {showBell ? (
-          <DropdownMenu>
+          <DropdownMenu onOpenChange={markSeen}>
             <DropdownMenuTrigger
               aria-label={dict.header.bellLabel}
               className={cn(

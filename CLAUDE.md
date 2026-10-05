@@ -1508,8 +1508,14 @@ suppression en cascade des textes, suppression du dernier modele refusee.
   one read so the two can never disagree. The bell's own pill sums the task
   *counts*, not the number of task lines: several reports share one line
   ("2 signalements a instruire"), so counting lines froze the pill at 1 while
-  the nav pill beside "Moderation" — which does sum dossiers — climbed. There is
-  no read/unread state: a task leaves the list when it is handled. Do not point the bell back at
+  the nav pill beside "Moderation" — which does sum dossiers — climbed. A task
+  leaves the *list* only when it is handled; the bell's *pill*, though, goes out
+  when the bell is opened and relights only for dossiers arrived since
+  (`useQueueSeen()`, `components/admin/queue-seen.ts`, per-queue counts kept in
+  `localStorage` per account, lowered whenever a queue shrinks so a handled
+  dossier followed by a new one is not missed). Client request, Oct 2026: a pill
+  that never went out was no longer read. The rail badges are unaffected — they
+  still show the whole queue. Do not point the bell back at
   `notifications` without the client asking.
   The layout's read only *seeds* the display: `AdminQueueProvider`
   (`components/admin/queue-live.tsx`) wraps the shell and keeps it current
