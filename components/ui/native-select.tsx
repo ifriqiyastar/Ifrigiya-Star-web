@@ -21,7 +21,7 @@ export function NativeSelect({
       <select
         data-slot="native-select"
         className={cn(
-          "h-10 w-full appearance-none rounded-xl border border-input bg-secondary pr-9 pl-3.5 text-sm outline-none transition-colors focus-visible:border-ring/60 disabled:cursor-not-allowed disabled:opacity-50",
+          "h-10 w-full cursor-pointer appearance-none rounded-xl border border-input bg-secondary pr-9 pl-3.5 text-sm outline-none transition-colors focus-visible:border-ring/60 disabled:cursor-not-allowed disabled:opacity-50",
           className,
         )}
         {...props}
