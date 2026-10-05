@@ -222,7 +222,13 @@ function NavRow({ item, current }: { item: NavEntry; current: string }) {
                   ) : null}
                   <span className="min-w-0 flex-1 truncate">{child.title}</span>
                   <NavBadge value={child.badge} tone={child.badgeTone} />
-                  <LinkPendingIcon className="ml-auto text-brand" />
+                  {/* `SidebarMenuSubButton` force `[&>svg]:text-sidebar-accent-foreground`
+                      (noir), pense pour son fond de survol lime : des que la
+                      souris passait sur une autre sous-entree pendant le
+                      chargement, le spinner restait noir sur le fond sombre
+                      et disparaissait. Lime au repos, noir sur sa propre ligne
+                      survolee — d'ou le `!`, plus fort que le selecteur enfant. */}
+                  <LinkPendingIcon className="ml-auto text-brand! [a:hover>&]:text-sidebar-accent-foreground!" />
                 </SidebarMenuSubButton>
               </SidebarMenuSubItem>
             )
