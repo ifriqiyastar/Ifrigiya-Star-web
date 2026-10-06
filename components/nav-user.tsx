@@ -22,7 +22,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { EllipsisVerticalIcon, ShieldCheckIcon, BellIcon, LogOutIcon } from "lucide-react"
+import { EllipsisVerticalIcon, ShieldCheckIcon, BellIcon, LogOutIcon, UserRoundIcon } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { useAdminI18n } from "@/lib/i18n/admin-client"
 import type { AdminPermission } from "@/lib/auth"
@@ -150,8 +150,14 @@ export function NavUser({
                 </div>
               </DropdownMenuLabel>
             </DropdownMenuGroup>
-            {permissions.includes("verifications.review") || permissions.includes("notifications.manage") ? (
-              <DropdownMenuGroup className="border-b border-border p-1.5">
+            {/* Son propre profil : ouvert a tout administrateur, sans
+                permission — c'est son compte, pas un ecran de gestion. Les
+                raccourcis suivent, gardes comme le rail. */}
+            <DropdownMenuGroup className="border-b border-border p-1.5">
+              <DropdownMenuItem className="py-2" render={<Link href="/admin/profil" />}>
+                <MenuIcon icon={UserRoundIcon} />
+                {dict.userMenu.profile}
+              </DropdownMenuItem>
                 {permissions.includes("verifications.review") ? (
                   <DropdownMenuItem className="py-2" render={<Link href="/admin/validations/joueurs" />}>
                     <MenuIcon icon={ShieldCheckIcon} />
@@ -166,8 +172,7 @@ export function NavUser({
                     {dict.userMenu.notifications}
                   </DropdownMenuItem>
                 ) : null}
-              </DropdownMenuGroup>
-            ) : null}
+            </DropdownMenuGroup>
             <div className="p-1.5">
               {/* Rouge : c'est le seul geste du menu qui met fin a quelque
                   chose. */}

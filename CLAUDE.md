@@ -746,6 +746,39 @@ back-office with **no Postgres behind it**, which is why `isSuperAdmin()`
 refuses by default and only degrades open when `is_super_admin()` itself is
 missing from the project.
 
+### An administrator's own profile — `/admin/profil` (Oct 2026)
+
+Reached from the rail's account menu ("Mon profil"), open to every admin with
+no permission: it is one's own account, not a management screen.
+
+- **Name and phone** go through `updateOwnProfile()` (`lib/actions/profile.ts`),
+  the admin session, and `.select("id")`. Those two (plus `locale`) are the only
+  `profiles` columns an account may write itself — mobile `0025` revoked table
+  `update` and granted it back column by column.
+- **Password** (`components/admin/profile/password-change-form.tsx`) is changed
+  in the browser with `updateUser({ password })`, after checking the current one
+  by **signing in again**, exactly like mobile `delete-account.tsx`: the
+  project's captcha protection leaves no other check, hence the Turnstile widget
+  on that form and `captcha.reset()` on every exit. ⚠️ `signInWithPassword()`
+  replaces the session, so the e-mail is read from the open session (never
+  typed) and the returned user id is compared with the previous one. The
+  "password changed" e-mail is sent by mobile `0063`'s trigger, not from here.
+- **E-mail** (`email-change-form.tsx`) is `updateUser({ email })`: nothing
+  changes until the confirmation link is followed (from both addresses if
+  "Secure email change" is on). The page shows the pending address from
+  `auth.users.new_email`. ⚠️ **`profiles.email` does not follow by itself** —
+  `202610060001_sync_profile_email.sql` adds the trigger; until it is applied the
+  rail and header keep showing the old address. Its exception handler is
+  load-bearing: it runs inside GoTrue's transaction, and an uncaught error would
+  cancel the address change itself (same reasoning as mobile `0063`). Applied
+  on the shared project on 2026-10-06 (reported by the client); it was not
+  replayed against a throwaway Postgres first — no `psql`/Docker on the machine
+  that wrote it. The "Change Email Address" template was switched the same day
+  to one e-mail carrying French, English and Arabic: the template cannot pick a
+  language, because nothing writes the locale into `user_metadata`.
+- Not on the page, on purpose: a photo (no column or storage for admins), the
+  role (SQL, `202608240006`), the language (`/admin/parametres`).
+
 ### Supabase clients
 
 - `lib/supabase/client.ts` — browser (sign-in / sign-out only).
