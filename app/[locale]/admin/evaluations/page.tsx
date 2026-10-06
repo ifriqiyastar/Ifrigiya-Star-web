@@ -106,8 +106,28 @@ export default async function EvaluationsPage({
   const evaluatorById = new Map(
     (evaluators ?? []).map((row) => [row.id, row]),
   );
-  const profiles = await fetchProfilesByIds(
-    (registrations ?? []).map((row) => row.player_id).filter(Boolean),
+  // Deux besoins, deux lectures, et elles partent ensemble.
+  //
+  // ⚠️ `fetchProfilesByIds` etait appele pour TOUS les inscrits (jusqu'a
+  // 1 000) : trois requetes portant chacune jusqu'a 1 000 identifiants dans
+  // l'adresse — identites, photos joueurs, photos professionnels — pour un
+  // tableau qui n'affiche qu'une page. Le tableau ne lit donc plus que les
+  // joueurs de ses lignes, vignettes signees en une demande ; la liste du
+  // formulaire, qui n'a besoin que de noms, lit le seul nom et l'e-mail.
+  const pagePlayerIds = rows
+    .map((row) => registrationById.get(row.registration_id)?.player_id)
+    .filter((id): id is string => Boolean(id));
+  const optionPlayerIds = [
+    ...new Set((registrations ?? []).map((row) => row.player_id).filter(Boolean)),
+  ];
+  const [profiles, { data: optionProfiles }] = await Promise.all([
+    fetchProfilesByIds(pagePlayerIds, { signAvatars: true }),
+    optionPlayerIds.length
+      ? supabase.from("profiles").select("id, full_name, email").in("id", optionPlayerIds)
+      : Promise.resolve({ data: [] as { id: string; full_name: string | null; email: string | null }[] }),
+  ]);
+  const playerNameById = new Map(
+    (optionProfiles ?? []).map((row) => [row.id, row.full_name || row.email || null]),
   );
 
   const total = count ?? 0;
@@ -194,10 +214,9 @@ export default async function EvaluationsPage({
               >
                 <option value="">{i18n.t("Selectionner une inscription")}</option>
                 {(registrations ?? []).map((registration) => {
-                  const profile = profiles.get(registration.player_id);
                   return (
                     <option key={registration.id} value={registration.id}>
-                      {profile?.full_name ?? profile?.email ?? i18n.t("Joueur")} —{" "}
+                      {playerNameById.get(registration.player_id) ?? i18n.t("Joueur")} —{" "}
                       {scoutDayById.get(registration.scout_day_id) ?? i18n.t("Scout Day")}
                     </option>
                   );

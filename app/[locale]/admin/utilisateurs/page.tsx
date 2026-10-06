@@ -10,12 +10,12 @@ import {
   RotateCcwIcon,
   SearchIcon,
   ShieldCheckIcon,
-  SlidersHorizontalIcon,
   Trash2Icon,
   UserRoundIcon,
   UsersIcon,
 } from "lucide-react";
 
+import { AutoFilterForm, FilterSearchIcon } from "@/components/admin/auto-filter-form";
 import { CreateEditorDialog } from "@/components/admin/create-editor-dialog";
 import { EmptyState } from "@/components/admin/empty-state";
 import { KpiTile } from "@/components/admin/kpi-tile";
@@ -73,19 +73,25 @@ export default async function UsersPage({ searchParams }: PageProps<"/[locale]/a
     page: str(resolved.page),
   };
 
-  const { rows, total, page, error } = await listUsers({
-    q: params.q,
-    role: params.role,
-    statut: params.statut,
-    actif: params.actif,
-    suppression: params.suppression,
-    page: Number(params.page ?? 1) || 1,
-  });
-
   const supabase = await createClient();
   const head = { count: "exact" as const, head: true };
-  const [allAccounts, activeAccounts, playerAccounts, proAccounts, playersTotal, kycValidated] =
-    await Promise.all([
+  // La liste et les six compteurs des tuiles partent ENSEMBLE. Les compteurs
+  // portent sur toute la base, pas sur la page affichee : rien ne les obligeait
+  // a attendre la liste, ce qu'ils faisaient — un aller-retour de plus a
+  // chaque chargement et a chaque rafraichissement automatique.
+  const [
+    { rows, total, page, error },
+    [allAccounts, activeAccounts, playerAccounts, proAccounts, playersTotal, kycValidated],
+  ] = await Promise.all([
+    listUsers({
+      q: params.q,
+      role: params.role,
+      statut: params.statut,
+      actif: params.actif,
+      suppression: params.suppression,
+      page: Number(params.page ?? 1) || 1,
+    }),
+    Promise.all([
       supabase.from("profiles").select("id", head),
       supabase.from("profiles").select("id", head).eq("is_active", true),
       supabase.from("profiles").select("id", head).eq("role", "player"),
@@ -95,7 +101,8 @@ export default async function UsersPage({ searchParams }: PageProps<"/[locale]/a
       // ligne par joueur au plus dans les faits, et le libelle dit le
       // denominateur — pas un pourcentage flottant sans base.
       supabase.from("identity_verifications").select("id", head).eq("status", "valide"),
-    ]);
+    ]),
+  ]);
 
   const allCount = allAccounts.count ?? 0;
   const playerCount = playerAccounts.count ?? 0;
@@ -228,33 +235,23 @@ export default async function UsersPage({ searchParams }: PageProps<"/[locale]/a
         />
       </section>
 
-      {/* Barre de recherche et de filtres : un formulaire GET, donc l'etat vit
-          dans l'URL et la page reste un Server Component qui refait sa requete.
-          Les listes sont des `<select>` natifs — aucun etat client a tenir. */}
-      <form
-        method="get"
-        className="flex flex-col items-stretch justify-between gap-3 rounded-lg border border-border bg-card p-3 lg:flex-row lg:items-center"
-      >
+      {/* Barre de recherche et de filtres : l'etat vit dans l'URL et la page
+          reste un Server Component qui refait sa requete. `AutoFilterForm`
+          l'applique tout seul — une liste au changement, la recherche apres la
+          frappe — la ou il fallait cliquer « Appliquer ». */}
+      <AutoFilterForm className="flex flex-col items-stretch justify-between gap-3 rounded-lg border border-border bg-card p-3 lg:flex-row lg:items-center">
         <div className="flex flex-1 items-center gap-2">
           <div className="flex w-full max-w-md items-center gap-2 rounded-lg bg-background px-3 py-1.5">
-            <SearchIcon className="size-4 shrink-0 text-muted-foreground" />
+            <FilterSearchIcon icon={<SearchIcon className="size-4" />} />
             <input
+              type="search"
               name="q"
               defaultValue={params.q ?? ""}
               placeholder={d.searchPlaceholder}
+              aria-label={d.searchPlaceholder}
               className="w-full bg-transparent text-xs outline-none placeholder:text-muted-foreground"
             />
-            <kbd className="shrink-0 rounded bg-accent px-1.5 py-0.5 text-[0.625rem] text-muted-foreground">
-              {d.enterKey}
-            </kbd>
           </div>
-          <button
-            type="submit"
-            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-muted px-3 text-xs font-semibold hover:bg-accent"
-          >
-            <SlidersHorizontalIcon className="size-3.5" />
-            {d.apply}
-          </button>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -298,7 +295,7 @@ export default async function UsersPage({ searchParams }: PageProps<"/[locale]/a
             <RotateCcwIcon className="size-4" />
           </Link>
         </div>
-      </form>
+      </AutoFilterForm>
 
       <Panel>
         {error ? (
@@ -522,8 +519,8 @@ export default async function UsersPage({ searchParams }: PageProps<"/[locale]/a
 
 /**
  * Liste de filtre de la maquette : intitule en capitales collé au `<select>`,
- * dans un bloc sombre. Natif, donc aucun etat client — la soumission du
- * formulaire porte la valeur dans l'URL.
+ * dans un bloc sombre. Natif, donc aucun etat client — `AutoFilterForm` porte
+ * la valeur dans l'URL des qu'elle change.
  */
 function Selector({
   name,

@@ -42,6 +42,7 @@ import {
 } from "@/lib/actions/scout-days";
 
 import { SCOUT_DAY_STATUS } from "@/lib/labels";
+import { orLikeTerm } from "@/lib/queries/notifications";
 import { displayName, fetchProfilesByIds } from "@/lib/queries/profiles";
 import { fetchCountries } from "@/lib/countries-api";
 import { createClient } from "@/lib/supabase/server";
@@ -59,11 +60,6 @@ export default async function ScoutDaysPage({ searchParams }: PageProps<"/[local
   const i18n = await getAdminI18n();
 
   const admin = await requirePermission("events.manage");
-  // Valider est reserve au super administrateur (migration 0040). On cache le
-  // geste plutot que de laisser un « Responsable evenements » decouvrir la
-  // regle par un refus Postgres.
-  const { permissions } = await getAdminAccess(admin.userId);
-  const canValidate = permissions.includes("events.validate");
   const resolved = await searchParams;
   const params = {
     q: str(resolved.q),
@@ -103,61 +99,84 @@ export default async function ScoutDaysPage({ searchParams }: PageProps<"/[local
   if (params.statut) query = query.eq("status", params.statut);
   if (params.paye === "oui") query = query.eq("is_paid", true);
   if (params.paye === "non") query = query.eq("is_paid", false);
+  // ⚠️ La recherche est DANS la requete. Elle filtrait en JavaScript les
+  // lignes de la page deja decoupee : un evenement de la page 3 restait
+  // introuvable, et `count` (pagination, pied du tableau) ignorait le filtre.
+  // Meme defaut que celui corrige sur la moderation, meme echappement que le
+  // journal des campagnes.
+  if (params.q) {
+    const term = orLikeTerm(params.q);
+    query = query.or(`title.ilike.${term},location.ilike.${term}`);
+  }
 
-  // File d'attente de validation : independante des filtres de la liste, comme
-  // le calendrier. Le plus ancien soumis en tete — c'est celui qui attend
-  // depuis le plus longtemps.
-  const { data: pendingRows } = await supabase
-    .from("scout_days")
-    .select(
-      "id, organizer_id, title, event_date, start_time, location, capacity, is_paid, price_amount, price_currency, submitted_at",
-    )
-    .eq("status", "en_attente_validation")
-    .order("submitted_at", { ascending: true, nullsFirst: false })
-    .limit(50);
-  const pending = pendingRows ?? [];
-
-  // Le calendrier montre *tous* les evenements du mois, filtres de la liste
-  // exclus : c'est une vue d'ensemble, pas un reflet du tableau.
-  const { data: calendarRows } = await supabase
-    .from("scout_days")
-    .select("id, title, event_date, start_time, location, status")
-    .gte("event_date", monthStart)
-    .lte("event_date", monthEnd)
-    .order("event_date");
-
-  // Organisateurs proposes a la creation : seuls les comptes professionnels
-  // valides peuvent porter un evenement (cle etrangere vers
-  // professional_profiles).
-  const { data: organizers } = await supabase
-    .from("professional_profiles")
-    .select("id, contact_full_name, organization_name")
-    .eq("status", "valide")
-    .order("contact_full_name")
-    .limit(1000);
-
-  // Referentiel pays charge cote serveur : meme service que l'app mobile, et
-  // pas de dependance au CORS d'un tiers depuis le navigateur.
-  const countries = await fetchCountries();
-
-  const { data, error, count } = await query;
-  const rows = (data ?? []).filter((row) =>
-    params.q
-      ? `${row.title} ${row.location ?? ""}`.toLowerCase().includes(params.q.toLowerCase())
-      : true,
-  );
-
-  const profiles = await fetchProfilesByIds([
-    ...rows.map((row) => row.organizer_id),
-    ...pending.map((row) => row.organizer_id),
+  // Tout ce qui ne depend que des droits et des filtres part ENSEMBLE. Ces
+  // six lectures s'enchainaient une a une — chaque aller-retour attendait le
+  // precedent sans en avoir besoin.
+  const [
+    { permissions },
+    { data: pendingRows },
+    { data: calendarRows },
+    { data: organizers },
+    countries,
+    { data, error, count },
+  ] = await Promise.all([
+    // Valider est reserve au super administrateur (migration 0040). On cache
+    // le geste plutot que de laisser un « Responsable evenements » decouvrir
+    // la regle par un refus Postgres.
+    getAdminAccess(admin.userId),
+    // File d'attente de validation : independante des filtres de la liste,
+    // comme le calendrier. Le plus ancien soumis en tete — c'est celui qui
+    // attend depuis le plus longtemps.
+    supabase
+      .from("scout_days")
+      .select(
+        "id, organizer_id, title, event_date, start_time, location, capacity, is_paid, price_amount, price_currency, submitted_at",
+      )
+      .eq("status", "en_attente_validation")
+      .order("submitted_at", { ascending: true, nullsFirst: false })
+      .limit(50),
+    // Le calendrier montre *tous* les evenements du mois, filtres de la liste
+    // exclus : c'est une vue d'ensemble, pas un reflet du tableau.
+    supabase
+      .from("scout_days")
+      .select("id, title, event_date, start_time, location, status")
+      .gte("event_date", monthStart)
+      .lte("event_date", monthEnd)
+      .order("event_date"),
+    // Organisateurs proposes a la creation : seuls les comptes professionnels
+    // valides peuvent porter un evenement (cle etrangere vers
+    // professional_profiles).
+    supabase
+      .from("professional_profiles")
+      .select("id, contact_full_name, organization_name")
+      .eq("status", "valide")
+      .order("contact_full_name")
+      .limit(1000),
+    // Referentiel pays charge cote serveur : meme service que l'app mobile, et
+    // pas de dependance au CORS d'un tiers depuis le navigateur.
+    fetchCountries(),
+    query,
   ]);
+  const canValidate = permissions.includes("events.validate");
+  const pending = pendingRows ?? [];
+  const rows = data ?? [];
 
-  // Nombre d'inscrits par evenement : une seule requete, comptee en memoire.
-  // PostgREST sait faire un count agrege, mais pas sans jointure imbriquee.
-  const { data: registrations } = await supabase
-    .from("scout_day_registrations")
-    .select("id, scout_day_id, status")
-    .in("scout_day_id", rows.length ? rows.map((row) => row.id) : [EMPTY_UUID]);
+  // Second temps, qui depend des lignes affichees : identites des
+  // organisateurs et inscriptions, ensemble elles aussi. Les vignettes des
+  // organisateurs sont signees en une seule demande plutot qu'une redirection
+  // chacune.
+  const [profiles, { data: registrations }] = await Promise.all([
+    fetchProfilesByIds(
+      [...rows.map((row) => row.organizer_id), ...pending.map((row) => row.organizer_id)],
+      { signAvatars: true },
+    ),
+    // Nombre d'inscrits par evenement : une seule requete, comptee en memoire.
+    // PostgREST sait faire un count agrege, mais pas sans jointure imbriquee.
+    supabase
+      .from("scout_day_registrations")
+      .select("id, scout_day_id, status")
+      .in("scout_day_id", rows.length ? rows.map((row) => row.id) : [EMPTY_UUID]),
+  ]);
 
   const countByEvent = new Map<string, { total: number; confirmed: number }>();
   for (const registration of registrations ?? []) {

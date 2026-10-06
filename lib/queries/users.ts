@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { accountAvatarUrl } from "@/lib/queries/profiles";
+import { accountAvatarUrl, signAvatarUrls } from "@/lib/queries/profiles";
 import { PROFILE_COLUMNS, fetchProfilesByIds, type ProfileSummary } from "@/lib/queries/profiles";
 
 export const USERS_PAGE_SIZE = 25;
@@ -28,6 +28,9 @@ export async function listUsers(params: {
   /** `oui` = seuls les comptes ayant demande leur suppression (§12.1, RGPD). */
   suppression?: string;
   page?: number;
+  /** Faux pour l'export CSV : il n'affiche aucune vignette, et la signature
+   * groupee y couterait un aller-retour par page de 25 lignes, pour rien. */
+  signAvatars?: boolean;
 }) {
   const supabase = await createClient();
   const page = Math.max(1, params.page ?? 1);
@@ -120,17 +123,29 @@ export async function listUsers(params: {
     ]),
   );
 
+  // Joueur : `profile_photo_url` ; professionnel : `photo_url` (migration
+  // mobile 0039). Le bucket est prive : les photos de la page sont signees en
+  // une seule demande, et `accountAvatarUrl` (route de signature) ne sert plus
+  // que de repli pour ce que la signature groupee n'a pas couvert.
+  const photoOf = (id: string) =>
+    (playerById.get(id)?.profile_photo_url as string | null | undefined) ??
+    proPhotoById.get(id) ??
+    null;
+  const signed =
+    params.signAvatars === false
+      ? new Map<string, string>()
+      : await signAvatarUrls(
+          supabase,
+          profiles.map((profile) => photoOf(profile.id)),
+        );
+
   const rows: UserListRow[] = profiles.map((profile) => {
     const player = playerById.get(profile.id);
     const pro = proById.get(profile.id);
+    const photo = photoOf(profile.id);
     return {
       ...profile,
-      // Joueur : `profile_photo_url` ; professionnel : `photo_url` (migration
-      // mobile 0039), signee par `accountAvatarUrl` — le bucket est prive.
-      avatar_url: accountAvatarUrl(
-        player?.profile_photo_url as string | null,
-        proPhotoById.get(profile.id),
-      ),
+      avatar_url: (photo && signed.get(photo)) || accountAvatarUrl(photo),
       businessStatus: (player?.status ?? pro?.status ?? null) as string | null,
       detail:
         (player?.current_club as string | null) ??

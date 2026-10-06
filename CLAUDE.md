@@ -291,6 +291,23 @@ They are now one function.
 - **Cost, accepted**: one redirect per image, each re-running the admin check
   and a signing round-trip. Fine for a back-office, and it is the mechanism
   already used for identity documents — but not a path for a public page.
+- **Except on `/admin/utilisateurs` (Oct 2026)**, where 25 rows meant 25 of
+  those detours per load. `signAvatarUrls()` (`lib/queries/profiles.ts`) signs
+  the whole page in **one** `createSignedUrls` call and the `<img>` points
+  straight at Storage; `accountAvatarUrl()` stays the fallback for whatever it
+  did not cover (external URL, sentinel, signing failure). ⚠️ The signed URLs
+  are **cached in memory** and reused while ≥ 15 min of their hour remain: a
+  signature carries a fresh token every call, and `AutoRefresh` replays the
+  page every 30 s, so without the cache every `src` would change and the
+  browser would re-download every thumbnail twice a minute. The export route
+  passes `signAvatars: false` — it shows no image. `fetchProfilesByIds(ids,
+  { signAvatars: true })` offers the same thing to any screen; `/admin/scout-days`
+  uses it. It is **off by default** on purpose: one extra round trip only pays
+  for itself on a list of thumbnails.
+- `/admin/scout-days` also ran its six reads one after another and filtered
+  `q` in JavaScript over the already-paginated page (the moderation bug again).
+  The reads now go out together in one `Promise.all`, and the search is an
+  `ilike` inside the query through `orLikeTerm()`.
 - ⚠️ **In the popup the image is a plain `<img>`, not `next/image`.** The
   source is a route that **redirects**; Next's optimizer would try to fetch the
   original itself, from a host not declared in `next.config.ts`, and 400 a

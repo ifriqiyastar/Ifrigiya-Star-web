@@ -27,6 +27,7 @@ export async function GET(request: NextRequest) {
       actif: params.get("actif") ?? undefined,
       suppression: params.get("suppression") ?? undefined,
       page,
+      signAvatars: false,
     });
     if (result.error) return Response.json({ error: result.error }, { status: 500 });
     rows.push(...result.rows);
