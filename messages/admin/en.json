@@ -34,8 +34,6 @@
   },
   "userMenu": {
     "profile": "My profile",
-    "validations": "Validations",
-    "notifications": "Notifications",
     "signOut": "Sign out"
   },
   "header": {

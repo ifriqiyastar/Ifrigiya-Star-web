@@ -22,10 +22,9 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { EllipsisVerticalIcon, ShieldCheckIcon, BellIcon, LogOutIcon, UserRoundIcon } from "lucide-react"
+import { EllipsisVerticalIcon, LogOutIcon, UserRoundIcon } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { useAdminI18n } from "@/lib/i18n/admin-client"
-import type { AdminPermission } from "@/lib/auth"
 import { cn } from "@/lib/utils"
 
 /**
@@ -56,7 +55,6 @@ function MenuIcon({
 
 export function NavUser({
   user,
-  permissions,
 }: {
   user: {
     name: string
@@ -65,11 +63,6 @@ export function NavUser({
     roleLabel?: string
     avatar?: string
   }
-  /** Memes permissions que `AppSidebar` : ces raccourcis menent aux memes
-   * ecrans que le rail, donc suivent la meme garde — sans quoi un compte
-   * sans `verifications.review` (un editeur, par ex.) voyait quand meme
-   * « Validations » ici et tombait sur l'ecran de refus en cliquant. */
-  permissions: AdminPermission[]
 }) {
   const { isMobile } = useSidebar()
   const { dict } = useAdminI18n()
@@ -150,28 +143,16 @@ export function NavUser({
                 </div>
               </DropdownMenuLabel>
             </DropdownMenuGroup>
-            {/* Son propre profil : ouvert a tout administrateur, sans
-                permission — c'est son compte, pas un ecran de gestion. Les
-                raccourcis suivent, gardes comme le rail. */}
+            {/* Le compte, et rien d'autre : son profil, puis la deconnexion.
+                Les raccourcis « Validations » et « Notifications » ont ete
+                retires a la demande du client — ils doublaient le rail, juste
+                au-dessus. Le profil est ouvert a tout administrateur, sans
+                permission : c'est son compte, pas un ecran de gestion. */}
             <DropdownMenuGroup className="border-b border-border p-1.5">
               <DropdownMenuItem className="py-2" render={<Link href="/admin/profil" />}>
                 <MenuIcon icon={UserRoundIcon} />
                 {dict.userMenu.profile}
               </DropdownMenuItem>
-                {permissions.includes("verifications.review") ? (
-                  <DropdownMenuItem className="py-2" render={<Link href="/admin/validations/joueurs" />}>
-                    <MenuIcon icon={ShieldCheckIcon} />
-                    {dict.userMenu.validations}
-                  </DropdownMenuItem>
-                ) : null}
-                {/* Le lien manquait : l'entree n'etait cliquable que pour ne
-                    rien faire. */}
-                {permissions.includes("notifications.manage") ? (
-                  <DropdownMenuItem className="py-2" render={<Link href="/admin/notifications" />}>
-                    <MenuIcon icon={BellIcon} />
-                    {dict.userMenu.notifications}
-                  </DropdownMenuItem>
-                ) : null}
             </DropdownMenuGroup>
             <div className="p-1.5">
               {/* Rouge : c'est le seul geste du menu qui met fin a quelque

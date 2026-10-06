@@ -112,7 +112,7 @@ export function AppSidebar({
         </div>
       </SidebarContent>
       <SidebarFooter className="gap-2.5 p-3 group-data-[collapsible=icon]:p-2">
-        <NavUser user={user} permissions={permissions} />
+        <NavUser user={user} />
       </SidebarFooter>
       {/* La bordure elle-meme devient cliquable : deuxieme prise pour replier
           et redeployer, sans avoir a viser le bouton de l'en-tete. */}
