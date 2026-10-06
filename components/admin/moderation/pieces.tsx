@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CheckIcon, EyeOffIcon, FlagIcon, SearchIcon, XIcon } from "lucide-react";
 
+import { AutoFilterForm, FilterSearchIcon } from "@/components/admin/auto-filter-form";
 import { ReasonDialog } from "@/components/admin/reason-dialog";
 import type { PreviewPost } from "@/components/admin/post-preview-dialog";
 import { getAdminI18n } from "@/lib/i18n/admin";
@@ -235,9 +236,11 @@ export const mediaUrlOf = (row: PostRow) => storageUrl("post-media", row.media_u
  * soumission — et `FilterBar` pour les publications et les commentaires :
  * composant client, `Select` de Base UI, navigation des le changement, pose
  * *dans* le panneau sous son titre. Meme ecran, meme geste, deux composants,
- * deux emplacements, deux facons de valider. On garde le formulaire GET :
- * l'etat vit dans l'URL, la page reste un Server Component, et soumettre remet
- * la pagination a zero puisque `page` n'est pas un champ du formulaire.
+ * deux emplacements, deux facons de valider. On garde le formulaire : l'etat
+ * vit dans l'URL, la page reste un Server Component, et filtrer remet la
+ * pagination a zero puisque `page` n'est pas un champ du formulaire.
+ * `AutoFilterForm` l'applique tout seul — une liste au changement, la
+ * recherche apres la frappe — la ou il fallait valider avec Entree.
  *
  * ⚠️ LA GRILLE NE PASSE PLUS EN COLONNES A `md`, ET C'EST MESURE. `md` (768px)
  * est **aussi** le point ou le rail de 16rem devient `fixed` : le contenu tombe
@@ -314,23 +317,24 @@ export async function ModerationFilters({
 
   return (
     <section className="rounded-xl border border-border bg-card p-2.5">
-      <form
-        method="get"
+      <AutoFilterForm
         className={cn(
           "grid grid-cols-1 items-center gap-2 sm:grid-cols-2",
           filters.length > 1 ? "xl:grid-cols-4" : "xl:grid-cols-3",
         )}
       >
         <div className="flex min-w-0 items-center gap-2 rounded-lg bg-background px-3 py-1.5 sm:col-span-2">
-          <SearchIcon className="size-4 shrink-0 text-muted-foreground" />
+          <FilterSearchIcon icon={<SearchIcon className="size-4" />} />
           <input
+            type="search"
             name="q"
             defaultValue={params.q ?? ""}
             placeholder={search}
-            className="w-full bg-transparent text-xs outline-none placeholder:text-muted-foreground"
+            aria-label={search}
+            className="w-full bg-transparent text-xs outline-none placeholder:text-muted-foreground [&::-webkit-search-cancel-button]:hidden"
           />
-          {/* Le champ est efface en le vidant puis en validant ; le bouton dit
-              ou est la commande, sans quoi une recherche se defait a l'URL. */}
+          {/* Effacer d'un clic : `AutoFilterForm` lit la valeur vide de ce
+              bouton, qui l'emporte sur le texte du champ. */}
           {params.q ? (
             <button
               type="submit"
@@ -342,10 +346,7 @@ export async function ModerationFilters({
             >
               <XIcon className="size-3.5" />
             </button>
-          ) : (
-            <kbd className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[0.625rem] text-muted-foreground">
-              {i18n.t("Entree")}</kbd>
-          )}
+          ) : null}
         </div>
         {filters.map((filter) => (
           <ModerationFilter
@@ -357,7 +358,7 @@ export async function ModerationFilters({
             options={filter.options}
           />
         ))}
-      </form>
+      </AutoFilterForm>
     </section>
   );
 }

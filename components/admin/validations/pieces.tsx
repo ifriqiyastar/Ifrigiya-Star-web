@@ -2,7 +2,6 @@ import Link from "next/link";
 import {
   BadgeCheckIcon,
   ClockIcon,
-  FilterIcon,
   IdCardIcon,
   SearchIcon,
   ShieldAlertIcon,
@@ -11,6 +10,7 @@ import {
   XCircleIcon,
 } from "lucide-react";
 
+import { AutoFilterForm, FilterSearchIcon } from "@/components/admin/auto-filter-form";
 import { MetricStrip } from "@/components/admin/metric-strip";
 import { NoteCards } from "@/components/admin/note-cards";
 import { getAdminI18n } from "@/lib/i18n/admin";
@@ -142,10 +142,11 @@ export async function ValidationMetrics() {
 /**
  * La barre de recherche, UNE pour les quatre ecrans.
  *
- * Formulaire GET, comme partout dans ce back-office : l'etat vit dans l'URL,
- * la page reste un Server Component, et soumettre remet la pagination a zero
- * puisque `page` n'est pas un champ du formulaire. Plus de champ cache `vue` :
- * chaque file est une route, le formulaire reposte sur son propre chemin.
+ * L'etat vit dans l'URL, la page reste un Server Component, et filtrer remet
+ * la pagination a zero puisque `page` n'est pas un champ du formulaire. Plus
+ * de champ cache `vue` : chaque file est une route, le formulaire navigue sur
+ * son propre chemin. `AutoFilterForm` applique la recherche apres la frappe —
+ * il fallait cliquer « Appliquer ».
  */
 export async function ValidationFilter({
   search,
@@ -158,17 +159,16 @@ export async function ValidationFilter({
   const i18n = await getAdminI18n();
 
   return (
-    <form
-      method="get"
-      className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-2.5"
-    >
+    <AutoFilterForm className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-2.5">
       <div className="flex min-w-72 flex-1 items-center gap-2 rounded-lg bg-background px-3 py-1.5">
-        <SearchIcon className="size-4 shrink-0 text-muted-foreground" />
+        <FilterSearchIcon icon={<SearchIcon className="size-4" />} />
         <input
+          type="search"
           name="q"
           defaultValue={search ?? ""}
           placeholder={i18n.t("Filtrer par nom, club ou nationalite…")}
-          className="w-full bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground"
+          aria-label={i18n.t("Filtrer par nom, club ou nationalite…")}
+          className="w-full bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground [&::-webkit-search-cancel-button]:hidden"
         />
         {search ? (
           <Link
@@ -180,17 +180,9 @@ export async function ValidationFilter({
           </Link>
         ) : null}
       </div>
-      <div className="flex items-center gap-3">
-        <button
-          type="submit"
-          className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-accent px-3 text-xs font-semibold hover:bg-accent/70"
-        >
-          <FilterIcon className="size-3.5" />
-          {i18n.t("Appliquer")}</button>
-        <span className="micro-label text-muted-foreground">
-          {i18n.t("Trie par : plus ancien d'abord")}</span>
-      </div>
-    </form>
+      <span className="micro-label text-muted-foreground">
+        {i18n.t("Trie par : plus ancien d'abord")}</span>
+    </AutoFilterForm>
   );
 }
 

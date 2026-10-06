@@ -2,18 +2,11 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { SearchIcon, XIcon } from "lucide-react";
+import { Loader2Icon, SearchIcon, XIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { useAdminI18n, useAdminTranslations } from "@/lib/i18n/admin-client";
+import { useAdminI18n } from "@/lib/i18n/admin-client";
 import { cn } from "@/lib/utils";
 
 export type FilterDef = {
@@ -36,7 +29,6 @@ export function FilterBar({
   searchName = "q",
   searchPlaceholder,
   className,
-  instant = false,
 }: {
   basePath: string;
   params: Record<string, string | undefined>;
@@ -44,19 +36,28 @@ export function FilterBar({
   searchName?: string;
   searchPlaceholder?: string;
   className?: string;
-  /**
-   * Recherche instantanee : navigue pendant la frappe (debounce 150 ms, sous
-   * le seuil ou un delai se voit) au lieu d'attendre Entree ou un clic sur
-   * "Filtrer". Faux par defaut pour ne pas changer le comportement des
-   * autres ecrans qui partagent ce composant (Scout Days, moderation,
-   * finances) — active uniquement la ou on le demande explicitement.
-   */
-  instant?: boolean;
 }) {
   const router = useRouter();
   const { dict } = useAdminI18n();
-  const i18n = useAdminTranslations();
-  const [search, setSearch] = React.useState(params[searchName] ?? "");
+  const [pending, startTransition] = React.useTransition();
+  const urlSearch = params[searchName] ?? "";
+  const [search, setSearch] = React.useState(urlSearch);
+
+  // La recherche suit l'URL quand elle change sans nous — « Reinitialiser »,
+  // retour arriere. Mais pas quand c'est notre propre frappe qui revient : la
+  // reponse a « abc » arrive pendant qu'on tape « abcd », et l'ecraser
+  // mangerait la derniere lettre. `sent` retient ce que nous avons envoye.
+  // Ajustement pendant le rendu (motif React d'un etat qui suit une prop),
+  // pas dans un effet.
+  const [sent, setSent] = React.useState(urlSearch);
+  const [seenUrl, setSeenUrl] = React.useState(urlSearch);
+  if (seenUrl !== urlSearch) {
+    setSeenUrl(urlSearch);
+    if (urlSearch !== sent) {
+      setSearch(urlSearch);
+      setSent(urlSearch);
+    }
+  }
 
   const buildUrl = React.useCallback(
     (changes: Record<string, string | null>) => {
@@ -76,20 +77,26 @@ export function FilterBar({
     [basePath, params],
   );
 
-  // Meme mecanisme que la recherche de l'en-tete (`components/site-header.tsx`) :
-  // `previousSearchRef` empeche l'effet de se declencher au premier rendu,
-  // ou l'etat initial (repris de l'URL) ne represente pas une frappe.
-  const previousSearchRef = React.useRef(search);
-  React.useEffect(() => {
-    if (!instant) return;
-    if (search === previousSearchRef.current) return;
-    previousSearchRef.current = search;
-    const timeout = setTimeout(() => {
-      router.push(buildUrl({ [searchName]: search.trim() || null }));
-    }, 150);
-    return () => clearTimeout(timeout);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, instant]);
+  // `replace` et non `push` : sans rechargement, le champ garde le focus, et
+  // chaque frappe ne laisse pas une entree dans l'historique.
+  const navigate = React.useCallback(
+    (changes: Record<string, string | null>) => {
+      startTransition(() => router.replace(buildUrl(changes), { scroll: false }));
+    },
+    [buildUrl, router],
+  );
+
+  // La recherche s'applique seule, 300 ms apres la derniere frappe — il
+  // fallait cliquer « Filtrer ». Entree part sans attendre.
+  const timer = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  React.useEffect(() => () => clearTimeout(timer.current), []);
+  const submitSearch = (value: string) => {
+    clearTimeout(timer.current);
+    const trimmed = value.trim();
+    if (trimmed === sent) return;
+    setSent(trimmed);
+    navigate({ [searchName]: trimmed || null });
+  };
 
   const activeCount = filters.filter((filter) => params[filter.name]).length + (params[searchName] ? 1 : 0);
 
@@ -101,58 +108,67 @@ export function FilterBar({
       )}
     >
       <form
+        role="search"
+        aria-busy={pending}
         onSubmit={(event) => {
           event.preventDefault();
-          router.push(buildUrl({ [searchName]: search.trim() || null }));
+          submitSearch(search);
         }}
         className="flex w-full items-center gap-2 lg:max-w-sm"
       >
         <div className="relative flex-1">
-          <SearchIcon className="pointer-events-none absolute top-1/2 left-0 size-3.5 -translate-y-1/2 text-muted-foreground" />
+          {/* La loupe cede la place a un spinner pendant le rechargement. */}
+          {pending ? (
+            <Loader2Icon className="pointer-events-none absolute top-1/2 left-0 size-3.5 -translate-y-1/2 animate-spin text-brand" />
+          ) : (
+            <SearchIcon className="pointer-events-none absolute top-1/2 left-0 size-3.5 -translate-y-1/2 text-muted-foreground" />
+          )}
           <Input
+            type="search"
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(event) => {
+              const value = event.target.value;
+              setSearch(value);
+              clearTimeout(timer.current);
+              timer.current = setTimeout(() => submitSearch(value), 300);
+            }}
             placeholder={searchPlaceholder ?? dict.common.searchPlaceholder}
             className="pl-6"
             aria-label={dict.common.search}
           />
         </div>
-        <Button type="submit" size="sm" variant="secondary">
-          {dict.common.filter}
-        </Button>
       </form>
 
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+      <div className="flex flex-wrap items-center gap-2">
+        {/* La meme pastille que les filtres des autres ecrans (utilisateurs,
+            moderation) : libelle en capitales colle a un `<select>` natif, dont
+            la liste ouverte prend le style commun de `globals.css`. C'etait un
+            `Select` de Base UI — bouton borde, fenetre d'options a part — si
+            bien que les filtres ne se ressemblaient pas d'un ecran a l'autre. */}
         {filters.map((filter) => (
-          <label key={filter.name} className="flex items-center gap-2">
-            <span className="micro-label hidden text-muted-foreground sm:inline">
-              {filter.label}
+          <label
+            key={filter.name}
+            className="flex min-w-0 items-center gap-2 rounded-lg bg-background px-3 py-1.5"
+          >
+            <span className="micro-label shrink-0 whitespace-nowrap text-muted-foreground">
+              {filter.label} :
             </span>
-            <Select
-              items={[{ value: "__all", label: i18n.t("Tous") }, ...filter.options]}
-              value={params[filter.name] ?? "__all"}
-              onValueChange={(value) =>
-                router.push(buildUrl({ [filter.name]: value === "__all" ? null : String(value) }))
-              }
+            <select
+              name={filter.name}
+              value={params[filter.name] ?? ""}
+              onChange={(event) => navigate({ [filter.name]: event.target.value || null })}
+              className={cn(
+                "min-w-0 cursor-pointer bg-transparent text-xs font-semibold outline-none",
+                params[filter.name] && "text-brand",
+              )}
             >
-              <SelectTrigger
-                size="sm"
-                className={cn(
-                  "min-w-28 rounded-md",
-                  params[filter.name] && "border-brand/40 text-brand",
-                )}
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all">{dict.common.all}</SelectItem>
-                {filter.options.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <option value="">{dict.common.all}</option>
+              {filter.options.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
           </label>
         ))}
 
@@ -161,8 +177,10 @@ export function FilterBar({
             variant="ghost"
             size="xs"
             onClick={() => {
+              clearTimeout(timer.current);
               setSearch("");
-              router.push(basePath);
+              setSent("");
+              startTransition(() => router.replace(basePath, { scroll: false }));
             }}
           >
             <XIcon />
