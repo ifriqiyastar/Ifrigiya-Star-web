@@ -455,11 +455,29 @@ an entry without its label still breaks the build. Four things decided here:
 - ⚠️ **Except when the rail is collapsed to icons**, where the stylesheet hides
   `SidebarMenuSub` entirely: a toggle-only parent would then do *nothing at
   all*, where it used to reach the section. In that state it is a link again.
-- **Only Signalements carries a count**, because it is the only one of the four
-  whose queue `fetchAdminQueue()` counts. Inventing counts for the others means
-  adding their tables to `QUEUE_TABLES` **and** to the realtime migration, or
-  the number silently lags. The group shows the same count while closed and
-  drops it while open, so the figure is never printed twice.
+- ⚠️ **A badge counts what awaits on the line it labels** (corrected Oct 2026).
+  Signalements was the only child carrying one, and it summed *all four*
+  moderation queues — so a publication awaiting a super admin was added to the
+  Signalements figure, where it is not reviewed: you clicked the number and
+  landed on a screen that had nothing. `badges` now carries `moderation` (the
+  group total), `signalements` (reports + removals), `publications` and
+  `commentaires`. Medias joueurs still has none, because `fetchAdminQueue()`
+  counts no queue for it — inventing one means adding its tables to
+  `QUEUE_TABLES` **and** to the realtime migration, or the number silently
+  lags. The group shows the total while closed and drops it while open, so the
+  figure is never printed twice. `DANGER_BADGES` (`nav-items.ts`) is what keeps
+  the red tone on all of moderation: it used to be `badge === "signalements"`,
+  which would have rendered the two new counts in lime.
+- ⚠️ **`posts` and `post_comments` were missing from `QUEUE_TABLES`** since
+  0089 added their two queues, so those counters only ever moved on the 10 s
+  poll while their moderation neighbours updated instantly. They need no entry
+  in `202609090001`: **mobile migration 0090 already publishes them** for the
+  feed. It does so deliberately *without* `replica identity full`, so an
+  UPDATE may be dropped at RLS re-evaluation and a status change waits for the
+  poll — the INSERT, i.e. a post that has just been submitted, comes through.
+  Forcing `full` on the product's two busiest tables would cost continuous WAL
+  to win ten seconds on a counter; same arbitration 0026 and `202609090001`
+  state explicitly for `public.messages`.
 - ⚠️ **`usePathname()` returns the locale prefix and `NAV_ITEMS` does not.**
   `pathname.startsWith("/admin/moderation")` was false on `/en/admin/...`, so
   the active highlight never lit in English or Arabic — a pre-existing bug the
@@ -760,6 +778,58 @@ missing from the project.
   entry point. HMAC-SHA256 over the raw body against `PAYMENT_WEBHOOK_SECRET`,
   compared with `timingSafeEqual`, then a `service_role` update of `payments`.
   Read the raw text before parsing — re-serialized JSON breaks the signature.
+
+### Validating a dossier was refused by Postgres (Oct 2026)
+
+Reported from the screen itself: *« Privilege Postgres manquant (GRANT) … Detail
+Postgres : permission denied for table player_profiles »*. Every validation
+gesture was dead — "Valider le compte", "Refuser", "Demander des pieces", the
+bulk validation on `/admin/validations/joueurs`, the professional queue, and
+step 2 of "Lever la suspension".
+
+⚠️⚠️ **Mobile migration `0050` is the cause, and it is right.** It revoked
+`update` on both profile tables from `authenticated` and re-granted the form's
+columns one by one, deliberately leaving out `status`, `status_reason`,
+`status_updated_by`, `status_updated_at` and `ranking_score` — without that, a
+player ran `update player_profiles set status = 'valide' where id = auth.uid()`
+and validated themselves, which makes the §6.1 manual review decorative. But a
+column privilege only looks at the **Postgres role**, and an administrator's
+session is an `authenticated` session like any other. 0050 concluded "those
+columns belong to the back-office, which uses `service_role`" — this
+back-office does not, and must not: `service_role` makes `auth.uid()` null, so
+`status_updated_by` would stay empty and the decision untraceable. It is the
+same scoping mistake `0079` had to repair after `0073`: a privilege withdrawn
+on the evidence of the mobile repo alone, when two apps share this database.
+
+`supabase/migrations/202610050001_admin_profile_status.sql` adds
+`admin_set_profile_status(uuid[], text, text, boolean)` — the remedy of 0042
+and 0044, a `security definer` function that checks `is_admin()` itself. Things
+worth knowing:
+
+- **One function for both tables and for the batch.** The four call sites
+  shared one rule ("clear the reason when approving") that four RPCs would let
+  drift. It takes an **array**, resolves the table from `profiles.role`, and
+  returns **the ids actually modified** — PostgREST does not fail an update
+  that touched no row, so the screen would otherwise announce "profil valide"
+  with nothing changed. `writeProfileStatus()` in `lib/actions/users.ts` is its
+  only caller.
+- ⚠️ **`suspendu` is refused by the function.** Suspending also cuts
+  `profiles.is_active`, which only `admin_set_account_active()` (0044) does;
+  writing the status alone leaves the "suspended but active" hybrid the account
+  screen already describes as an anomaly.
+- **It falls back to the direct update on `PGRST202`**, so an installation
+  without 0050 keeps working — same shape as hiding preferring
+  `admin_set_content_hidden`. If that fallback then hits `42501`,
+  `describeStatusError()` names *this* migration rather than the generic
+  "needs a security definer function" copy.
+- Verified on a throwaway Postgres reproducing 0050's grants: the reported
+  error reproduced first (the witness), then 12 assertions — approval,
+  rejection with a trimmed reason, `status_updated_by` stamped from
+  `auth.uid()`, the batch skipping already-decided rows, an unknown id
+  returning `{}` instead of a false success, a blank reason stored as null,
+  and the refusals (ordinary player, `suspendu`, unknown status, `anon`) — plus
+  the two controls that 0050's revoke still holds for a user and that what a
+  player *may* write still works. Migration replayed twice.
 
 ### Evaluations are scored on SIX axes, not four (Sept 2026)
 
@@ -1571,12 +1641,17 @@ suppression en cascade des textes, suppression du dernier modele refusee.
 - **Several columns are unwritable by an admin session, and the error looks
   like RLS but isn't.** Migration `0025` revoked `update` on `profiles` and
   re-granted only a whitelist — `is_active`, `deactivated_at` and `role` are
-  deliberately excluded; `0033`/`0035` did the same for `is_hidden`. A column
+  deliberately excluded; `0033`/`0035` did the same for `is_hidden`, and
+  **`0050` for the status columns of `player_profiles` /
+  `professional_profiles`** (`status`, `status_reason`, `status_updated_by`,
+  `status_updated_at`, plus `ranking_score`). A column
   privilege is checked *before* RLS and only looks at the Postgres role, so the
   back-office session is refused too, with `42501 permission denied for table
   …`. The remedy is a `security definer` RPC, never a policy: mobile migrations
   `0042` (hiding) and `0044` (account state, role, deletion request) provide
-  them, and `describeError()` now tells the two causes apart.
+  them, `202610050001_admin_profile_status.sql` (this repo) provides
+  `admin_set_profile_status()` for the status columns, and `describeError()`
+  now tells the two causes apart.
 - **Suspending an account is a product-level block, not an auth ban.**
   `admin_set_account_active` (mobile 0044) flips `profiles.is_active` **and**
   sets the business profile to `suspendu`. Nothing touches Supabase Auth:

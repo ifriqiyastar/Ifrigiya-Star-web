@@ -14,6 +14,21 @@ import type { AdminTask } from "@/lib/queries/admin-queue";
  * Exactement les tables comptees par `fetchAdminQueue()`. Ajouter une file
  * la-bas sans l'ajouter ici — et dans la migration `202609090001` — lui rend
  * la latence du sondage.
+ *
+ * ⚠️ `posts` et `post_comments` y manquaient depuis que 0089 a ajoute leurs
+ * deux files : elles n'avaient donc que le sondage, alors que leurs voisines
+ * de moderation remontaient tout de suite. Elles n'ont pas besoin de
+ * `202609090001` pour autant — la **migration mobile 0090 les publie deja**
+ * dans `supabase_realtime`, pour le fil d'actualite.
+ *
+ * ⚠️ 0090 les publie **sans `replica identity full`**, et c'est delibere de sa
+ * part : un UPDATE peut donc etre ecarte a la reevaluation du RLS, et le
+ * passage a « en_attente » n'arrivera qu'au sondage suivant. L'INSERT, lui,
+ * passe — c'est-a-dire le cas qui compte, une publication qui vient d'etre
+ * deposee. Forcer `full` sur les deux tables les plus ecrites du produit
+ * couterait du WAL en continu pour gagner dix secondes sur un compteur ; c'est
+ * l'arbitrage que 0026 puis `202609090001` posent explicitement pour
+ * `public.messages`, et il vaut ici.
  */
 const QUEUE_TABLES = [
   "player_profiles",
@@ -21,6 +36,8 @@ const QUEUE_TABLES = [
   "professional_documents",
   "identity_verifications",
   "reports",
+  "posts",
+  "post_comments",
   "scout_days",
   "profiles",
 ] as const;

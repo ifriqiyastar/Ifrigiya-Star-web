@@ -75,7 +75,7 @@ export const NAV_ITEMS = [
     href: "/admin/moderation",
     key: "moderation",
     icon: FlagIcon,
-    badge: "signalements" as const,
+    badge: "moderation" as const,
     permission: "moderation.manage" as AdminPermission,
     section: "operations",
     /**
@@ -87,11 +87,16 @@ export const NAV_ITEMS = [
      * se replie — replie, il reste une ligne, et son compteur continue de dire
      * ce qui attend.
      *
-     * Seul « Signalements » porte un compteur : c'est le seul de ces quatre
-     * ecrans dont `fetchAdminQueue()` compte la file. En inventer pour les
-     * autres voudrait dire ajouter leurs tables a `QUEUE_TABLES` **et** a la
-     * migration temps reel — sans quoi le chiffre serait en retard sans que
-     * rien ne le dise.
+     * ⚠️ **Trois des quatre portent un compteur, et chacun est celui de son
+     * propre ecran.** Il n'y en avait qu'un, sur « Signalements », et il
+     * additionnait les quatre files : une publication en attente de
+     * validation s'ajoutait au chiffre de « Signalements », ou elle ne
+     * s'instruit pas. La regle est celle du rail entier — une pastille
+     * compte ce qui attend **sur la ligne qu'elle designe**. « Medias
+     * joueurs » n'en a pas parce que `fetchAdminQueue()` ne compte aucune
+     * file pour lui ; en inventer une voudrait dire ajouter ses tables a
+     * `QUEUE_TABLES` **et** a la publication temps reel, sans quoi le chiffre
+     * serait en retard sans que rien ne le dise.
      */
     /**
      * ⚠️ L'enfant « Signalements » porte `GavelIcon`, pas `FlagIcon` : le
@@ -102,8 +107,8 @@ export const NAV_ITEMS = [
      */
     children: [
       { href: "/admin/moderation/signalements", key: "moderationReports", badge: "signalements" as const, icon: GavelIcon },
-      { href: "/admin/moderation/publications", key: "moderationPosts", badge: null, icon: SquarePenIcon },
-      { href: "/admin/moderation/commentaires", key: "moderationComments", badge: null, icon: MessageSquareIcon },
+      { href: "/admin/moderation/publications", key: "moderationPosts", badge: "publications" as const, icon: SquarePenIcon },
+      { href: "/admin/moderation/commentaires", key: "moderationComments", badge: "commentaires" as const, icon: MessageSquareIcon },
       { href: "/admin/moderation/medias", key: "moderationMedia", badge: null, icon: ImagesIcon },
     ],
   },
@@ -185,4 +190,26 @@ export function firstAccessiblePath(permissions: AdminPermission[]): string {
   return NAV_ITEMS.find((item) => permissions.includes(item.permission))?.href ?? "/admin/acces-refuse";
 }
 
-export type NavBadges = { validations: number; signalements: number; scoutDays: number };
+/** Les compteurs que le layout passe au rail. */
+export type NavBadgeKey =
+  | "validations"
+  | "moderation"
+  | "signalements"
+  | "publications"
+  | "commentaires"
+  | "scoutDays";
+
+export type NavBadges = Record<NavBadgeKey, number>;
+
+/**
+ * Les files dont le rouge est reserve : un element non traite y reste visible
+ * du public. Toute la moderation en releve, groupe et sous-entrees — le ton se
+ * deduisait de la seule cle `signalements`, ce qui aurait rendu en lime les
+ * deux compteurs ajoutes a cote d'elle.
+ */
+export const DANGER_BADGES: readonly NavBadgeKey[] = [
+  "moderation",
+  "signalements",
+  "publications",
+  "commentaires",
+];

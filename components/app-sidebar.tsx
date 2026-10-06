@@ -4,7 +4,7 @@ import Link from "next/link"
 import * as React from "react"
 
 import { BrandMark } from "@/components/admin/brand-mark"
-import { NAV_ITEMS, navLabel } from "@/components/admin/nav-items"
+import { DANGER_BADGES, NAV_ITEMS, navLabel } from "@/components/admin/nav-items"
 import { useAdminQueue } from "@/components/admin/queue-live"
 import { RailDiagnostics } from "@/components/admin/rail-diagnostics"
 import { NavMain } from "@/components/nav-main"
@@ -45,8 +45,11 @@ export function AppSidebar({
     icon: <item.icon />,
     badge: item.badge ? badges[item.badge] : 0,
     // Le rouge est reserve a la moderation : c'est la seule file ou un
-    // element non traite reste visible du public.
-    badgeTone: item.badge === "signalements" ? ("danger" as const) : ("brand" as const),
+    // element non traite reste visible du public. Le groupe et ses trois
+    // sous-entrees comptees en relevent, d'ou une liste et non une egalite.
+    badgeTone: item.badge && DANGER_BADGES.includes(item.badge)
+      ? ("danger" as const)
+      : ("brand" as const),
     section: item.section,
     // Une section a sous-entrees porte ses enfants ; les autres n'en ont pas,
     // et `NavMain` retombe alors sur une simple ligne.
@@ -57,7 +60,9 @@ export function AppSidebar({
             url: child.href,
             icon: <child.icon className="size-4 shrink-0" />,
             badge: child.badge ? badges[child.badge] : 0,
-            badgeTone: child.badge === "signalements" ? ("danger" as const) : ("brand" as const),
+            badgeTone: child.badge && DANGER_BADGES.includes(child.badge)
+              ? ("danger" as const)
+              : ("brand" as const),
           }))
         : undefined,
   }))

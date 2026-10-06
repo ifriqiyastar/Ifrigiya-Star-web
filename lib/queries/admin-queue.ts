@@ -223,10 +223,27 @@ export async function fetchAdminQueue(
 
   return {
     tasks,
-    /** Pastilles de la navigation : memes chiffres que la cloche. */
+    /**
+     * Pastilles de la navigation : memes chiffres que la cloche.
+     *
+     * ⚠️ **Une pastille se pose sur l'ecran qui porte la file, pas sur son
+     * voisin.** `signalements` additionnait les quatre files de moderation,
+     * et c'est l'entree « Signalements » du rail qui la portait : une
+     * publication en attente de validation s'y ajoutait, alors qu'elle
+     * s'instruit dans « Publications ». On cliquait sur le chiffre et on
+     * arrivait sur un ecran ou il n'y avait rien.
+     *
+     * `moderation` reste la somme des quatre — c'est le groupe replie, qui
+     * doit continuer de dire ce qui attend sous lui. Depliee, chaque
+     * sous-entree porte la sienne, et `NavMain` retire alors celle du parent
+     * pour que le meme nombre ne soit pas imprime deux fois.
+     */
     badges: {
       validations: counts.players + counts.professionals + counts.documents + counts.identity,
-      signalements: counts.reports + counts.removals + counts.posts + counts.comments,
+      moderation: counts.reports + counts.removals + counts.posts + counts.comments,
+      signalements: counts.reports + counts.removals,
+      publications: counts.posts,
+      commentaires: counts.comments,
       scoutDays: counts.scoutDays,
     },
   };
