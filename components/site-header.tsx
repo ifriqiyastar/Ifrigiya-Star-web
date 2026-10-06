@@ -5,7 +5,24 @@ import { usePathname } from "next/navigation"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import * as React from "react"
-import { BellIcon, CheckCircle2Icon, ChevronRightIcon, SearchIcon } from "lucide-react"
+import {
+  BellIcon,
+  BriefcaseIcon,
+  CalendarDaysIcon,
+  CheckCircle2Icon,
+  ChevronRightIcon,
+  FileTextIcon,
+  FlagIcon,
+  IdCardIcon,
+  InboxIcon,
+  MegaphoneIcon,
+  MessageSquareIcon,
+  NewspaperIcon,
+  SearchIcon,
+  ShieldAlertIcon,
+  UserRoundCheckIcon,
+  UserXIcon,
+} from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { buttonVariants } from "@/components/ui/button"
 import {
@@ -22,6 +39,27 @@ import type { AdminPermission } from "@/lib/auth"
 import { useAdminI18n } from "@/lib/i18n/admin-client"
 import { localePath, stripLocale } from "@/lib/i18n/config"
 import { cn } from "@/lib/utils"
+
+/**
+ * Une icone par file de `fetchAdminQueue()` (`AdminTask.key`), pour qu'une
+ * ligne se reconnaisse avant d'etre lue. `critical` teinte en rouge les deux
+ * files ou attendre a un cout : un retrait a valider porte sur un contenu deja
+ * mis en quarantaine, une demande de suppression de compte engage le RGPD.
+ * Une file ajoutee sans entree ici prend l'icone generique, sans casser.
+ */
+const TASK_STYLE: Record<string, { icon: React.ComponentType<{ className?: string }>; critical?: boolean }> = {
+  players: { icon: UserRoundCheckIcon },
+  professionals: { icon: BriefcaseIcon },
+  documents: { icon: FileTextIcon },
+  identity: { icon: IdCardIcon },
+  reports: { icon: FlagIcon },
+  removals: { icon: ShieldAlertIcon, critical: true },
+  posts: { icon: NewspaperIcon },
+  comments: { icon: MessageSquareIcon },
+  scoutDays: { icon: CalendarDaysIcon },
+  deletions: { icon: UserXIcon, critical: true },
+}
+const DEFAULT_TASK_STYLE = { icon: InboxIcon, critical: false }
 
 /**
  * La cloche liste **ce qui attend une decision de l'administration**, pas les
@@ -100,6 +138,7 @@ export function SiteHeader({
   // Seuls les dossiers arrives depuis la derniere ouverture de la cloche sont
   // comptes : la liste deroulee, elle, montre toujours tout ce qui attend.
   const { unseen: pending, markSeen } = useQueueSeen(tasks, user.email)
+  const total = tasks.reduce((sum, task) => sum + task.count, 0)
   // La recherche ⌘K menait toujours a `/admin/utilisateurs?q=...`, un ecran
   // qu'un editeur (`blog.manage` seul, pas `users.read`) ne peut pas ouvrir.
   // Plutot que de la repointer vers le Blog, elle disparait pour ce compte :
@@ -176,45 +215,83 @@ export function SiteHeader({
               ) : null}
             </DropdownMenuTrigger>
 
-            <DropdownMenuContent align="end" className="w-(--available-width) max-w-96 p-0">
-              <div className="border-b border-border px-4 py-3">
-                <p className="text-sm font-semibold">{dict.header.queueTitle}</p>
-                <p className="text-[10px] text-muted-foreground">{dict.header.queueHint}</p>
+            {/* `--popover` a `#000000` : rendu dans un portail hors de
+                `.admin-dashboard-shell`, le menu prenait le gris general
+                (`#1B1B1D`) — meme correction que le menu de langue. */}
+            <DropdownMenuContent
+              align="end"
+              className="w-(--available-width) max-w-[min(24rem,calc(100vw-1.5rem))] p-0 [--popover:#000000]"
+            >
+              <div className="flex items-start gap-3 border-b border-border px-4 py-3.5">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand/12 text-brand ring-1 ring-brand/25">
+                  <BellIcon className="size-4" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="font-heading text-sm font-bold">{dict.header.queueTitle}</p>
+                  <p className="text-[0.6875rem] leading-snug text-muted-foreground">{dict.header.queueHint}</p>
+                </div>
+                {/* Le total de la file entiere, pas seulement des nouveaux :
+                    la pastille de la cloche s'eteint une fois vue, ce chiffre
+                    dit ce qui reste a traiter. */}
+                {total > 0 ? (
+                  <span className="shrink-0 rounded-full bg-brand px-2 py-0.5 text-[0.6875rem] font-bold text-brand-foreground tabular-nums">
+                    {total > 99 ? "99+" : total}
+                  </span>
+                ) : null}
               </div>
 
               {tasks.length === 0 ? (
-                <p className="flex items-center justify-center gap-2 px-4 py-6 text-center text-xs text-muted-foreground">
-                  <CheckCircle2Icon className="size-4 text-brand" />
-                  {dict.header.queueEmpty}
-                </p>
+                <div className="flex flex-col items-center gap-2 px-4 py-8 text-center">
+                  <span className="flex size-10 items-center justify-center rounded-full bg-brand/12 text-brand">
+                    <CheckCircle2Icon className="size-5" />
+                  </span>
+                  <p className="text-xs text-muted-foreground">{dict.header.queueEmpty}</p>
+                </div>
               ) : (
-                <ul className="max-h-96 divide-y divide-border overflow-y-auto">
-                  {tasks.map((task) => (
-                    <li key={task.key}>
-                      <Link
-                        href={href(task.href)}
-                        className="flex items-center gap-3 px-4 py-3 hover:bg-secondary/60"
-                      >
-                        <span className="flex min-w-8 shrink-0 justify-center rounded-full bg-brand/15 px-2 py-0.5 text-xs font-bold text-brand tabular-nums">
-                          {task.count > 99 ? "99+" : task.count}
-                        </span>
-                        <span className="flex min-w-0 flex-col">
-                          <span className="truncate text-xs font-medium">{task.label}</span>
-                          <span className="text-[10px] text-muted-foreground">{task.section}</span>
-                        </span>
-                        <ChevronRightIcon className="ml-auto size-3.5 shrink-0 text-muted-foreground" />
-                      </Link>
-                    </li>
-                  ))}
+                <ul className="max-h-96 space-y-1 overflow-y-auto p-1.5">
+                  {tasks.map((task) => {
+                    const { icon: TaskIcon, critical } = TASK_STYLE[task.key] ?? DEFAULT_TASK_STYLE;
+                    return (
+                      <li key={task.key}>
+                        <Link
+                          href={href(task.href)}
+                          className="group/task flex items-center gap-3 rounded-lg px-2.5 py-2.5 transition-colors hover:bg-secondary/70 focus-visible:bg-secondary/70 focus-visible:outline-none"
+                        >
+                          <span
+                            className={cn(
+                              "flex size-8 shrink-0 items-center justify-center rounded-lg",
+                              critical ? "bg-destructive/12 text-destructive" : "bg-secondary text-muted-foreground group-hover/task:text-brand",
+                            )}
+                          >
+                            <TaskIcon className="size-4" />
+                          </span>
+                          <span className="flex min-w-0 flex-1 flex-col">
+                            <span className="truncate text-xs font-semibold">{task.label}</span>
+                            <span className="micro-label truncate text-muted-foreground">{task.section}</span>
+                          </span>
+                          <span
+                            className={cn(
+                              "flex min-w-6 shrink-0 justify-center rounded-full px-1.5 py-0.5 text-[0.6875rem] font-bold tabular-nums",
+                              critical ? "bg-destructive/15 text-destructive" : "bg-brand/15 text-brand",
+                            )}
+                          >
+                            {task.count > 99 ? "99+" : task.count}
+                          </span>
+                          <ChevronRightIcon className="size-3.5 shrink-0 text-muted-foreground transition-transform group-hover/task:translate-x-0.5 group-hover/task:text-foreground" />
+                        </Link>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
 
               {permissions.includes("notifications.manage") ? (
-                <div className="border-t border-border p-2">
+                <div className="border-t border-border p-1.5">
                   <Link
                     href={href("/admin/notifications")}
-                    className={cn(buttonVariants({ variant: "ghost", size: "xs" }), "w-full")}
+                    className="flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-muted-foreground transition-colors hover:bg-secondary/70 hover:text-foreground"
                   >
+                    <MegaphoneIcon className="size-3.5" />
                     {dict.header.campaigns}
                   </Link>
                 </div>
