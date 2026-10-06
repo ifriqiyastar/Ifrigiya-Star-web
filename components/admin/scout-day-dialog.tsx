@@ -4,7 +4,7 @@ import { useAdminTranslations } from "@/lib/i18n/admin-client";
 
 
 import * as React from "react";
-import { PencilIcon, PlusIcon } from "lucide-react";
+import { CalendarPlusIcon, PencilIcon, PlusIcon } from "lucide-react";
 
 import {
   ScoutDayForm,
@@ -50,14 +50,31 @@ export function ScoutDayDialog({
           </Button>
         }
       />
-      <DialogContent className="max-h-[90dvh] gap-4 overflow-y-auto sm:max-w-3xl">
-        <DialogHeader>
-          <DialogTitle>{editing ? i18n.t("Modifier le Scout Day") : i18n.t("Creer un Scout Day")}</DialogTitle>
-          <DialogDescription>
-            {editing
-              ? i18n.t("Mettez a jour les informations. Les inscrits seront notifies si la date, l'heure ou le lieu change.")
-              : i18n.t("L'evenement sera cree en brouillon et pourra etre publie apres verification.")}
-          </DialogDescription>
+      {/* Trois etages : en-tete fixe, contenu qui defile, pied fixe portant
+          les boutons. Tout defilait d'un bloc — le titre disparaissait des le
+          premier coup de molette, et « Creer » n'apparaissait qu'au bas d'un
+          formulaire de cinq sections. `flex` remplace la grille par defaut du
+          dialogue pour que le milieu seul prenne la hauteur restante.
+          `--popover` vaut `#000000` dans toute la fenetre : rendue dans un
+          portail hors de `.admin-dashboard-shell`, elle prenait le `--popover`
+          general (`#1B1B1D`). La variable, et non une couleur de fond, parce
+          que les listes ouvertes des `<select>` (`globals.css`) la lisent
+          aussi : fenetre et listes passent au noir ensemble. */}
+      <DialogContent className="flex max-h-[92dvh] flex-col gap-0 overflow-hidden p-0 [--popover:#000000] sm:max-w-3xl">
+        <DialogHeader className="flex-row items-start gap-3 border-b border-border px-5 pt-5 pb-4 pr-16 sm:px-6">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand/12 text-brand ring-1 ring-brand/25">
+            {editing ? <PencilIcon className="size-4.5" /> : <CalendarPlusIcon className="size-4.5" />}
+          </span>
+          <div className="min-w-0 space-y-1">
+            <DialogTitle className="font-heading text-lg font-bold">
+              {editing ? i18n.t("Modifier le Scout Day") : i18n.t("Creer un Scout Day")}
+            </DialogTitle>
+            <DialogDescription className="text-xs leading-relaxed">
+              {editing
+                ? i18n.t("Mettez a jour les informations. Les inscrits seront notifies si la date, l'heure ou le lieu change.")
+                : i18n.t("L'evenement sera cree en brouillon et pourra etre publie apres verification.")}
+            </DialogDescription>
+          </div>
         </DialogHeader>
         <ScoutDayForm
           value={value}
@@ -65,6 +82,7 @@ export function ScoutDayDialog({
           countries={countries}
           submitLabel={editing ? i18n.t("Enregistrer les modifications") : i18n.t("Creer en brouillon")}
           onSuccess={close}
+          onCancel={close}
         />
       </DialogContent>
     </Dialog>

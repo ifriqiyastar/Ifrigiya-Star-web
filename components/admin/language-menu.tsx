@@ -99,7 +99,10 @@ export function LanguageMenu() {
         <ChevronDownIcon className="size-3 shrink-0" aria-hidden />
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" className="min-w-48">
+      {/* Rendu dans un portail, hors de `.admin-dashboard-shell` : sans cette
+          variable, le menu prenait le `--popover` general (`#1B1B1D`) au lieu
+          du noir des autres listes de l'administration. */}
+      <DropdownMenuContent align="end" className="min-w-48 [--popover:#000000]">
         <DropdownMenuGroup>
           <DropdownMenuLabel className="micro-label text-muted-foreground">
             {dict.language.menuLabel}

@@ -17,12 +17,16 @@ export function ServerForm({
   submitLabel,
   className,
   onSuccess,
+  renderSubmit,
 }: {
   action: (formData: FormData) => Promise<ActionResult>;
   children: React.ReactNode;
   submitLabel?: string;
   className?: string;
   onSuccess?: () => void;
+  /** Place le bouton d'envoi — dans un pied de fenetre fixe, par exemple.
+   * Sans lui, le bouton suit simplement le contenu. */
+  renderSubmit?: (submit: React.ReactNode) => React.ReactNode;
 }) {
   const { dict } = useAdminI18n();
   const [state, formAction, pending] = useActionState(
@@ -39,13 +43,17 @@ export function ServerForm({
     else toast.error(state.message);
   }, [state, onSuccess]);
 
+  const submit = (
+    <Button type="submit" disabled={pending}>
+      {pending ? <Loader2Icon className="animate-spin" /> : null}
+      {submitLabel ?? dict.common.save}
+    </Button>
+  );
+
   return (
     <form action={formAction} className={className}>
       {children}
-      <Button type="submit" disabled={pending}>
-        {pending ? <Loader2Icon className="animate-spin" /> : null}
-        {submitLabel ?? dict.common.save}
-      </Button>
+      {renderSubmit ? renderSubmit(submit) : submit}
     </form>
   );
 }
