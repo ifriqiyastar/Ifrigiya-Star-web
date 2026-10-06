@@ -357,8 +357,14 @@ export async function deleteScoutDay(scoutDayId: string): Promise<ActionResult> 
   await requirePermission("events.manage");
   const supabase = await createClient();
 
-  const { error } = await supabase.from("scout_days").delete().eq("id", scoutDayId);
+  // `.select("id")` : PostgREST ne signale pas une ligne filtree par le RLS —
+  // la suppression touche zero ligne et repond « succes ». Sans ce controle,
+  // l'ecran annoncait « Evenement supprime » sur un evenement toujours la.
+  const { data, error } = await supabase.from("scout_days").delete().eq("id", scoutDayId).select("id");
   if (error) return fail(makeErrors(i18n.locale).describeError(error));
+  if (!data?.length) {
+    return fail(i18n.t("La suppression n'a pas ete appliquee : l'evenement n'existe plus, ou la base de donnees a refuse l'operation."));
+  }
 
   await logAdminAction("delete_scout_day", "scout_day", scoutDayId);
   REFRESH();

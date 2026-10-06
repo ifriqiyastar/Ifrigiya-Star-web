@@ -1579,6 +1579,7 @@
     "Selectionner un organisateur": "Selectionner un organisateur",
     "L'evenement": "L'evenement",
     "Vide = sans limite": "Vide = sans limite",
+    "La suppression n'a pas ete appliquee : l'evenement n'existe plus, ou la base de donnees a refuse l'operation.": "La suppression n'a pas ete appliquee : l'evenement n'existe plus, ou la base de donnees a refuse l'operation.",
     "Cree en brouillon : rien n'est visible des joueurs avant publication.": "Cree en brouillon : rien n'est visible des joueurs avant publication.",
     "Les inscrits seront notifies si la date, l'heure ou le lieu change.": "Les inscrits seront notifies si la date, l'heure ou le lieu change.",
     "Decoche = inscription gratuite.": "Decoche = inscription gratuite.",

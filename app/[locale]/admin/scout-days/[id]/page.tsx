@@ -18,6 +18,7 @@ import {
   SendIcon,
   ShieldCheckIcon,
   TicketIcon,
+  Trash2Icon,
   UserIcon,
   UsersIcon,
   XIcon,
@@ -255,10 +256,16 @@ export default async function ScoutDayDetailPage({
                   <XIcon />
                   {i18n.t("Annuler")}</ActionButton>
               ) : null}
+              {/* `redirectTo` : sans lui, le bouton rejouait la page de
+                  l'evenement qu'il venait de supprimer, et l'on tombait sur
+                  une page introuvable. Rouge et corbeille : c'est le seul geste
+                  irreversible de la barre. */}
               <ActionButton
                 action={deleteScoutDay.bind(null, scoutDay.id)}
                 variant="ghost"
                 size="sm"
+                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                redirectTo={i18n.path("/admin/scout-days")}
                 confirm={{
                   title: i18n.t("Supprimer cet evenement"),
                   description:
@@ -266,6 +273,7 @@ export default async function ScoutDayDetailPage({
                   actionLabel: i18n.t("Supprimer definitivement"),
                 }}
               >
+                <Trash2Icon />
                 {i18n.t("Supprimer")}</ActionButton>
             </>
           }

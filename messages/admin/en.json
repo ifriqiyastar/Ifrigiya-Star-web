@@ -1579,6 +1579,7 @@
     "Selectionner un organisateur": "Select an organiser",
     "L'evenement": "The event",
     "Vide = sans limite": "Empty = unlimited",
+    "La suppression n'a pas ete appliquee : l'evenement n'existe plus, ou la base de donnees a refuse l'operation.": "The deletion was not applied: the event no longer exists, or the database refused the operation.",
     "Cree en brouillon : rien n'est visible des joueurs avant publication.": "Created as a draft: players see nothing until it is published.",
     "Les inscrits seront notifies si la date, l'heure ou le lieu change.": "Registered players are notified if the date, time or venue changes.",
     "Decoche = inscription gratuite.": "Unchecked = free registration.",
