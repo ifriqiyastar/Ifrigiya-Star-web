@@ -12,7 +12,14 @@ import { isSuperAdmin, logAdminAction, requirePermission } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { requestPasswordReset } from "@/lib/password-reset";
-import { makeErrors, fail, ok, type ActionResult } from "@/lib/actions/result";
+import {
+  makeErrors,
+  isMissingRpc,
+  fail,
+  ok,
+  type ActionResult,
+  type DbError,
+} from "@/lib/actions/result";
 import type {
   DocumentStatus,
   IdentityVerificationStatus,
@@ -30,6 +37,75 @@ import type {
 
 const REFRESH = () => revalidatePath("/[locale]/admin", "layout");
 
+/**
+ * Pose le statut metier d'un ou plusieurs comptes, joueurs comme
+ * professionnels.
+ *
+ * ⚠️ Pourquoi une RPC et non un `update` : la migration mobile 0050 a revoque
+ * `update` sur `player_profiles` / `professional_profiles` au role
+ * `authenticated`, puis re-accorde colonne par colonne en laissant dehors
+ * `status`, `status_reason`, `status_updated_by`, `status_updated_at` — sans
+ * quoi un joueur se validait lui-meme et la revue du §6.1 devenait
+ * decorative. Mais un privilege de colonne ne regarde que le **role
+ * Postgres** : la session d'un administrateur est une session `authenticated`
+ * comme une autre, donc refusee elle aussi, avec un
+ * « 42501 permission denied for table player_profiles » qui ressemble a un
+ * refus RLS sans en etre un. Remede de 0042 et 0044 : une fonction
+ * `security definer`, ici `admin_set_profile_status()`
+ * (202610050001_admin_profile_status.sql, ce depot).
+ *
+ * ⚠️ Et pas `service_role` : il rend `auth.uid()` nul, donc
+ * `status_updated_by` resterait vide et la decision serait intracable — c'est
+ * l'objection que 0042 opposait deja a la moderation par cle de service.
+ *
+ * Le repli sur l'ecriture directe sert les installations ou la fonction
+ * n'existe pas : sans la migration 0050 ces colonnes sont encore ecrivables,
+ * et refuser le geste leur ferait perdre ce qu'elles savaient faire.
+ *
+ * Rend les identifiants **reellement** modifies : PostgREST ne signale pas une
+ * mise a jour qui n'a touche aucune ligne, et l'ecran annoncerait « profil
+ * valide » sans que rien n'ait change.
+ */
+async function writeProfileStatus(
+  profileIds: string[],
+  status: PlayerProfileStatus,
+  options: {
+    reason?: string | null;
+    /** Validation groupee : ne toucher que ce qui attend encore. */
+    onlyPending?: boolean;
+    /** Table visee par le repli seul — la RPC la deduit de `profiles.role`. */
+    fallbackTable: "player_profiles" | "professional_profiles";
+    adminId: string;
+  },
+): Promise<{ ids: string[]; error: null } | { ids: null; error: DbError }> {
+  const supabase = await createClient();
+  const reason = options.reason?.trim() || null;
+
+  const { data, error } = await supabase.rpc("admin_set_profile_status", {
+    p_profile_ids: profileIds,
+    p_status: status,
+    p_reason: reason,
+    p_only_pending: options.onlyPending ?? false,
+  });
+  if (!error) return { ids: (data as string[] | null) ?? [], error: null };
+  if (!isMissingRpc(error)) return { ids: null, error };
+
+  let query = supabase
+    .from(options.fallbackTable)
+    .update({
+      status,
+      status_reason: reason,
+      status_updated_by: options.adminId,
+      status_updated_at: new Date().toISOString(),
+    })
+    .in("id", profileIds);
+  if (options.onlyPending) query = query.eq("status", "en_attente_validation");
+
+  const { data: rows, error: updateError } = await query.select("id");
+  if (updateError) return { ids: null, error: updateError };
+  return { ids: (rows ?? []).map((row) => row.id as string), error: null };
+}
+
 /** §12.1 — validation / refus / suspension d'un profil joueur. */
 export async function setPlayerStatus(
   playerId: string,
@@ -39,21 +115,19 @@ export async function setPlayerStatus(
   const i18n = await getRequestAdminI18n();
 
   const admin = await requirePermission("verifications.review");
-  const supabase = await createClient();
 
-  const { error } = await supabase
-    .from("player_profiles")
-    .update({
-      status,
-      // `status_reason` porte le motif affiche au joueur ; on le vide quand on
-      // valide, sinon un ancien motif de refus resterait colle au profil.
-      status_reason: status === "valide" ? null : (reason?.trim() || null),
-      status_updated_by: admin.userId,
-      status_updated_at: new Date().toISOString(),
-    })
-    .eq("id", playerId);
+  const { ids, error } = await writeProfileStatus([playerId], status, {
+    // `status_reason` porte le motif affiche au joueur ; on le vide quand on
+    // valide, sinon un ancien motif de refus resterait colle au profil.
+    reason: status === "valide" ? null : reason,
+    fallbackTable: "player_profiles",
+    adminId: admin.userId,
+  });
 
   if (error) return fail(describeStatusError(i18n, error));
+  if (!ids.length) {
+    return fail(i18n.t("Le dossier n'a pas change d'etat : il n'existe plus, ou il a ete traite ailleurs."));
+  }
 
   await logAdminAction(`player_status_${status}`, "player_profile", playerId, {
     status,
@@ -84,24 +158,18 @@ export async function bulkValidatePlayers(formData: FormData): Promise<ActionRes
   const ids = formData.getAll("ids").map(String).filter(Boolean);
   if (!ids.length) return fail(i18n.t("Selectionnez au moins un dossier."));
 
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("player_profiles")
-    .update({
-      status: "valide",
-      status_reason: null,
-      status_updated_by: admin.userId,
-      status_updated_at: new Date().toISOString(),
-    })
-    .in("id", ids)
-    .eq("status", "en_attente_validation")
-    .select("id");
+  const { ids: changed, error } = await writeProfileStatus(ids, "valide", {
+    reason: null,
+    onlyPending: true,
+    fallbackTable: "player_profiles",
+    adminId: admin.userId,
+  });
 
   if (error) return fail(describeStatusError(i18n, error));
 
-  const updated = data?.length ?? 0;
-  for (const id of data ?? []) {
-    await logAdminAction("player_status_valide", "player_profile", id.id, { bulk: true });
+  const updated = changed.length;
+  for (const id of changed) {
+    await logAdminAction("player_status_valide", "player_profile", id, { bulk: true });
   }
   REFRESH();
 
@@ -126,19 +194,17 @@ export async function setProfessionalStatus(
   const i18n = await getRequestAdminI18n();
 
   const admin = await requirePermission("verifications.review");
-  const supabase = await createClient();
 
-  const { error } = await supabase
-    .from("professional_profiles")
-    .update({
-      status,
-      status_reason: status === "valide" ? null : (reason?.trim() || null),
-      status_updated_by: admin.userId,
-      status_updated_at: new Date().toISOString(),
-    })
-    .eq("id", professionalId);
+  const { ids, error } = await writeProfileStatus([professionalId], status, {
+    reason: status === "valide" ? null : reason,
+    fallbackTable: "professional_profiles",
+    adminId: admin.userId,
+  });
 
   if (error) return fail(describeStatusError(i18n, error));
+  if (!ids.length) {
+    return fail(i18n.t("Le dossier n'a pas change d'etat : il n'existe plus, ou il a ete traite ailleurs."));
+  }
 
   await logAdminAction(`professional_status_${status}`, "professional_profile", professionalId, {
     status,
@@ -225,6 +291,15 @@ export async function setIdentityStatus(
 function describeStatusError(i18n: AdminTranslations, error: { code?: string; message: string; hint?: string | null }) {
   if (error.code === "42804" || /notification_type/i.test(error.message)) {
     return i18n.t("Validation impossible : appliquez la migration 0017_notification_type_cast.sql (depot mobile). Sans elle, le trigger de notification refuse tout passage a « valide » ou « refuse » (42804).");
+  }
+  // Le repli direct a parle : la RPC manque ET 0050 est appliquee. Le message
+  // generique de `describeError()` dit « il faut une fonction security definer »
+  // sans dire laquelle — ici on la nomme.
+  if (
+    error.code === "42501" &&
+    /permission denied for (?:table|column|relation)\s+"?(?:player|professional)_profiles/i.test(error.message)
+  ) {
+    return i18n.t("Validation impossible : appliquez la migration 202610050001_admin_profile_status.sql (ce depot). La migration mobile 0050 a retire au role « authenticated » le droit d'ecrire le statut d'un profil, session administrateur comprise ; la fonction admin_set_profile_status() le rend a l'administration (42501).");
   }
   return makeErrors(i18n.locale).describeError(error);
 }
@@ -322,23 +397,24 @@ export async function liftSuspension(profileId: string): Promise<ActionResult> {
   }
   if (reactivated === false) return fail(i18n.t("Compte introuvable."));
 
-  // Etape 2 : le statut metier, ecrit directement — `player_profiles` et
-  // `professional_profiles` n'ont subi aucun revoke de colonne, et les
-  // policies `*_update_admin` autorisent l'ecriture.
+  // Etape 2 : le statut metier. Il passe par la meme RPC que la validation —
+  // 0050 a revoque ces colonnes a `authenticated`, session administrateur
+  // comprise (cf. `writeProfileStatus`).
   const table = profile.role === "player" ? "player_profiles" : "professional_profiles";
   if (profile.role === "player" || profile.role === "professional") {
-    const { error } = await supabase
-      .from(table)
-      .update({
-        status: "valide",
-        status_reason: null,
-        status_updated_by: admin.userId,
-        status_updated_at: new Date().toISOString(),
-      })
-      .eq("id", profileId);
+    const { ids, error } = await writeProfileStatus([profileId], "valide", {
+      reason: null,
+      fallbackTable: table,
+      adminId: admin.userId,
+    });
     if (error) {
       return fail(
         i18n.t("Compte reactive, mais le profil metier est reste en attente de validation : {0}", { "0": describeStatusError(i18n, error) }),
+      );
+    }
+    if (!ids.length) {
+      return fail(
+        i18n.t("Compte reactive, mais le profil metier n'a pas pu etre repasse a « valide » : il n'existe plus, ou il a ete traite ailleurs."),
       );
     }
   }
