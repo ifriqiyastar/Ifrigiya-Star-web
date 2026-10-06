@@ -40,9 +40,12 @@ const STATUS_STYLE: Record<string, { chip: string; dot: string }> = {
     chip: "bg-muted-foreground text-background hover:bg-muted-foreground/85",
     dot: "bg-muted-foreground",
   },
+  // Un vrai rouge, pas `destructive` : dans `.admin-dashboard-shell` il vaut
+  // `#f05260`, un corail qui se lisait rose a cote du jaune « en attente ».
+  // Le texte sombre reste au-dessus du seuil de contraste sur `#ef4444`.
   annule: {
-    chip: "bg-destructive text-background hover:bg-destructive/85",
-    dot: "bg-destructive",
+    chip: "bg-[#ef4444] text-background hover:bg-[#ef4444]/85",
+    dot: "bg-[#ef4444]",
   },
   cloture: { chip: "bg-info text-background hover:bg-info/85", dot: "bg-info" },
 };
@@ -158,7 +161,25 @@ export async function ScoutDayCalendar({
     <Panel>
       <PanelHeader
         title={i18n.t("Calendrier des evenements")}
-        description={i18n.t("{0} evenement(s) ce mois-ci, tous statuts confondus — les filtres de la liste ci-dessous ne s'y appliquent pas.", { "0": events.length })}
+        description={
+          <>
+            {i18n.t("{0} evenement(s) ce mois-ci, tous statuts confondus — les filtres de la liste ci-dessous ne s'y appliquent pas.", { "0": events.length })}
+            {/* Legende : la couleur seule ne doit pas porter le statut. Collee
+                a la phrase, dans l'en-tete, au-dessus du trait qui ouvre la
+                grille : on lit le code avant le calendrier. Des `span` et non
+                des `div` — `PanelHeader` rend la description dans un `<p>`. */}
+            <span className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5">
+              {(
+                ["publie", "en_attente_validation", "brouillon", "cloture", "annule"] as const
+              ).map((status) => (
+                <span key={status} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <span className={cn("size-3 rounded-sm", styleFor(status).dot)} />
+                  {i18n.labels.label(SCOUT_DAY_STATUS, status)}
+                </span>
+              ))}
+            </span>
+          </>
+        }
         action={
           <div className="flex items-center gap-1.5">
             <Link
@@ -187,7 +208,7 @@ export async function ScoutDayCalendar({
         }
       />
 
-      <div className="px-4 pb-4 sm:px-5 sm:pb-5">
+      <div className="px-4 pt-4 pb-4 sm:px-5 sm:pb-5">
         {/* Grille mensuelle — masquee sous `sm`, ou une vignette lisible ne
             tient pas dans un septieme de largeur. L'agenda ci-dessous prend
             alors le relais. */}
@@ -330,18 +351,6 @@ export async function ScoutDayCalendar({
               ))}
             </ul>
           )}
-        </div>
-
-        {/* Legende : la couleur seule ne doit pas porter le statut. */}
-        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
-          {(
-            ["publie", "en_attente_validation", "brouillon", "cloture", "annule"] as const
-          ).map((status) => (
-            <span key={status} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <span className={cn("size-3 rounded-sm", styleFor(status).dot)} />
-              {i18n.labels.label(SCOUT_DAY_STATUS, status)}
-            </span>
-          ))}
         </div>
       </div>
     </Panel>
