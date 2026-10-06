@@ -179,6 +179,20 @@
   --sidebar-ring: #aff70f;
 }
 
+/* Clignotement de l'icone de l'alerte des Scout Days en attente
+   (`components/admin/scout-day-alert.tsx`), utilisee via
+   `motion-safe:animate-[alert-blink_...]`. Un fondu marque plutot qu'un
+   tout-ou-rien : l'icone ne disparait jamais completement. */
+@keyframes alert-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.2;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

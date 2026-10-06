@@ -112,7 +112,7 @@ async function PostsView({
   );
 
   // File d'attente : independante des filtres de la liste, comme celle des
-  // Scout Days. Le plus ancien en tete.
+  // Scout Days. Le plus recent en tete.
   const pending = available ? await fetchPendingContent<PostRow>("posts", POST_COLUMNS) : [];
 
   const profiles = await fetchProfilesByIds([

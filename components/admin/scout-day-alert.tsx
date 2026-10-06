@@ -12,8 +12,11 @@ import {
   Loader2Icon,
   MapPinIcon,
   TicketIcon,
+  TriangleAlertIcon,
   UserIcon,
   UsersIcon,
+  Volume2Icon,
+  VolumeXIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -32,12 +35,84 @@ import { cn } from "@/lib/utils";
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 /** Fermer sans choisir de delai : le rappel par defaut. */
-const DEFAULT_SNOOZE = 30 * MINUTE;
-const SNOOZE_CHOICES = [15 * MINUTE, HOUR, 4 * HOUR] as const;
+const DEFAULT_SNOOZE = 15 * MINUTE;
+const SNOOZE_CHOICES = [30 * MINUTE, HOUR] as const;
 /** Cadence a laquelle l'alerte reverifie si elle doit se rouvrir. */
 const TICK = 20_000;
 
 type Snooze = { until: number; ids: string[] };
+
+/**
+ * Le « bip » de l'alerte, genere par le navigateur (Web Audio) : aucun fichier
+ * a servir ni a charger.
+ *
+ * ⚠️ Les navigateurs interdisent tout son tant que la page n'a recu aucun clic
+ * ni aucune frappe. Le contexte audio est donc cree — ou reveille — au premier
+ * geste de l'administrateur, et le bip ne joue que s'il tourne. Juste apres un
+ * rechargement, avant toute interaction, l'alerte s'ouvre en silence : c'est
+ * la regle du navigateur, pas un defaut.
+ */
+function useAlertSound() {
+  const context = React.useRef<AudioContext | null>(null);
+
+  const ensure = React.useCallback(() => {
+    if (!context.current) {
+      try {
+        context.current = new AudioContext();
+      } catch {
+        return null;
+      }
+    }
+    if (context.current.state === "suspended") void context.current.resume().catch(() => {});
+    return context.current;
+  }, []);
+
+  React.useEffect(() => {
+    window.addEventListener("pointerdown", ensure);
+    window.addEventListener("keydown", ensure);
+    return () => {
+      window.removeEventListener("pointerdown", ensure);
+      window.removeEventListener("keydown", ensure);
+    };
+  }, [ensure]);
+
+  return React.useCallback(() => {
+    const audio = ensure();
+    if (!audio || audio.state !== "running") return;
+    // Carillon montant do-mi-sol, joue deux fois : plus marquant qu'un bip,
+    // sans etre une sirene (demande du client : « plus attirant »). Chaque
+    // note superpose sa fondamentale et une octave plus douce — c'est ce qui
+    // lui donne un timbre de cloche plutot que de sonnerie electronique — et
+    // s'eteint en fondu, sans claquement.
+    const NOTES = [1047, 1319, 1568];
+    const STEP = 0.14;
+    const REPEAT_GAP = 0.62;
+    [0, REPEAT_GAP].forEach((offset) => {
+      NOTES.forEach((frequency, index) => {
+        const start = audio.currentTime + offset + index * STEP;
+        const gain = audio.createGain();
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(0.22, start + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.5);
+        gain.connect(audio.destination);
+        for (const [type, multiple, level] of [
+          ["triangle", 1, 1],
+          ["sine", 2, 0.35],
+        ] as const) {
+          const voice = audio.createGain();
+          voice.gain.value = level;
+          voice.connect(gain);
+          const oscillator = audio.createOscillator();
+          oscillator.type = type;
+          oscillator.frequency.value = frequency * multiple;
+          oscillator.connect(voice);
+          oscillator.start(start);
+          oscillator.stop(start + 0.52);
+        }
+      });
+    });
+  }, [ensure]);
+}
 
 /**
  * L'alerte des Scout Days en attente de validation.
@@ -49,8 +124,8 @@ type Snooze = { until: number; ids: string[] };
  * d'elle-meme, sur n'importe quelle page du back-office.
  *
  * LA MINUTERIE. Fermer l'alerte ne la congedie pas : elle revient tant que le
- * Scout Day attend. L'administrateur choisit quand (15 min, 1 h, 4 h) ; fermer
- * sans choisir — croix, Echap, clic a cote — vaut un rappel dans 30 minutes.
+ * Scout Day attend. L'administrateur choisit quand (30 min ou 1 h) ; fermer
+ * sans choisir — croix, Echap, clic a cote — vaut un rappel dans 15 minutes.
  * Le rappel retient AUSSI la liste des evenements deja vus : un Scout Day
  * soumis entre-temps rouvre l'alerte immediatement, sans attendre la fin du
  * delai. Un rappel ne doit pas masquer ce qu'on n'a jamais vu.
@@ -97,6 +172,37 @@ export function ScoutDayAlert({
   const [validating, setValidating] = React.useState<string | null>(null);
 
   const storageKey = `scout-day-alert:${account}`;
+  const soundKey = `scout-day-alert-sound:${account}`;
+  const playSound = useAlertSound();
+  // Le son est actif par defaut ; la preference n'est lue qu'au moment
+  // d'ouvrir (dans un minuteur, cote navigateur) — jamais au rendu serveur.
+  const [soundOn, setSoundOn] = React.useState(true);
+  // L'etat d'ouverture lu depuis les minuteurs : le bip ne joue qu'au passage
+  // de fermee a ouverte, pas a chaque verification tant qu'elle reste ouverte.
+  const openRef = React.useRef(false);
+  React.useEffect(() => {
+    openRef.current = open;
+  }, [open]);
+
+  const readSoundOn = React.useCallback(() => {
+    try {
+      return window.localStorage.getItem(soundKey) !== "off";
+    } catch {
+      return true;
+    }
+  }, [soundKey]);
+
+  const toggleSound = () => {
+    const next = !soundOn;
+    setSoundOn(next);
+    try {
+      window.localStorage.setItem(soundKey, next ? "on" : "off");
+    } catch {
+      // Stockage refuse : le reglage vaut pour cette ouverture seulement.
+    }
+    // Reactiver fait entendre le son : on sait tout de suite a quoi s'attendre.
+    if (next) playSound();
+  };
   const ids = React.useMemo(() => pending.map((row) => row.id), [pending]);
   const idsKey = ids.join(",");
 
@@ -144,6 +250,12 @@ export function ScoutDayAlert({
       // Une autre fenetre est ouverte (formulaire, confirmation) : on attend.
       const otherDialog = document.querySelector('[role="dialog"]:not([data-scout-day-alert])');
       if (otherDialog) return;
+      if (!openRef.current) {
+        const on = readSoundOn();
+        setSoundOn(on);
+        if (on) playSound();
+        openRef.current = true;
+      }
       setOpen(true);
     };
     const first = setTimeout(evaluate, 1_500);
@@ -155,7 +267,7 @@ export function ScoutDayAlert({
     // `idsKey` plutot que `ids` : une nouvelle reference de la meme liste
     // (rafraichissement du layout) ne doit pas relancer les minuteurs.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idsKey, readSnooze]);
+  }, [idsKey, readSnooze, readSoundOn, playSound]);
 
   async function validate(id: string) {
     setValidating(id);
@@ -210,7 +322,11 @@ export function ScoutDayAlert({
               clignotement agressif. */}
           <span className="relative flex size-11 shrink-0 items-center justify-center rounded-xl bg-warning/12 text-warning ring-1 ring-warning/30">
             <span className="absolute inset-0 animate-ping rounded-xl bg-warning/20 [animation-duration:2.4s]" aria-hidden />
-            <AlarmClockIcon className="relative size-5" />
+            {/* Icone d'alerte qui clignote — demande du client : l'alerte doit
+                se remarquer. `motion-safe` : rien ne clignote pour qui a demande
+                a son systeme de reduire les animations. L'animation
+                `alert-blink` est definie dans `globals.css`. */}
+            <TriangleAlertIcon className="relative size-5 motion-safe:animate-[alert-blink_1.2s_ease-in-out_infinite]" />
           </span>
           <div className="min-w-0 space-y-1">
             <DialogTitle className="font-heading text-lg font-bold">
@@ -315,7 +431,18 @@ export function ScoutDayAlert({
           ) : null}
         </ul>
 
-        <div className="flex flex-col gap-2 border-t border-border bg-popover px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <div className="flex flex-col gap-3 border-t border-border bg-popover px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          {/* Couper le son : memorise par compte, dans ce navigateur. */}
+          <button
+            type="button"
+            onClick={toggleSound}
+            aria-pressed={!soundOn}
+            className="flex w-fit items-center gap-1.5 rounded-md px-2 py-1 text-[0.6875rem] font-medium text-muted-foreground transition-colors hover:bg-secondary/70 hover:text-foreground"
+          >
+            {soundOn ? <Volume2Icon className="size-3.5" /> : <VolumeXIcon className="size-3.5" />}
+            {soundOn ? i18n.t("Son active") : i18n.t("Son coupe")}
+          </button>
+          <div className="flex flex-wrap items-center gap-2">
           <p className="flex items-center gap-1.5 text-[0.6875rem] text-muted-foreground">
             <AlarmClockIcon className="size-3.5" />
             {i18n.t("Me le rappeler dans")}
@@ -326,6 +453,7 @@ export function ScoutDayAlert({
                 {snoozeLabel(delay)}
               </Button>
             ))}
+          </div>
           </div>
         </div>
       </DialogContent>

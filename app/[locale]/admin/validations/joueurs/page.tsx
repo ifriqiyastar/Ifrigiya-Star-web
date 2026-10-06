@@ -59,7 +59,7 @@ export default async function ValidationsPlayersPage({
           { label: i18n.t("Profils joueurs") },
         ]}
         title={i18n.t("Profils joueurs a valider")}
-        description={i18n.t("Les comptes joueurs en attente, du plus ancien au plus recent. Valider debloque l'acces a l'application : c'est le statut du profil qui l'ouvre, pas celui du document d'identite.")}
+        description={i18n.t("Les comptes joueurs en attente, du plus recent au plus ancien. Valider debloque l'acces a l'application : c'est le statut du profil qui l'ouvre, pas celui du document d'identite.")}
       />
 
       <ValidationMetrics />
@@ -95,7 +95,7 @@ async function PlayersQueue({
       { count: "exact" },
     )
     .eq("status", "en_attente_validation")
-    .order("updated_at", { ascending: true })
+    .order("updated_at", { ascending: false })
     .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
 
   // Filtre texte : sur les colonnes du profil joueur uniquement. L'email vit
@@ -160,8 +160,8 @@ async function PlayersQueue({
   }
 
   // Ligne ouverte dans la colonne de droite : celle demandee par l'URL, sinon
-  // la premiere de la file — la plus ancienne, donc celle qui attend depuis le
-  // plus longtemps.
+  // la premiere de la file — la plus recente, toutes les listes du
+  // back-office se lisant desormais du plus recent au plus ancien.
   const active = rows.find((row) => row.id === selected) ?? rows[0];
   const activeProfile = active ? profiles.get(active.id) : undefined;
   const activeKyc = active ? kycByPlayer.get(active.id) : undefined;

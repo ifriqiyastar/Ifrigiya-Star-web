@@ -157,9 +157,9 @@ export async function fetchPendingContent<T>(
     .select(`${columns}, moderation_status`)
     .eq("moderation_status", "en_attente")
     .eq("is_deleted", false)
-    // Le plus ancien en tete : c'est celui qui attend depuis le plus
-    // longtemps, comme la file des Scout Days.
-    .order("created_at", { ascending: true })
+    // Le plus recent en tete — demande du client (oct. 2026) : toutes les
+    // listes, files comprises, se lisent du plus recent au plus ancien.
+    .order("created_at", { ascending: false })
     .limit(50);
   return (data ?? []) as T[];
 }

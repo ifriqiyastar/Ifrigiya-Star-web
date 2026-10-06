@@ -2,9 +2,9 @@ import { createClient } from "@/lib/supabase/server";
 import { ALERT_LIMIT, type PendingScoutDay } from "@/lib/scout-day-alert";
 
 /**
- * Les Scout Days qui attendent une validation, du plus ancien soumis au plus
- * recent — celui qui attend depuis le plus longtemps vient en premier, meme
- * convention que la file de la page Scout Days.
+ * Les Scout Days qui attendent une validation, du dernier soumis au plus
+ * ancien — meme convention que toutes les listes du back-office. Le temps
+ * d'attente affiche sur chaque carte dit lequel est en retard.
  *
  * Lu par le layout pour l'alerte de `components/admin/scout-day-alert.tsx`,
  * et seulement pour qui detient `events.validate` : l'alerte propose
@@ -24,7 +24,7 @@ export async function fetchPendingScoutDays(): Promise<{ rows: PendingScoutDay[]
       { count: "exact" },
     )
     .eq("status", "en_attente_validation")
-    .order("submitted_at", { ascending: true, nullsFirst: false })
+    .order("submitted_at", { ascending: false, nullsFirst: false })
     .limit(ALERT_LIMIT);
 
   if (error) {

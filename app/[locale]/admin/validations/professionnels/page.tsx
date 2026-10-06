@@ -88,7 +88,7 @@ async function ProfessionalsQueue({
       { count: "exact" },
     )
     .eq("status", "en_attente_validation")
-    .order("updated_at", { ascending: true })
+    .order("updated_at", { ascending: false })
     .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
 
   if (search) {

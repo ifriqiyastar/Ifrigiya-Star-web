@@ -181,7 +181,7 @@ export async function ValidationFilter({
         ) : null}
       </div>
       <span className="micro-label text-muted-foreground">
-        {i18n.t("Trie par : plus ancien d'abord")}</span>
+        {i18n.t("Trie par : plus recent d'abord")}</span>
     </AutoFilterForm>
   );
 }

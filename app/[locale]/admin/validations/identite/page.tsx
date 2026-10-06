@@ -77,7 +77,7 @@ async function IdentityQueue({ page }: { page: number }) {
       { count: "exact" },
     )
     .eq("status", "en_attente")
-    .order("created_at", { ascending: true })
+    .order("created_at", { ascending: false })
     .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
 
   const rows = data ?? [];

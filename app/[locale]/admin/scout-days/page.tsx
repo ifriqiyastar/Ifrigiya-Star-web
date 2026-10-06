@@ -93,7 +93,10 @@ export default async function ScoutDaysPage({ searchParams }: PageProps<"/[local
       "id, organizer_id, title, description, event_date, start_time, location, capacity, is_paid, price_amount, price_currency, status, eligibility_criteria, created_at",
       { count: "exact" },
     )
-    .order("event_date", { ascending: false })
+    // Le dernier cree en tete, comme toutes les listes du back-office —
+    // `created_at` et non `submitted_at`, qui viendrait de la migration 0040
+    // et ferait echouer toute la liste la ou elle manque.
+    .order("created_at", { ascending: false })
     .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
 
   if (params.statut) query = query.eq("status", params.statut);
@@ -125,15 +128,15 @@ export default async function ScoutDaysPage({ searchParams }: PageProps<"/[local
     // la regle par un refus Postgres.
     getAdminAccess(admin.userId),
     // File d'attente de validation : independante des filtres de la liste,
-    // comme le calendrier. Le plus ancien soumis en tete — c'est celui qui
-    // attend depuis le plus longtemps.
+    // comme le calendrier. Le dernier soumis en tete, comme toutes les
+    // listes du back-office.
     supabase
       .from("scout_days")
       .select(
         "id, organizer_id, title, event_date, start_time, location, capacity, is_paid, price_amount, price_currency, submitted_at",
       )
       .eq("status", "en_attente_validation")
-      .order("submitted_at", { ascending: true, nullsFirst: false })
+      .order("submitted_at", { ascending: false, nullsFirst: false })
       .limit(50),
     // Le calendrier montre *tous* les evenements du mois, filtres de la liste
     // exclus : c'est une vue d'ensemble, pas un reflet du tableau.
@@ -165,7 +168,7 @@ export default async function ScoutDaysPage({ searchParams }: PageProps<"/[local
   // organisateurs et inscriptions, ensemble elles aussi. Les vignettes des
   // organisateurs sont signees en une seule demande plutot qu'une redirection
   // chacune.
-  const [profiles, { data: registrations }] = await Promise.all([
+  const [profiles, { data: registrations }, { data: submissions }] = await Promise.all([
     fetchProfilesByIds(
       [...rows.map((row) => row.organizer_id), ...pending.map((row) => row.organizer_id)],
       { signAvatars: true },
@@ -176,7 +179,19 @@ export default async function ScoutDaysPage({ searchParams }: PageProps<"/[local
       .from("scout_day_registrations")
       .select("id, scout_day_id, status")
       .in("scout_day_id", rows.length ? rows.map((row) => row.id) : [EMPTY_UUID]),
+    // « Soumis le » de la liste, lu A PART et pour les seules lignes
+    // affichees : `submitted_at` vient de la migration 0040, et l'ajouter a la
+    // requete de la liste ferait echouer toute la liste en 42703 sur un projet
+    // ou elle manque (cf. le commentaire de cette requete). Isolee, une erreur
+    // ne coute que la colonne, affichee « — ».
+    supabase
+      .from("scout_days")
+      .select("id, submitted_at")
+      .in("id", rows.length ? rows.map((row) => row.id) : [EMPTY_UUID]),
   ]);
+  const submittedAtById = new Map(
+    (submissions ?? []).map((row) => [row.id as string, row.submitted_at as string | null]),
+  );
 
   const countByEvent = new Map<string, { total: number; confirmed: number }>();
   for (const registration of registrations ?? []) {
@@ -386,6 +401,7 @@ export default async function ScoutDaysPage({ searchParams }: PageProps<"/[local
                 <TableHead>{i18n.t("Evenement")}</TableHead>
                 <TableHead>{i18n.t("Organisateur")}</TableHead>
                 <TableHead>{i18n.t("Date")}</TableHead>
+                <TableHead>{i18n.t("Soumis le")}</TableHead>
                 <TableHead>{i18n.t("Statut")}</TableHead>
                 <TableHead>{i18n.t("Inscriptions")}</TableHead>
                 <TableHead>{i18n.t("Tarif")}</TableHead>
@@ -422,6 +438,14 @@ export default async function ScoutDaysPage({ searchParams }: PageProps<"/[local
                       {row.start_time ? (
                         <span className="ml-1 text-xs">{String(row.start_time).slice(0, 5)}</span>
                       ) : null}
+                    </TableCell>
+                    {/* Date de creation de la ligne, a cotnisateur. « — » pour
+                        un evenement jamais soumis : un brouillon, ou un Scout
+                        Day cree directement par l'administration. */}
+                    <TableCell className="whitespace-nowrap text-muted-foreground">
+                      {submittedAtById.get(row.id)
+                        ? i18n.format.formatDate(submittedAtById.get(row.id) as string)
+                        : "—"}
                     </TableCell>
                     <TableCell>
                       <StatusPill tone={i18n.labels.entry(SCOUT_DAY_STATUS, row.status).tone}>

@@ -216,9 +216,12 @@ Things that will bite whoever touches this next:
   (`moderation_reason_required`): it is the only explanation the author gets,
   delivered by the `notify_content_moderation` trigger. Do not also queue an
   `admin_notification_campaigns` row — that would send the notice twice.
-- **Both lists stay newest-first; the two queues are oldest-first**, so the
-  content that has waited longest comes up first. Same convention as the Scout
-  Day queue.
+- **Every list and every queue is newest-first** (client request, Oct 2026).
+  The queues used to be oldest-first so that what waited longest came up
+  first; the client chose one order everywhere. Each queue card still shows
+  how long it has waited, which is now the only cue for what is late. The one
+  exception is a comment thread, which stays chronological — it is read like a
+  conversation.
 - **"Voir la publication" opens the same popup**, from the comment queue and
   from the comment list alike — a comment is judged on what it sits under, and
   "bien joue" under an announcement is not "bien joue" under an insult. The
@@ -524,7 +527,7 @@ actually on screen, and never returns zero for a row that is on screen.
 Commentaires both open on what is blocked; Signalements had nothing, and a
 removal awaiting a super admin — content already quarantined — was a lime row
 border somewhere inside two hundred rows sorted by arrival. The `a_valider`
-reports now sit in a `Panel highlighted` above the list, oldest-first, carrying
+reports now sit in a `Panel highlighted` above the list, newest-first, carrying
 confirm and refuse. The queue ignores the list's filters, same convention as
 `fetchPendingContent()`.
 
@@ -752,7 +755,7 @@ Client request: a Scout Day submitted by a professional waits for a super admin,
 and a line in the bell was too easy to overlook — a forgotten event is a
 detection day announced too late to players. `ScoutDayAlert`
 (`components/admin/scout-day-alert.tsx`), mounted in the admin layout, opens a
-dialog by itself on **every** admin page listing what waits, oldest first, with
+dialog by itself on **every** admin page listing what waits, newest first, with
 how long each has waited (amber past 4 h, red past 24 h), "Examiner" and
 "Valider et publier".
 
@@ -762,8 +765,8 @@ how long each has waited (amber past 4 h, red past 24 h), "Examiner" and
   `lib/queries/scout-day-alert.ts`, tolerant: an error yields no alert rather
   than a broken back-office on every page).
 - **The snooze is the feature.** Closing never dismisses: the admin picks
-  15 min / 1 h / 4 h, and closing without choosing (cross, Escape, overlay)
-  means 30 min. The snooze also stores **which ids were seen**: a Scout Day
+  30 min or 1 h, and closing without choosing (cross, Escape, overlay)
+  means 15 min (client request, Oct 2026). The snooze also stores **which ids were seen**: a Scout Day
   submitted meanwhile reopens the alert at once. It lives in `localStorage`
   per account, like the bell's seen state — a per-device convenience; the
   Scout Days queue page remains the real safeguard.
@@ -775,6 +778,12 @@ how long each has waited (amber past 4 h, red past 24 h), "Examiner" and
   `lib/scout-day-alert.ts`, which imports nothing, for the same reason.
 - Refusal stays on the Scout Day page: it needs a written reason, which is the
   only explanation the organiser receives.
+- **A chime plays when the alert opens** (not on every tick while it stays
+  open): a rising C-E-G, twice, generated with Web Audio — no audio file. ⚠️
+  Browsers block any sound until the page has had a click or a key press, so the
+  audio context is created or resumed on the first gesture and the chime is
+  skipped while it is not running: right after a reload the alert opens silent.
+  "Son active / coupe" in the footer mutes it, per account in `localStorage`.
 
 ### An administrator's own profile — `/admin/profil` (Oct 2026)
 

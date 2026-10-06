@@ -185,13 +185,13 @@ async function ReportsView({
 
   // La file de ce qui est bloque : un retrait propose attend un super
   // administrateur, et le contenu vise est deja en quarantaine. Elle est
-  // independante des filtres de la liste et se lit du plus ancien au plus
-  // recent — meme convention que les files Publications et Commentaires.
+  // independante des filtres de la liste et se lit du plus recent au plus
+  // ancien — meme convention que toutes les listes du back-office.
   const { data: blockedData } = await supabase
     .from("reports")
     .select(REPORT_COLUMNS)
     .eq("status", "a_valider")
-    .order("created_at", { ascending: true })
+    .order("created_at", { ascending: false })
     .limit(QUEUE_SIZE);
   const blocked = blockedData ?? [];
 
@@ -239,7 +239,7 @@ async function ReportsView({
             title={i18n.t("Retraits a valider ({0})", { "0": blocked.length })}
             description={
               canValidate
-                ? i18n.t("Un moderateur a propose un retrait motive et la cible est deja hors du flux public. Confirmer applique le retrait ; refuser la remet en ligne et clot le signalement. Le plus ancien passe en premier.")
+                ? i18n.t("Un moderateur a propose un retrait motive et la cible est deja hors du flux public. Confirmer applique le retrait ; refuser la remet en ligne et clot le signalement. Le plus recent passe en premier.")
                 : i18n.t("Un moderateur a propose un retrait motive et la cible est deja hors du flux public. Seul un super administrateur peut confirmer ou refuser.")
             }
           />

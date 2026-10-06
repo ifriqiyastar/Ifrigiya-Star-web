@@ -95,7 +95,7 @@ export default async function ScoutDayDetailPage({
       "id, player_id, status, is_eligible, eligibility_checked_at, payment_id, registered_at",
     )
     .eq("scout_day_id", id)
-    .order("registered_at", { ascending: true });
+    .order("registered_at", { ascending: false });
 
   const rows = registrations ?? [];
   const paymentIds = rows.map((row) => row.payment_id).filter(Boolean) as string[];

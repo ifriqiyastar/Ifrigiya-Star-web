@@ -73,7 +73,7 @@ async function DocumentsQueue({ page }: { page: number }) {
     .from("professional_documents")
     .select("id, professional_id, document_label, storage_path, status, created_at", { count: "exact" })
     .eq("status", "en_attente")
-    .order("created_at", { ascending: true })
+    .order("created_at", { ascending: false })
     .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
 
   const rows = data ?? [];
