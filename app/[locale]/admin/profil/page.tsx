@@ -74,7 +74,13 @@ export default async function ProfilPage() {
         </span>
       </Panel>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      {/* Bordure visible sur les six champs. Dans `.admin-dashboard-shell`,
+          `--input` vaut `#000000` et le fond d'un champ est presque noir : un
+          champ vide — mot de passe, nouvelle adresse, telephone — n'avait
+          plus de contour et disparaissait dans le panneau. `:not(:focus-visible)`
+          laisse la couleur de focus du champ reprendre la main au clic. */}
+      <div className="grid gap-6 lg:grid-cols-2 [&_[data-slot=input]:not(:focus-visible)]:border-border">
+
         <Panel>
           <PanelHeader
             icon={UserIcon}
