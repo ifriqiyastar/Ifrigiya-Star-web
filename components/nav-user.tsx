@@ -14,7 +14,6 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
@@ -27,6 +26,33 @@ import { EllipsisVerticalIcon, ShieldCheckIcon, BellIcon, LogOutIcon } from "luc
 import { createClient } from "@/lib/supabase/client"
 import { useAdminI18n } from "@/lib/i18n/admin-client"
 import type { AdminPermission } from "@/lib/auth"
+import { cn } from "@/lib/utils"
+
+/**
+ * L'icone d'une entree du menu, dans une pastille. Au survol la ligne passe au
+ * vert de la marque : la pastille s'assombrit alors legerement plutot que de
+ * rester grise sur le vert.
+ */
+function MenuIcon({
+  icon: Icon,
+  destructive = false,
+}: {
+  icon: React.ComponentType<{ className?: string }>
+  destructive?: boolean
+}) {
+  return (
+    <span
+      className={cn(
+        "flex size-7 shrink-0 items-center justify-center rounded-md",
+        destructive
+          ? "bg-destructive/12"
+          : "bg-secondary group-focus/dropdown-menu-item:bg-black/15",
+      )}
+    >
+      <Icon className="size-3.5" />
+    </span>
+  )
+}
 
 export function NavUser({
   user,
@@ -89,56 +115,67 @@ export function NavUser({
             </div>
             <EllipsisVerticalIcon className="ml-auto size-3.5 text-sidebar-foreground/50" />
           </DropdownMenuTrigger>
+          {/* `--popover` a `#000000` : rendu dans un portail hors de
+              `.admin-dashboard-shell`, le menu prenait le gris general
+              (`#1B1B1D`) — meme correction que la cloche et le menu de
+              langue. */}
           <DropdownMenuContent
-            className="min-w-56"
+            className="min-w-64 p-0 [--popover:#000000]"
             side={isMobile ? "bottom" : "right"}
             align="end"
-            sideOffset={4}
+            sideOffset={8}
           >
             <DropdownMenuGroup>
               <DropdownMenuLabel className="p-0 font-normal">
-                <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                  <Avatar className="size-8">
+                <div className="flex items-center gap-3 border-b border-border px-3.5 py-3.5 text-left">
+                  <Avatar className="size-10 rounded-xl">
                     <AvatarImage src={user.avatar} alt={user.name} />
-                    <AvatarFallback className="rounded-lg bg-transparent">
-                      <BrandMark size={32} className="size-full" />
+                    <AvatarFallback className="rounded-xl bg-transparent">
+                      <BrandMark size={40} className="size-full" />
                     </AvatarFallback>
                   </Avatar>
-                  <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-medium">{user.name}</span>
-                    <span className="truncate text-xs text-muted-foreground">
-                      {user.email}
-                    </span>
+                  <div className="grid min-w-0 flex-1 gap-0.5 leading-tight">
+                    <span className="truncate font-heading text-sm font-bold text-foreground">{user.name}</span>
+                    {/* Un compte sans nom affiche son adresse comme nom : la
+                        repeter dessous ferait deux lignes identiques. */}
+                    {user.email !== user.name ? (
+                      <span className="truncate text-[0.6875rem] text-muted-foreground">{user.email}</span>
+                    ) : null}
+                    {user.roleLabel ? (
+                      <span className="mt-1 w-fit rounded-full bg-brand/12 px-2 py-0.5 text-[0.625rem] font-semibold text-brand ring-1 ring-brand/25">
+                        {user.roleLabel}
+                      </span>
+                    ) : null}
                   </div>
                 </div>
               </DropdownMenuLabel>
             </DropdownMenuGroup>
-            <DropdownMenuSeparator />
             {permissions.includes("verifications.review") || permissions.includes("notifications.manage") ? (
-              <>
-                <DropdownMenuGroup>
-                  {permissions.includes("verifications.review") ? (
-                    <DropdownMenuItem className="cursor-pointer" render={<Link href="/admin/validations/joueurs" />}>
-                      <ShieldCheckIcon />
-                      {dict.userMenu.validations}
-                    </DropdownMenuItem>
-                  ) : null}
-                  {/* Le lien manquait : l'entree n'etait cliquable que pour ne
-                      rien faire. */}
-                  {permissions.includes("notifications.manage") ? (
-                    <DropdownMenuItem className="cursor-pointer" render={<Link href="/admin/notifications" />}>
-                      <BellIcon />
-                      {dict.userMenu.notifications}
-                    </DropdownMenuItem>
-                  ) : null}
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-              </>
+              <DropdownMenuGroup className="border-b border-border p-1.5">
+                {permissions.includes("verifications.review") ? (
+                  <DropdownMenuItem className="py-2" render={<Link href="/admin/validations/joueurs" />}>
+                    <MenuIcon icon={ShieldCheckIcon} />
+                    {dict.userMenu.validations}
+                  </DropdownMenuItem>
+                ) : null}
+                {/* Le lien manquait : l'entree n'etait cliquable que pour ne
+                    rien faire. */}
+                {permissions.includes("notifications.manage") ? (
+                  <DropdownMenuItem className="py-2" render={<Link href="/admin/notifications" />}>
+                    <MenuIcon icon={BellIcon} />
+                    {dict.userMenu.notifications}
+                  </DropdownMenuItem>
+                ) : null}
+              </DropdownMenuGroup>
             ) : null}
-            <DropdownMenuItem className="cursor-pointer" onClick={signOut}>
-              <LogOutIcon />
-              {dict.userMenu.signOut}
-            </DropdownMenuItem>
+            <div className="p-1.5">
+              {/* Rouge : c'est le seul geste du menu qui met fin a quelque
+                  chose. */}
+              <DropdownMenuItem variant="destructive" className="py-2" onClick={signOut}>
+                <MenuIcon icon={LogOutIcon} destructive />
+                {dict.userMenu.signOut}
+              </DropdownMenuItem>
+            </div>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
