@@ -746,6 +746,36 @@ back-office with **no Postgres behind it**, which is why `isSuperAdmin()`
 refuses by default and only degrades open when `is_super_admin()` itself is
 missing from the project.
 
+### The pending Scout Day alert (Oct 2026)
+
+Client request: a Scout Day submitted by a professional waits for a super admin,
+and a line in the bell was too easy to overlook — a forgotten event is a
+detection day announced too late to players. `ScoutDayAlert`
+(`components/admin/scout-day-alert.tsx`), mounted in the admin layout, opens a
+dialog by itself on **every** admin page listing what waits, oldest first, with
+how long each has waited (amber past 4 h, red past 24 h), "Examiner" and
+"Valider et publier".
+
+- **Only for `events.validate`** — the exact permission `validateScoutDay`
+  requires, so the button never shows to someone the action would refuse. The
+  layout does not even read the list otherwise (`fetchPendingScoutDays()`,
+  `lib/queries/scout-day-alert.ts`, tolerant: an error yields no alert rather
+  than a broken back-office on every page).
+- **The snooze is the feature.** Closing never dismisses: the admin picks
+  15 min / 1 h / 4 h, and closing without choosing (cross, Escape, overlay)
+  means 30 min. The snooze also stores **which ids were seen**: a Scout Day
+  submitted meanwhile reopens the alert at once. It lives in `localStorage`
+  per account, like the bell's seen state — a per-device convenience; the
+  Scout Days queue page remains the real safeguard.
+- **It never opens over another dialog** (a form being typed must not be cut
+  off) and decides only inside timers, never during render, so the server HTML
+  never carries an open dialog and nothing differs at hydration.
+- `validateScoutDay` arrives **as a prop** from the layout — a client component
+  may not import `lib/actions/*` — and the shared type/limit live in
+  `lib/scout-day-alert.ts`, which imports nothing, for the same reason.
+- Refusal stays on the Scout Day page: it needs a written reason, which is the
+  only explanation the organiser receives.
+
 ### An administrator's own profile — `/admin/profil` (Oct 2026)
 
 Reached from the rail's account menu ("Mon profil"), open to every admin with

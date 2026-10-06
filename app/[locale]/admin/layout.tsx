@@ -8,6 +8,10 @@ import { AdminI18nProvider } from "@/lib/i18n/admin-client";
 import { getAdminDict, getAdminLocale } from "@/lib/i18n/admin";
 import { fetchAdminQueue, hasQueueAccess } from "@/lib/queries/admin-queue";
 import { fetchDiagnostics } from "@/lib/queries/diagnostics";
+import { ScoutDayAlert } from "@/components/admin/scout-day-alert";
+import { validateScoutDay } from "@/lib/actions/scout-days";
+import { localePath } from "@/lib/i18n/config";
+import { fetchPendingScoutDays } from "@/lib/queries/scout-day-alert";
 
 /**
  * Toutes les pages du back-office passent par ici, donc par `requireAdmin()`.
@@ -29,9 +33,16 @@ export default async function AdminLayout({
   // pastilles de la navigation et la cloche du bandeau, qui ne peuvent donc
   // plus annoncer deux chiffres differents. Elle est filtree par les
   // permissions de l'administrateur connecte.
-  const [{ tasks, badges }, diagnostics] = await Promise.all([
+  //
+  // L'alerte des Scout Days en attente ne se lit que pour qui peut les
+  // valider (`events.validate`, super admin) : c'est la permission meme que
+  // `validateScoutDay` exige, donc le bouton « Valider » de l'alerte ne
+  // s'affiche jamais a qui l'action refuserait.
+  const canValidateEvents = access.permissions.includes("events.validate");
+  const [{ tasks, badges }, diagnostics, pendingScoutDays] = await Promise.all([
     fetchAdminQueue(access.permissions, dict),
     fetchDiagnostics(access.permissions, dict),
+    canValidateEvents ? fetchPendingScoutDays() : Promise.resolve(null),
   ]);
 
   return (
@@ -75,6 +86,16 @@ export default async function AdminLayout({
             rejoue le Server Component de la page courante — donc ses requetes —
             sans rechargement ni perte de l'etat client. */}
             <AutoRefresh intervalMs={30_000} />
+            {pendingScoutDays ? (
+              <ScoutDayAlert
+                pending={pendingScoutDays.rows}
+                total={pendingScoutDays.total}
+                account={admin.userId}
+                onValidate={validateScoutDay}
+                listHref={localePath(locale, "/admin/scout-days")}
+                detailHref={localePath(locale, "/admin/scout-days")}
+              />
+            ) : null}
             <div className="@container/main flex flex-1 flex-col">
               {/* `xl:px-8` : les ecrans de file occupent desormais toute la largeur
                 utile, et 20 px de marge laissaient un tableau pleine largeur
