@@ -1,6 +1,6 @@
 import { DEFAULT_ADMIN_LOCALE, type AdminLocale } from "@/lib/i18n/config";
 import { createClient } from "@/lib/supabase/server";
-import { storageUrl } from "@/lib/supabase/config";
+import { storagePathOf, storageUrl } from "@/lib/supabase/config";
 
 export type ProfileSummary = {
   id: string;
@@ -45,7 +45,13 @@ export const PROFILE_COLUMNS =
  * `profiles(...)` ambigu et force a nommer la contrainte exacte. Deux requetes
  * explicites sont plus robustes et se lisent mieux.
  */
-export async function fetchProfilesByIds(ids: string[]) {
+export async function fetchProfilesByIds(
+  ids: string[],
+  /** `signAvatars` : photos signees en une seule demande (`signAvatarUrls`)
+   * plutot qu'une redirection par vignette. Faux par defaut — un aller-retour
+   * de plus, qui ne vaut la peine que pour une liste de vignettes. */
+  options: { signAvatars?: boolean } = {},
+) {
   const unique = [...new Set(ids.filter(Boolean))];
   if (!unique.length) return new Map<string, ProfileSummary>();
 
@@ -69,14 +75,21 @@ export async function fetchProfilesByIds(ids: string[]) {
     ),
   ]);
 
+  const signed = options.signAvatars
+    ? await signAvatarUrls(supabase, [...photoById.values()])
+    : new Map<string, string>();
+
   return new Map(
-    (profiles.data ?? []).map((row) => [
-      row.id as string,
-      {
-        ...row,
-        avatar_url: accountAvatarUrl(photoById.get(row.id as string)),
-      } as ProfileSummary,
-    ]),
+    (profiles.data ?? []).map((row) => {
+      const photo = photoById.get(row.id as string);
+      return [
+        row.id as string,
+        {
+          ...row,
+          avatar_url: (photo && signed.get(photo)) || accountAvatarUrl(photo),
+        } as ProfileSummary,
+      ];
+    }),
   );
 }
 
@@ -98,6 +111,72 @@ export function accountAvatarUrl(
   professionalPhoto?: string | null | undefined,
 ) {
   return storageUrl("avatars", playerPhoto ?? professionalPhoto ?? null);
+}
+
+/**
+ * Signe en UNE demande les photos d'une page entiere.
+ *
+ * `accountAvatarUrl()` pointe chaque vignette vers `/admin/documents`, qui
+ * refait un controle d'administration, signe, puis redirige : vingt-cinq
+ * lignes, vingt-cinq detours, que le navigateur ne mene que quelques-uns a la
+ * fois. Ici le serveur, qui a deja verifie la session pour rendre la page,
+ * demande toutes les signatures d'un coup (`createSignedUrls`) et la vignette
+ * pointe directement sur le stockage.
+ *
+ * ⚠️ Les adresses signees sont gardees en memoire et reutilisees tant qu'il
+ * leur reste au moins un quart d'heure. Une signature porte un jeton qui change
+ * a chaque appel, et `AutoRefresh` rejoue la page toutes les 30 s : sans ce
+ * cache, chaque rafraichissement changerait le `src` de toutes les vignettes,
+ * et le navigateur les retelechargerait toutes les 30 s. Le cache ne sert que
+ * des pages deja gardees par `requirePermission()`, et une adresse signee ne
+ * donne acces qu'a l'image qu'elle designe.
+ *
+ * Rend une `Map` valeur stockee → adresse signee. Ce qui manque (adresse
+ * externe, sentinelle, echec de signature) n'y est pas : l'appelant retombe
+ * alors sur `accountAvatarUrl()`, qui gere ces cas — une signature groupee qui
+ * echoue coute la rapidite, jamais la vignette.
+ */
+const SIGNED_AVATAR_TTL = 60 * 60; // secondes
+const SIGNED_AVATAR_MIN_LEFT = 15 * 60 * 1000; // millisecondes
+const signedAvatarCache = new Map<string, { url: string; expiresAt: number }>();
+
+export async function signAvatarUrls(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  values: (string | null | undefined)[],
+): Promise<Map<string, string>> {
+  const result = new Map<string, string>();
+  const now = Date.now();
+  const toSign = new Map<string, string[]>(); // chemin → valeurs stockees
+
+  for (const value of values) {
+    if (!value) continue;
+    const path = storagePathOf("avatars", value);
+    if (!path) continue;
+    const cached = signedAvatarCache.get(path);
+    if (cached && cached.expiresAt - now > SIGNED_AVATAR_MIN_LEFT) {
+      result.set(value, cached.url);
+      continue;
+    }
+    toSign.set(path, [...(toSign.get(path) ?? []), value]);
+  }
+
+  if (!toSign.size) return result;
+
+  const { data, error } = await supabase.storage
+    .from("avatars")
+    .createSignedUrls([...toSign.keys()], SIGNED_AVATAR_TTL);
+  if (error) {
+    console.error("avatars createSignedUrls:", error);
+    return result;
+  }
+
+  const expiresAt = now + SIGNED_AVATAR_TTL * 1000;
+  for (const item of data ?? []) {
+    if (!item.path || !item.signedUrl || item.error) continue;
+    signedAvatarCache.set(item.path, { url: item.signedUrl, expiresAt });
+    for (const value of toSign.get(item.path) ?? []) result.set(value, item.signedUrl);
+  }
+  return result;
 }
 
 /** Nom affichable d'un profil, avec repli sur l'email puis l'identifiant. */

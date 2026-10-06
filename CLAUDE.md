@@ -291,6 +291,23 @@ They are now one function.
 - **Cost, accepted**: one redirect per image, each re-running the admin check
   and a signing round-trip. Fine for a back-office, and it is the mechanism
   already used for identity documents — but not a path for a public page.
+- **Except on `/admin/utilisateurs` (Oct 2026)**, where 25 rows meant 25 of
+  those detours per load. `signAvatarUrls()` (`lib/queries/profiles.ts`) signs
+  the whole page in **one** `createSignedUrls` call and the `<img>` points
+  straight at Storage; `accountAvatarUrl()` stays the fallback for whatever it
+  did not cover (external URL, sentinel, signing failure). ⚠️ The signed URLs
+  are **cached in memory** and reused while ≥ 15 min of their hour remain: a
+  signature carries a fresh token every call, and `AutoRefresh` replays the
+  page every 30 s, so without the cache every `src` would change and the
+  browser would re-download every thumbnail twice a minute. The export route
+  passes `signAvatars: false` — it shows no image. `fetchProfilesByIds(ids,
+  { signAvatars: true })` offers the same thing to any screen; `/admin/scout-days`
+  uses it. It is **off by default** on purpose: one extra round trip only pays
+  for itself on a list of thumbnails.
+- `/admin/scout-days` also ran its six reads one after another and filtered
+  `q` in JavaScript over the already-paginated page (the moderation bug again).
+  The reads now go out together in one `Promise.all`, and the search is an
+  `ilike` inside the query through `orLikeTerm()`.
 - ⚠️ **In the popup the image is a plain `<img>`, not `next/image`.** The
   source is a route that **redirects**; Next's optimizer would try to fetch the
   original itself, from a host not declared in `next.config.ts`, and 400 a
@@ -1508,8 +1525,14 @@ suppression en cascade des textes, suppression du dernier modele refusee.
   one read so the two can never disagree. The bell's own pill sums the task
   *counts*, not the number of task lines: several reports share one line
   ("2 signalements a instruire"), so counting lines froze the pill at 1 while
-  the nav pill beside "Moderation" — which does sum dossiers — climbed. There is
-  no read/unread state: a task leaves the list when it is handled. Do not point the bell back at
+  the nav pill beside "Moderation" — which does sum dossiers — climbed. A task
+  leaves the *list* only when it is handled; the bell's *pill*, though, goes out
+  when the bell is opened and relights only for dossiers arrived since
+  (`useQueueSeen()`, `components/admin/queue-seen.ts`, per-queue counts kept in
+  `localStorage` per account, lowered whenever a queue shrinks so a handled
+  dossier followed by a new one is not missed). Client request, Oct 2026: a pill
+  that never went out was no longer read. The rail badges are unaffected — they
+  still show the whole queue. Do not point the bell back at
   `notifications` without the client asking.
   The layout's read only *seeds* the display: `AdminQueueProvider`
   (`components/admin/queue-live.tsx`) wraps the shell and keeps it current

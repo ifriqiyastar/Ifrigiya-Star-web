@@ -82,7 +82,7 @@ export function LanguageMenu() {
         disabled={pending}
         aria-label={`${dict.language.choose} — ${LOCALE_LABEL[locale]}`}
         className={cn(
-          "flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-border bg-card px-2.5",
+          "flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-border bg-card px-2.5",
           "text-muted-foreground transition-colors hover:text-foreground",
           "hover:border-brand/50 aria-expanded:border-brand/50 aria-expanded:text-foreground",
           "disabled:pointer-events-none disabled:opacity-60",
@@ -111,7 +111,7 @@ export function LanguageMenu() {
                 key={value}
                 lang={value}
                 onClick={() => choose(value)}
-                className={cn("gap-3", active && "text-brand")}
+                className={cn("cursor-pointer gap-3", active && "text-brand")}
               >
                 <span className="flex min-w-0 flex-col">
                   {/* Le nom de la langue dans sa propre ecriture : c'est lui

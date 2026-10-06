@@ -24,6 +24,7 @@ import {
 
 import { BreakdownMeter, type BreakdownRow } from "@/components/admin/breakdown-meter";
 import { DashboardPeriod } from "@/components/admin/dashboard-period";
+import { LinkPendingIcon } from "@/components/admin/link-pending-icon";
 import { firstAccessiblePath } from "@/components/admin/nav-items";
 import { PageHeader } from "@/components/admin/page-header";
 import { Panel } from "@/components/admin/panel";
@@ -304,13 +305,16 @@ export default async function DashboardPage({ searchParams }: PageProps<"/[local
                     i18n.path(`/admin?periode=${period}${tab.value === "tous" ? "" : `&flux=${tab.value}`}`),
                   )}
                   className={cn(
-                    "micro-label rounded px-2 py-1 transition-colors",
+                    "micro-label inline-flex items-center gap-1 rounded px-2 py-1 transition-colors",
                     flux === tab.value
                       ? "bg-muted font-bold text-brand"
                       : "text-muted-foreground hover:text-foreground",
                   )}
                 >
                   {tab.label}
+                  {/* La page relit la base a chaque clic : sans indicateur,
+                      l'onglet semblait ne pas reagir jusqu'a la reponse. */}
+                  <LinkPendingIcon className="size-3" />
                 </Link>
               ))}
             </div>

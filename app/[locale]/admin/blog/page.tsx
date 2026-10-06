@@ -120,7 +120,6 @@ export default async function BlogPage({ searchParams }: PageProps<"/[locale]/ad
               options: months.map((mois) => ({ value: mois, label: formatMonth(`${mois}-01`) })),
             },
           ]}
-          instant
         />
 
         {error ? (
