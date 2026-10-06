@@ -18,7 +18,6 @@ import {
   UsersIcon,
   WalletIcon,
   PieChartIcon,
-  SlidersHorizontalIcon,
   TrendingUpIcon,
 } from "lucide-react";
 
@@ -180,14 +179,10 @@ export default async function DashboardPage({ searchParams }: PageProps<"/[local
         description={d.description}
         actions={
           <>
+            {/* La periode s'applique des la selection : le bouton « Filtrer »
+                qui suivait — un lien vers l'annuaire des utilisateurs — a ete
+                retire a la demande du client. */}
             <DashboardPeriod value={period} />
-            <Link
-              href={href("/admin/utilisateurs")}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-muted px-3 text-sm font-semibold hover:bg-accent"
-            >
-              <SlidersHorizontalIcon className="size-4" />
-              {d.filter}
-            </Link>
             {/* « Exporter » pointe sur l'export qui existe : le journal des
                 paiements en CSV. Pas d'export du tableau de bord lui-meme —
                 il n'y a pas de fichier derriere. */}
