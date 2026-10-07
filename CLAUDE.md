@@ -785,6 +785,71 @@ how long each has waited (amber past 4 h, red past 24 h), "Examiner" and
   skipped while it is not running: right after a reload the alert opens silent.
   "Son active / coupe" in the footer mutes it, per account in `localStorage`.
 
+### Le preavis minimum d'un Scout Day (Oct 2026)
+
+Demande client : un professionnel deposait un Scout Day pour le lendemain,
+l'evenement sortait de la file de validation quelques heures avant, et aucun
+joueur n'avait le temps de le voir. Le super administrateur fixe desormais un
+nombre de jours — « au moins 7 jours avant » — sur `/admin/scout-days`.
+
+| Fichier | Role |
+|---|---|
+| `supabase/migrations/202610070001_scout_day_min_notice.sql` | `platform_settings` + le trigger qui applique la regle |
+| `lib/platform-settings.ts` | les bornes (0–365), pures, lisibles d'un composant client |
+| `lib/queries/platform-settings.ts` · `lib/actions/platform-settings.ts` | lecture toleree, ecriture gardee |
+| `components/admin/scout-day-notice-form.tsx` | le champ, sur l'ecran des Scout Days |
+
+- ⚠️⚠️ **La regle est un trigger *supplementaire*, pas une retouche de
+  `enforce_scout_day_validation()`** (migration mobile 0040). Reecrire une
+  fonction du depot mobile depuis ici la perdrait en silence le jour ou 0040
+  est rejoue.
+- ⚠️⚠️ **Le nom du trigger est l'ordre d'execution.** Postgres classe les
+  triggers d'un meme evenement par ordre alphabetique, et c'est
+  `trg_enforce_scout_day_validation` qui bascule le brouillon d'un organisateur
+  en `en_attente_validation` (la soumission est automatique depuis 0040, il n'y
+  a pas de bouton). Un trigger nomme `trg_check_...` serait passe **avant**
+  cette bascule et n'aurait vu qu'un brouillon : la regle n'aurait filtre
+  personne. `trg_scout_day_min_notice` trie apres, donc lit le statut bascule.
+- ⚠️ **L'administration est exempte, et c'est la voie de derogation.** La regle
+  ne se declenche que pour `organizer_id = auth.uid()`. Sinon un evenement
+  soumis dix jours a l'avance et valide la veille serait refuse **au moment de
+  la validation** : le super administrateur se verrait interdire de publier ce
+  qu'il vient d'accepter.
+- ⚠️ **Elle ne mord que sur un geste qui la concerne** : entrer dans la file,
+  ou deplacer la date. Corriger le titre d'un evenement imminent deja soumis
+  reste possible — sans quoi un organisateur pris par la regle ne pourrait
+  plus rien corriger du tout.
+- ⚠️ **La lecture du reglage est ouverte a tout compte authentifie, et c'est le
+  point.** Le professionnel est l'assujetti : sans pouvoir lire la valeur,
+  l'application mobile ne peut ni grisier les dates interdites ni expliquer le
+  refus, et il decouvre la contrainte par une erreur. L'ecriture, elle, demande
+  `is_super_admin()` cote Postgres **et** `events.validate` cote action — les
+  deux gardes repondent pareil, comme pour « Valider / Publier ».
+- ⚠️ **`.select("id")` apres l'ecriture, encore.** Mesure sur un Postgres
+  jetable : un `update` par un compte non super administrateur **reussit sans
+  rien changer** (la RLS filtre la ligne). L'upsert, lui, leve bien `42501` —
+  c'est la clause `with check` de la policy d'insertion qui parle en premier —
+  et l'action nomme alors le role manquant plutot que de laisser
+  `describeError()` parler d'une policy absente.
+- Le defaut est **7 jours**, applique des que la migration tourne. Le reglage
+  est visible en haut de `/admin/scout-days`, jamais une regle muette ; 0
+  la desactive.
+- **Ce que ce depot ne peut pas faire** : l'application mobile affiche le refus
+  tel que Postgres le redige (message accentue, `hint = 'scout_day_min_notice'`,
+  meme convention que `past_event_date`). Griser les dates interdites dans son
+  formulaire demande une passe dans `~/ifriqiyastar`, qui lit desormais
+  `platform_settings.scout_day_min_notice_days`.
+
+Verifie sur un Postgres jetable (fixture reproduisant 0028/0040), migration
+rejouee deux fois : 23 assertions — refus a J+1 et J+6, acceptation a J+7
+(borne exacte), exemption de l'administration a la creation et a la
+publication, renommage d'un evenement imminent accepte, redatation vers une
+date proche refusee, correction d'un brouillon refuse re-soumise et verifiee,
+preavis a 0 qui laisse tout passer, preavis a 2 qui refuse J+1 et accepte J+2,
+`past_event_date` toujours actif, borne >365 refusee par la contrainte, et
+l'ecriture du reglage refusee au professionnel — y compris le temoin du
+« succes a zero ligne » cite plus haut.
+
 ### An administrator's own profile — `/admin/profil` (Oct 2026)
 
 Reached from the rail's account menu ("Mon profil"), open to every admin with

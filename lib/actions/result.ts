@@ -14,7 +14,8 @@ export type DbError = {
 };
 
 /**
- * `hint` poses par les triggers du schema (migrations 0028 et 0040).
+ * `hint` poses par les triggers du schema (migrations mobiles 0028 et 0040,
+ * et 202610070001 de ce depot pour le preavis minimum).
  *
  * Le message qui les accompagne est redige **en francais dans la base**, donc
  * intraduisible depuis ici. Ces trois-la sont connus et figes, on peut donc
@@ -27,6 +28,8 @@ const BUSINESS_RULE_EN: Record<string, string> = {
     "Only a super administrator can publish a Scout Day.",
   validation_reason_required:
     "A reason is required to send a Scout Day back to the organiser.",
+  scout_day_min_notice:
+    "This Scout Day is too close: it must be submitted a minimum number of days before its date.",
 };
 
 /**

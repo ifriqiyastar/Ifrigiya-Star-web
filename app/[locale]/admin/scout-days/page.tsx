@@ -6,6 +6,7 @@ import {
   CheckIcon,
   ClockIcon,
   ListChecksIcon,
+  HourglassIcon,
   ShieldCheckIcon,
   SlidersHorizontalIcon,
   Trash2Icon,
@@ -25,6 +26,7 @@ import { StatCard } from "@/components/admin/stat-card";
 import { StatusPill } from "@/components/admin/status-pill";
 import { ScoutDayCalendar, type CalendarEvent } from "@/components/admin/scout-day-calendar";
 import { ScoutDayDialog } from "@/components/admin/scout-day-dialog";
+import { ScoutDayNoticeForm } from "@/components/admin/scout-day-notice-form";
 import { UserCell } from "@/components/admin/user-cell";
 import {
   Table,
@@ -40,11 +42,13 @@ import {
   setScoutDayStatus,
   validateScoutDay,
 } from "@/lib/actions/scout-days";
+import { setScoutDayMinNotice } from "@/lib/actions/platform-settings";
 
 import { SCOUT_DAY_STATUS } from "@/lib/labels";
 import { orLikeTerm } from "@/lib/queries/notifications";
 import { displayName, fetchProfilesByIds } from "@/lib/queries/profiles";
 import { fetchCountries } from "@/lib/countries-api";
+import { fetchScoutDayNotice } from "@/lib/queries/platform-settings";
 import { createClient } from "@/lib/supabase/server";
 import { getAdminAccess, requirePermission } from "@/lib/auth";
 
@@ -121,6 +125,7 @@ export default async function ScoutDaysPage({ searchParams }: PageProps<"/[local
     { data: calendarRows },
     { data: organizers },
     countries,
+    notice,
     { data, error, count },
   ] = await Promise.all([
     // Valider est reserve au super administrateur (migration 0040). On cache
@@ -158,6 +163,10 @@ export default async function ScoutDaysPage({ searchParams }: PageProps<"/[local
     // Referentiel pays charge cote serveur : meme service que l'app mobile, et
     // pas de dependance au CORS d'un tiers depuis le navigateur.
     fetchCountries(),
+    // Le preavis minimum exige d'un organisateur. Lecture tolerante : tant que
+    // la migration 202610070001 n'est pas appliquee, elle rend « indisponible »
+    // plutot que d'emporter la page.
+    fetchScoutDayNotice(),
     query,
   ]);
   const canValidate = permissions.includes("events.validate");
@@ -350,6 +359,32 @@ export default async function ScoutDaysPage({ searchParams }: PageProps<"/[local
           </Table>
         </Panel>
       ) : null}
+
+      {/* Le preavis minimum (demande client du 2026-10-07). Pose ici, sur
+          l'ecran des Scout Days, et non dans /admin/parametres : celui-la
+          porte les preferences de la session (la langue), pas les regles de
+          la plateforme — et c'est en lisant la file d'attente qu'on se rend
+          compte qu'un evenement arrive trop tard. */}
+      <Panel>
+        <PanelHeader
+          icon={HourglassIcon}
+          title={i18n.t("Delai minimum avant un evenement")}
+          description={i18n.t("Un professionnel ne peut pas deposer un Scout Day dont la date tombe dans ce delai. La regle est appliquee par la base de donnees, donc depuis l'application mobile aussi. L'administration en est exempte : un evenement cree ou publie depuis cet ecran reste possible a tout moment, c'est la voie de derogation.")}
+        />
+        {!notice.available ? (
+          <p className="px-4 py-5 text-xs text-muted-foreground sm:px-5">
+            {i18n.t("Reglage indisponible sur ce projet : aucun preavis n'est exige des organisateurs tant que la migration 202610070001_scout_day_min_notice.sql n'a pas ete appliquee.")}
+          </p>
+        ) : canValidate ? (
+          <ScoutDayNoticeForm days={notice.days} action={setScoutDayMinNotice} />
+        ) : (
+          <p className="px-4 py-5 text-xs text-muted-foreground sm:px-5">
+            {notice.days > 0
+              ? i18n.t("Preavis en vigueur : {days} jour(s). Seul un super administrateur peut le changer.", { days: notice.days })
+              : i18n.t("Aucun preavis n'est exige aujourd'hui. Seul un super administrateur peut en poser un.")}
+          </p>
+        )}
+      </Panel>
 
       <ScoutDayCalendar
         events={(calendarRows ?? []) as CalendarEvent[]}
@@ -549,6 +584,11 @@ export default async function ScoutDaysPage({ searchParams }: PageProps<"/[local
             icon: XIcon,
             title: i18n.t("Un refus est toujours motive"),
             body: i18n.t("Refuser renvoie l'evenement en brouillon chez son organisateur et exige un motif, qu'il recoit tel quel en notification. Il revient dans la file des qu'il enregistre une correction."),
+          },
+          {
+            icon: HourglassIcon,
+            title: i18n.t("Le preavis s'impose a l'organisateur, pas a l'administration"),
+            body: i18n.t("Le delai minimum est verifie par la base de donnees au moment ou un professionnel depose son evenement ou en deplace la date. Corriger le titre d'un evenement deja soumis reste possible, et l'administration peut creer ou publier un evenement imminent — sans quoi plus personne ne pourrait rattraper un cas urgent."),
           },
           {
             icon: SlidersHorizontalIcon,
