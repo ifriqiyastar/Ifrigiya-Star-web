@@ -140,27 +140,86 @@ export async function ValidationMetrics() {
 }
 
 /**
- * La barre de recherche, UNE pour les quatre ecrans.
+ * Les etats qu'une file de validation peut lister.
+ *
+ * ⚠️ `pending` porte la valeur attendue **par la table** : les deux tables de
+ * profil disent `en_attente_validation` (enum `player_profile_status`), les
+ * deux tables de pieces disent `en_attente`. Les confondre rendait une file
+ * vide sans erreur — PostgREST n'a rien a redire a un statut qui n'existe
+ * pas, il ne trouve simplement aucune ligne.
+ */
+export type ValidationScope = "profile" | "document";
+
+export const VALIDATION_PENDING = {
+  profile: "en_attente_validation",
+  document: "en_attente",
+} as const;
+
+/**
+ * L'etat demande, ramene a une valeur que la table connait. Tout le reste —
+ * y compris une valeur inventee dans l'URL — retombe sur « en attente », qui
+ * reste l'etat par defaut de ces quatre ecrans : ce sont des files de travail,
+ * elles s'ouvrent sur ce qui attend.
+ */
+export function validationStatus(scope: ValidationScope, etat?: string) {
+  const allowed: readonly string[] =
+    scope === "profile"
+      ? ["en_attente_validation", "valide", "refuse", "incomplet", "suspendu"]
+      : ["en_attente", "valide", "refuse"];
+  return etat && allowed.includes(etat) ? etat : VALIDATION_PENDING[scope];
+}
+
+/**
+ * La barre de recherche et le filtre d'etat, UNE pour les quatre ecrans.
  *
  * L'etat vit dans l'URL, la page reste un Server Component, et filtrer remet
  * la pagination a zero puisque `page` n'est pas un champ du formulaire. Plus
  * de champ cache `vue` : chaque file est une route, le formulaire navigue sur
  * son propre chemin. `AutoFilterForm` applique la recherche apres la frappe —
  * il fallait cliquer « Appliquer ».
+ *
+ * ⚠️⚠️ **LE FILTRE D'ETAT MANQUAIT, ET AVEC LUI TOUT L'HISTORIQUE.** Les quatre
+ * ecrans posaient `status = en_attente…` en dur : une fois le dossier tranche,
+ * il sortait de l'ecran et **plus rien dans le back-office ne le montrait** —
+ * ni pour verifier une decision, ni pour revenir dessus, ni pour repondre a
+ * quelqu'un qui conteste. Signale par le client. Meme correction que le filtre
+ * « Validee » de la moderation, et meme regle : l'ecran s'ouvre toujours sur
+ * ce qui attend, le reste se demande.
  */
 export async function ValidationFilter({
   search,
   path,
+  scope,
+  etat,
 }: {
   search?: string;
   /** Le chemin de la file courante, deja prefixe de la langue. */
   path: string;
+  /** Quelle famille de statuts proposer — profil ou piece. */
+  scope: ValidationScope;
+  etat?: string;
 }) {
   const i18n = await getAdminI18n();
 
+  const options =
+    scope === "profile"
+      ? [
+          { value: "en_attente_validation", label: i18n.t("En attente de validation") },
+          { value: "valide", label: i18n.t("Valides") },
+          { value: "refuse", label: i18n.t("Refuses") },
+          { value: "incomplet", label: i18n.t("Incomplets") },
+          { value: "suspendu", label: i18n.t("Suspendus") },
+        ]
+      : [
+          { value: "en_attente", label: i18n.t("En attente de validation") },
+          { value: "valide", label: i18n.t("Valides") },
+          { value: "refuse", label: i18n.t("Refuses") },
+        ];
+  const current = validationStatus(scope, etat);
+
   return (
     <AutoFilterForm className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-2.5">
-      <div className="flex min-w-72 flex-1 items-center gap-2 rounded-lg bg-background px-3 py-1.5">
+      <div className="flex min-w-60 flex-1 items-center gap-2 rounded-lg bg-background px-3 py-1.5">
         <FilterSearchIcon icon={<SearchIcon className="size-4" />} />
         <input
           type="search"
@@ -180,6 +239,26 @@ export async function ValidationFilter({
           </Link>
         ) : null}
       </div>
+      {/* `min-w-0` des deux cotes : sans lui le libelle `whitespace-nowrap` et
+          la largeur intrinseque du `<select>` se disputent une piste qui, elle,
+          accepte de retrecir — et c'est le `<select>` qui perd, jusqu'a 21 px.
+          Defaut deja paye sur le bandeau de la moderation. */}
+      <label className="flex min-w-0 items-center gap-2 rounded-lg bg-background px-3 py-1.5">
+        <span className="micro-label shrink-0 whitespace-nowrap text-muted-foreground">
+          {i18n.t("Etat")} :
+        </span>
+        <select
+          name="etat"
+          defaultValue={current}
+          className="w-full min-w-0 cursor-pointer bg-transparent text-xs font-semibold outline-none"
+        >
+          {options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </label>
       <span className="micro-label text-muted-foreground">
         {i18n.t("Trie par : plus recent d'abord")}</span>
     </AutoFilterForm>

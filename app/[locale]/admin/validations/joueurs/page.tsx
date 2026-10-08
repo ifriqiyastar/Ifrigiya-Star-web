@@ -21,7 +21,7 @@ import { ReasonDialog } from "@/components/admin/reason-dialog";
 import { StatusPill } from "@/components/admin/status-pill";
 import { UserCell } from "@/components/admin/user-cell";
 import { PlayerDossier } from "@/components/admin/validation-dossier";
-import { QueueError, ValidationFilter, ValidationMetrics, ValidationNotes } from "@/components/admin/validations/pieces";
+import { QueueError, ValidationFilter, ValidationMetrics, ValidationNotes, validationStatus } from "@/components/admin/validations/pieces";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { bulkValidatePlayers, setPlayerStatus } from "@/lib/actions/users";
 import { requirePermission } from "@/lib/auth";
@@ -49,6 +49,12 @@ export default async function ValidationsPlayersPage({
   const selected = typeof resolved.dossier === "string" ? resolved.dossier : undefined;
   const search =
     typeof resolved.q === "string" && resolved.q.trim() ? resolved.q.trim() : undefined;
+  // L'etat demande, ramene a une valeur que la table connait — « en attente »
+  // par defaut : c'est une file de travail, elle s'ouvre sur ce qui attend.
+  const etat = validationStatus(
+    "profile",
+    typeof resolved.etat === "string" ? resolved.etat : undefined,
+  );
   const path = i18n.path("/admin/validations/joueurs");
 
   return (
@@ -59,14 +65,14 @@ export default async function ValidationsPlayersPage({
           { label: i18n.t("Profils joueurs") },
         ]}
         title={i18n.t("Profils joueurs a valider")}
-        description={i18n.t("Les comptes joueurs en attente, du plus recent au plus ancien. Valider debloque l'acces a l'application : c'est le statut du profil qui l'ouvre, pas celui du document d'identite.")}
+        description={i18n.t("Les comptes joueurs, du plus recent au plus ancien — en attente par defaut, les dossiers deja tranches se demandent dans le bandeau. Valider debloque l'acces a l'application : c'est le statut du profil qui l'ouvre, pas celui du document d'identite.")}
       />
 
       <ValidationMetrics />
 
-      <ValidationFilter search={search} path={path} />
+      <ValidationFilter search={search} path={path} scope="profile" etat={etat} />
 
-      <PlayersQueue page={page} selected={selected} search={search} />
+      <PlayersQueue page={page} selected={selected} search={search} etat={etat} />
 
       <ValidationNotes />
     </>
@@ -77,10 +83,13 @@ async function PlayersQueue({
   page,
   selected,
   search,
+  etat,
 }: {
   page: number;
   selected?: string;
   search?: string;
+  /** Statut demande, deja valide par `validationStatus()`. */
+  etat: string;
 }) {
   const i18n = await getAdminI18n();
 
@@ -94,7 +103,7 @@ async function PlayersQueue({
       "id, first_name, last_name, birth_date, nationality, country, city, main_position, secondary_position, foot_preference, current_club, is_free_agent, height_cm, weight_kg, level, about, is_visible, status, status_reason, created_at, updated_at",
       { count: "exact" },
     )
-    .eq("status", "en_attente_validation")
+    .eq("status", etat)
     .order("updated_at", { ascending: false })
     .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
 
@@ -205,11 +214,20 @@ async function PlayersQueue({
             {!rows.length && !error ? (
               <EmptyState
                 icon={UserCheckIcon}
-                title={i18n.t("Aucun profil joueur en attente")}
+                /* ⚠️ Le vide doit nommer le filtre qui le produit : « aucun
+                   profil en attente » sur une file reglee sur « Valides »
+                   ferait croire que rien n'a jamais ete valide. */
+                title={
+                  etat === "en_attente_validation"
+                    ? i18n.t("Aucun profil joueur en attente")
+                    : i18n.t("Aucun dossier dans cet etat")
+                }
                 description={
                   search
                     ? i18n.t("Aucun dossier ne correspond a ce filtre.")
-                    : i18n.t("Les nouveaux dossiers apparaitront ici des qu'un joueur aura termine son etape KYC.")
+                    : etat === "en_attente_validation"
+                      ? i18n.t("Les nouveaux dossiers apparaitront ici des qu'un joueur aura termine son etape KYC.")
+                      : i18n.t("Changez l'etat demande dans le bandeau ci-dessus pour retrouver les dossiers deja tranches.")
                 }
               />
             ) : (
@@ -321,11 +339,22 @@ async function PlayersQueue({
                             >
                               <EyeIcon className="size-4" />
                             </Link>
-                            <ActionButton
-                              action={setPlayerStatus.bind(null, row.id, "valide", undefined)}
-                            >
-                              <CheckIcon />
-                              {i18n.t("Valider")}</ActionButton>
+                            {/* ⚠️ Un geste qui ne peut rien changer n'est pas
+                                propose : depuis que les etats deja tranches
+                                sont consultables, « Valider » apparaissait sur
+                                un dossier deja valide. Le chemin inverse, lui,
+                                reste ouvert — reprendre un refus est
+                                precisement ce pour quoi on vient lire
+                                l'historique. */}
+                            {row.status === "valide" ? null : (
+                              <ActionButton
+                                action={setPlayerStatus.bind(null, row.id, "valide", undefined)}
+                              >
+                                <CheckIcon />
+                                {i18n.t("Valider")}
+                              </ActionButton>
+                            )}
+                            {row.status === "refuse" ? null : (
                             <ReasonDialog
                               action={setPlayerStatus.bind(null, row.id, "refuse")}
                               trigger={
@@ -343,6 +372,7 @@ async function PlayersQueue({
                               placeholder={i18n.t("Piece d'identite illisible, informations incoherentes…")}
                               submitLabel={i18n.t("Refuser le profil")}
                             />
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -354,7 +384,7 @@ async function PlayersQueue({
           </QueueBulkForm>
           <Pagination
             basePath={i18n.path("/admin/validations/joueurs")}
-            params={{ vue: "joueurs", q: search, page: String(page) }}
+            params={{ vue: "joueurs", q: search, etat, page: String(page) }}
             page={page}
             pageSize={PAGE_SIZE}
             total={count ?? 0}

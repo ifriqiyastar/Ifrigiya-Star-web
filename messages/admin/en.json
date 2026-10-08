@@ -1366,7 +1366,6 @@
     "Profils joueurs a valider": "Player profiles awaiting approval",
     "Les comptes joueurs en attente, du plus ancien au plus recent. Valider debloque l'acces a l'application : c'est le statut du profil qui l'ouvre, pas celui du document d'identite.": "Player accounts awaiting a decision, oldest first. Approving unlocks access to the app: it is the profile status that opens it, not the identity document.",
     "Comptes professionnels a valider": "Professional accounts awaiting approval",
-    "Les clubs, academies, agents et recruteurs en attente. Un professionnel valide peut organiser des Scout Days et signer des evaluations.": "Clubs, academies, agents and recruiters awaiting a decision. An approved professional can run Scout Days and sign evaluations.",
     "Les pieces deposees a l'appui d'un compte professionnel. Les accepter ne valide pas le compte : les deux gestes sont volontairement separes.": "Documents filed in support of a professional account. Accepting them does not approve the account: the two gestures are deliberately separate.",
     "Pieces d'identite a controler": "Identity documents to review",
     "Le controle KYC, distinct de la validation du compte. Accepter une piece ne donne pas l'acces a l'application, et la refuser demande un motif transmis a l'interesse.": "The KYC review, separate from approving the account. Accepting a document does not grant access to the app, and refusing one requires a reason, which is sent to the person.",
@@ -1580,7 +1579,6 @@
     "Vide = sans limite": "Empty = unlimited",
     "Son active": "Sound on",
     "Son coupe": "Sound off",
-    "Les comptes joueurs en attente, du plus recent au plus ancien. Valider debloque l'acces a l'application : c'est le statut du profil qui l'ouvre, pas celui du document d'identite.": "Player accounts awaiting a decision, newest first. Approving unlocks access to the app: it is the profile status that opens it, not the identity document.",
     "Un moderateur a propose un retrait motive et la cible est deja hors du flux public. Confirmer applique le retrait ; refuser la remet en ligne et clot le signalement. Le plus recent passe en premier.": "A moderator has proposed a motivated removal and the target is already out of the public feed. Confirming applies the removal; refusing puts it back online and closes the report. Newest first.",
     "Trie par : plus recent d'abord": "Sorted by: newest first",
     "La validation a echoue. Reessayez depuis la fiche du Scout Day.": "Validation failed. Try again from the Scout Day page.",
@@ -2030,7 +2028,6 @@
     "Commentaires a valider ({0})": "Comments awaiting approval ({0})",
     "Un commentaire n'est visible que de son auteur tant qu'il n'est pas valide, et l'auteur de la publication n'en est prevenu qu'a ce moment-la.": "A comment is visible to its author only until it is approved, and the post's author is notified only at that point.",
     "Seul un super administrateur peut valider ou refuser un commentaire.": "Only a super administrator can approve or reject a comment.",
-    "Voir la publication": "View the post",
     "Refuse": "Rejected",
     "Indiquez le motif du refus : l'auteur le recevra tel quel.": "State the reason for rejection: the author receives it verbatim.",
     "Validation des contenus indisponible : la migration 0089_content_moderation.sql n'est pas appliquee sur ce projet.": "Content approval unavailable: migration 0089_content_moderation.sql has not been applied to this project.",
@@ -2040,8 +2037,6 @@
     "Commentaire valide : il est desormais visible.": "Comment approved: it is now visible.",
     "Contenu refuse : l'auteur est prevenu du motif.": "Content rejected: the author has been told why.",
     "Examiner": "Review",
-    "Voir le fil": "View the thread",
-    "En réponse à": "Replying to",
     "(commentaire introuvable)": "(comment not found)",
     "Indiquez un nombre entier de jours, entre {min} et {max}.": "Enter a whole number of days, between {min} and {max}.",
     "Reglage indisponible : appliquez la migration 202610070001_scout_day_min_notice.sql. Sans elle, aucun preavis n'est exige des organisateurs.": "Setting unavailable: apply migration 202610070001_scout_day_min_notice.sql. Without it, no notice period is required from organisers.",
@@ -2060,7 +2055,17 @@
     "Aucun preavis n'est exige aujourd'hui. Seul un super administrateur peut en poser un.": "No notice period is required today. Only a super administrator can set one.",
     "Le preavis s'impose a l'organisateur, pas a l'administration": "The notice period binds the organiser, not the administration",
     "Le delai minimum est verifie par la base de donnees au moment ou un professionnel depose son evenement ou en deplace la date. Corriger le titre d'un evenement deja soumis reste possible, et l'administration peut creer ou publier un evenement imminent — sans quoi plus personne ne pourrait rattraper un cas urgent.": "The minimum lead time is checked by the database when a professional submits an event or moves its date. Fixing the title of an already-submitted event stays possible, and the administration can create or publish an imminent event — otherwise nobody could ever handle an urgent case.",
-    "Reglage refuse par la base de donnees : il est reserve au super administrateur. Rien n'a ete enregistre.": "Setting refused by the database: it is reserved for the super administrator. Nothing was saved."
+    "Reglage refuse par la base de donnees : il est reserve au super administrateur. Rien n'a ete enregistre.": "Setting refused by the database: it is reserved for the super administrator. Nothing was saved.",
+    "Tout le fil, du plus recent au plus ancien. La ligne dit qui a publie, quand, dans quel etat et ce qui la met en cause ; « Examiner » ouvre la publication entiere et porte les decisions.": "The whole feed, newest first. A row says who posted, when, in what state and what puts it in question; “Review” opens the full post and carries the decisions.",
+    "Tout le fil, du plus recent au plus ancien. La ligne dit qui a commente, quand, dans quel etat et ce qui le met en cause ; « Examiner » ouvre le commentaire avec la publication qu'il vise, le fil complet et les decisions.": "The whole feed, newest first. A row says who commented, when, in what state and what puts it in question; “Review” opens the comment with the post it sits under, the full thread and the decisions.",
+    "Valides": "Approved",
+    "Refuses": "Rejected",
+    "Incomplets": "Incomplete",
+    "Suspendus": "Suspended",
+    "Aucun dossier dans cet etat": "No file in this state",
+    "Changez l'etat demande dans le bandeau ci-dessus pour retrouver les dossiers deja tranches.": "Change the requested state in the bar above to find files that have already been decided.",
+    "Les comptes joueurs, du plus recent au plus ancien — en attente par defaut, les dossiers deja tranches se demandent dans le bandeau. Valider debloque l'acces a l'application : c'est le statut du profil qui l'ouvre, pas celui du document d'identite.": "Player accounts, newest first — pending by default; decided files can be requested in the bar. Approving unlocks access to the app: it is the profile status that opens it, not the identity document's.",
+    "Les clubs, academies, agents et recruteurs — en attente par defaut, les dossiers deja tranches se demandent dans le bandeau. Un professionnel valide peut organiser des Scout Days et signer des evaluations.": "Clubs, academies, agents and recruiters — pending by default; decided files can be requested in the bar. An approved professional can organise Scout Days and sign evaluations."
   },
   "validations": {
     "metaTitle": "Validations",
@@ -2304,6 +2309,23 @@
     "preview": "Preview",
     "thread": "Discussion thread",
     "threadFocus": "This comment",
-    "threadPending": "Pending"
+    "threadPending": "Pending",
+    "content": "Content",
+    "mediaLabel": "Media",
+    "openFull": "View full size",
+    "publishedAt": "Submitted on",
+    "reference": "Reference",
+    "mediaKind": {
+      "aucun": "None",
+      "photo": "Photo",
+      "video": "Video",
+      "lien": "Link"
+    },
+    "titleComment": "Comment preview",
+    "descriptionComment": "The comment, the post it sits under and the full thread. The validation and moderation actions apply to the comment.",
+    "commentLabel": "Comment",
+    "replyTo": "In reply to",
+    "underPost": "Under {nom}'s post",
+    "postMissing": "Post not found — removed, or out of reach."
   }
 }

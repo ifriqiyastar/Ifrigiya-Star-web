@@ -1366,7 +1366,6 @@
     "Profils joueurs a valider": "Profils joueurs a valider",
     "Les comptes joueurs en attente, du plus ancien au plus recent. Valider debloque l'acces a l'application : c'est le statut du profil qui l'ouvre, pas celui du document d'identite.": "Les comptes joueurs en attente, du plus ancien au plus recent. Valider debloque l'acces a l'application : c'est le statut du profil qui l'ouvre, pas celui du document d'identite.",
     "Comptes professionnels a valider": "Comptes professionnels a valider",
-    "Les clubs, academies, agents et recruteurs en attente. Un professionnel valide peut organiser des Scout Days et signer des evaluations.": "Les clubs, academies, agents et recruteurs en attente. Un professionnel valide peut organiser des Scout Days et signer des evaluations.",
     "Les pieces deposees a l'appui d'un compte professionnel. Les accepter ne valide pas le compte : les deux gestes sont volontairement separes.": "Les pieces deposees a l'appui d'un compte professionnel. Les accepter ne valide pas le compte : les deux gestes sont volontairement separes.",
     "Pieces d'identite a controler": "Pieces d'identite a controler",
     "Le controle KYC, distinct de la validation du compte. Accepter une piece ne donne pas l'acces a l'application, et la refuser demande un motif transmis a l'interesse.": "Le controle KYC, distinct de la validation du compte. Accepter une piece ne donne pas l'acces a l'application, et la refuser demande un motif transmis a l'interesse.",
@@ -1580,7 +1579,6 @@
     "Vide = sans limite": "Vide = sans limite",
     "Son active": "Son active",
     "Son coupe": "Son coupe",
-    "Les comptes joueurs en attente, du plus recent au plus ancien. Valider debloque l'acces a l'application : c'est le statut du profil qui l'ouvre, pas celui du document d'identite.": "Les comptes joueurs en attente, du plus recent au plus ancien. Valider debloque l'acces a l'application : c'est le statut du profil qui l'ouvre, pas celui du document d'identite.",
     "Un moderateur a propose un retrait motive et la cible est deja hors du flux public. Confirmer applique le retrait ; refuser la remet en ligne et clot le signalement. Le plus recent passe en premier.": "Un moderateur a propose un retrait motive et la cible est deja hors du flux public. Confirmer applique le retrait ; refuser la remet en ligne et clot le signalement. Le plus recent passe en premier.",
     "Trie par : plus recent d'abord": "Trie par : plus recent d'abord",
     "La validation a echoue. Reessayez depuis la fiche du Scout Day.": "La validation a echoue. Reessayez depuis la fiche du Scout Day.",
@@ -2030,7 +2028,6 @@
     "Commentaires a valider ({0})": "Commentaires a valider ({0})",
     "Un commentaire n'est visible que de son auteur tant qu'il n'est pas valide, et l'auteur de la publication n'en est prevenu qu'a ce moment-la.": "Un commentaire n'est visible que de son auteur tant qu'il n'est pas valide, et l'auteur de la publication n'en est prevenu qu'a ce moment-la.",
     "Seul un super administrateur peut valider ou refuser un commentaire.": "Seul un super administrateur peut valider ou refuser un commentaire.",
-    "Voir la publication": "Voir la publication",
     "Refuse": "Refuse",
     "Indiquez le motif du refus : l'auteur le recevra tel quel.": "Indiquez le motif du refus : l'auteur le recevra tel quel.",
     "Validation des contenus indisponible : la migration 0089_content_moderation.sql n'est pas appliquee sur ce projet.": "Validation des contenus indisponible : la migration 0089_content_moderation.sql n'est pas appliquee sur ce projet.",
@@ -2040,8 +2037,6 @@
     "Commentaire valide : il est desormais visible.": "Commentaire valide : il est desormais visible.",
     "Contenu refuse : l'auteur est prevenu du motif.": "Contenu refuse : l'auteur est prevenu du motif.",
     "Examiner": "Examiner",
-    "Voir le fil": "Voir le fil",
-    "En réponse à": "En réponse à",
     "(commentaire introuvable)": "(commentaire introuvable)",
     "Indiquez un nombre entier de jours, entre {min} et {max}.": "Indiquez un nombre entier de jours, entre {min} et {max}.",
     "Reglage indisponible : appliquez la migration 202610070001_scout_day_min_notice.sql. Sans elle, aucun preavis n'est exige des organisateurs.": "Reglage indisponible : appliquez la migration 202610070001_scout_day_min_notice.sql. Sans elle, aucun preavis n'est exige des organisateurs.",
@@ -2060,7 +2055,17 @@
     "Aucun preavis n'est exige aujourd'hui. Seul un super administrateur peut en poser un.": "Aucun preavis n'est exige aujourd'hui. Seul un super administrateur peut en poser un.",
     "Le preavis s'impose a l'organisateur, pas a l'administration": "Le preavis s'impose a l'organisateur, pas a l'administration",
     "Le delai minimum est verifie par la base de donnees au moment ou un professionnel depose son evenement ou en deplace la date. Corriger le titre d'un evenement deja soumis reste possible, et l'administration peut creer ou publier un evenement imminent — sans quoi plus personne ne pourrait rattraper un cas urgent.": "Le delai minimum est verifie par la base de donnees au moment ou un professionnel depose son evenement ou en deplace la date. Corriger le titre d'un evenement deja soumis reste possible, et l'administration peut creer ou publier un evenement imminent — sans quoi plus personne ne pourrait rattraper un cas urgent.",
-    "Reglage refuse par la base de donnees : il est reserve au super administrateur. Rien n'a ete enregistre.": "Reglage refuse par la base de donnees : il est reserve au super administrateur. Rien n'a ete enregistre."
+    "Reglage refuse par la base de donnees : il est reserve au super administrateur. Rien n'a ete enregistre.": "Reglage refuse par la base de donnees : il est reserve au super administrateur. Rien n'a ete enregistre.",
+    "Tout le fil, du plus recent au plus ancien. La ligne dit qui a publie, quand, dans quel etat et ce qui la met en cause ; « Examiner » ouvre la publication entiere et porte les decisions.": "Tout le fil, du plus recent au plus ancien. La ligne dit qui a publie, quand, dans quel etat et ce qui la met en cause ; « Examiner » ouvre la publication entiere et porte les decisions.",
+    "Tout le fil, du plus recent au plus ancien. La ligne dit qui a commente, quand, dans quel etat et ce qui le met en cause ; « Examiner » ouvre le commentaire avec la publication qu'il vise, le fil complet et les decisions.": "Tout le fil, du plus recent au plus ancien. La ligne dit qui a commente, quand, dans quel etat et ce qui le met en cause ; « Examiner » ouvre le commentaire avec la publication qu'il vise, le fil complet et les decisions.",
+    "Valides": "Valides",
+    "Refuses": "Refuses",
+    "Incomplets": "Incomplets",
+    "Suspendus": "Suspendus",
+    "Aucun dossier dans cet etat": "Aucun dossier dans cet etat",
+    "Changez l'etat demande dans le bandeau ci-dessus pour retrouver les dossiers deja tranches.": "Changez l'etat demande dans le bandeau ci-dessus pour retrouver les dossiers deja tranches.",
+    "Les comptes joueurs, du plus recent au plus ancien — en attente par defaut, les dossiers deja tranches se demandent dans le bandeau. Valider debloque l'acces a l'application : c'est le statut du profil qui l'ouvre, pas celui du document d'identite.": "Les comptes joueurs, du plus recent au plus ancien — en attente par defaut, les dossiers deja tranches se demandent dans le bandeau. Valider debloque l'acces a l'application : c'est le statut du profil qui l'ouvre, pas celui du document d'identite.",
+    "Les clubs, academies, agents et recruteurs — en attente par defaut, les dossiers deja tranches se demandent dans le bandeau. Un professionnel valide peut organiser des Scout Days et signer des evaluations.": "Les clubs, academies, agents et recruteurs — en attente par defaut, les dossiers deja tranches se demandent dans le bandeau. Un professionnel valide peut organiser des Scout Days et signer des evaluations."
   },
   "validations": {
     "metaTitle": "Validations",
@@ -2304,6 +2309,23 @@
     "preview": "Apercu",
     "thread": "Fil de discussion",
     "threadFocus": "Ce commentaire",
-    "threadPending": "En attente"
+    "threadPending": "En attente",
+    "content": "Contenu",
+    "mediaLabel": "Media",
+    "openFull": "Voir en grand",
+    "publishedAt": "Deposee le",
+    "reference": "Reference",
+    "mediaKind": {
+      "aucun": "Aucun",
+      "photo": "Photo",
+      "video": "Video",
+      "lien": "Lien"
+    },
+    "titleComment": "Apercu du commentaire",
+    "descriptionComment": "Le commentaire, la publication sous laquelle il vit et le fil complet. Les gestes de validation et de moderation portent sur le commentaire.",
+    "commentLabel": "Commentaire",
+    "replyTo": "En reponse a",
+    "underPost": "Sous la publication de {nom}",
+    "postMissing": "Publication introuvable — supprimee, ou hors de portee."
   }
 }

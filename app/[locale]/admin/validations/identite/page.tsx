@@ -16,7 +16,7 @@ import { ReasonDialog } from "@/components/admin/reason-dialog";
 import { StatusPill } from "@/components/admin/status-pill";
 import { UserCell } from "@/components/admin/user-cell";
 import { IdentityDossier } from "@/components/admin/validation-dossier";
-import { QueueError, ValidationFilter, ValidationMetrics, ValidationNotes } from "@/components/admin/validations/pieces";
+import { QueueError, ValidationFilter, ValidationMetrics, ValidationNotes, validationStatus } from "@/components/admin/validations/pieces";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { setIdentityStatus } from "@/lib/actions/users";
@@ -42,6 +42,12 @@ export default async function ValidationsIdentityPage({
   const page = Math.max(1, Number(resolved.page ?? 1) || 1);
   const search =
     typeof resolved.q === "string" && resolved.q.trim() ? resolved.q.trim() : undefined;
+  // L'etat demande, ramene a une valeur que la table connait — « en attente »
+  // par defaut : c'est une file de travail, elle s'ouvre sur ce qui attend.
+  const etat = validationStatus(
+    "document",
+    typeof resolved.etat === "string" ? resolved.etat : undefined,
+  );
   const path = i18n.path("/admin/validations/identite");
 
   return (
@@ -57,16 +63,16 @@ export default async function ValidationsIdentityPage({
 
       <ValidationMetrics />
 
-      <ValidationFilter search={search} path={path} />
+      <ValidationFilter search={search} path={path} scope="document" etat={etat} />
 
-      <IdentityQueue page={page} />
+      <IdentityQueue page={page} etat={etat} />
 
       <ValidationNotes />
     </>
   );
 }
 
-async function IdentityQueue({ page }: { page: number }) {
+async function IdentityQueue({ page, etat }: { page: number; etat: string }) {
   const i18n = await getAdminI18n();
 
   const supabase = await createClient();
@@ -76,7 +82,7 @@ async function IdentityQueue({ page }: { page: number }) {
       "id, player_id, document_type, storage_path, status, facial_check_provider, facial_check_passed, rejection_reason, created_at",
       { count: "exact" },
     )
-    .eq("status", "en_attente")
+    .eq("status", etat)
     .order("created_at", { ascending: false })
     .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
 
@@ -120,8 +126,16 @@ async function IdentityQueue({ page }: { page: number }) {
       {!rows.length && !error ? (
         <EmptyState
           icon={ShieldCheckIcon}
-          title={i18n.t("Aucune piece d'identite en attente")}
-          description={i18n.t("Les dossiers KYC deposes depuis l'application arriveront ici.")}
+          title={
+            etat === "en_attente"
+              ? i18n.t("Aucune piece d'identite en attente")
+              : i18n.t("Aucun dossier dans cet etat")
+          }
+          description={
+            etat === "en_attente"
+              ? i18n.t("Les dossiers KYC deposes depuis l'application arriveront ici.")
+              : i18n.t("Changez l'etat demande dans le bandeau ci-dessus pour retrouver les dossiers deja tranches.")
+          }
         />
       ) : (
         <Table>
@@ -179,9 +193,15 @@ async function IdentityQueue({ page }: { page: number }) {
                           guardian={guardianByPlayer.get(row.player_id)}
                         />
                       </DetailDialog>
-                      <ActionButton action={setIdentityStatus.bind(null, row.id, "valide", undefined)}>
-                        <CheckIcon />
-                        {i18n.t("Valider la piece")}</ActionButton>
+                      {/* Un geste qui ne peut rien changer n'est pas propose
+                          — voir la file des joueurs. */}
+                      {row.status === "valide" ? null : (
+                        <ActionButton action={setIdentityStatus.bind(null, row.id, "valide", undefined)}>
+                          <CheckIcon />
+                          {i18n.t("Valider la piece")}
+                        </ActionButton>
+                      )}
+                      {row.status === "refuse" ? null : (
                       <ReasonDialog
                         action={setIdentityStatus.bind(null, row.id, "refuse")}
                         trigger={
@@ -194,6 +214,7 @@ async function IdentityQueue({ page }: { page: number }) {
                         placeholder={i18n.t("Document expire, photo floue…")}
                         submitLabel={i18n.t("Refuser la piece")}
                       />
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -202,7 +223,7 @@ async function IdentityQueue({ page }: { page: number }) {
           </TableBody>
         </Table>
       )}
-      <Pagination basePath={i18n.path("/admin/validations/identite")} params={{ vue: "identite", page: String(page) }} page={page} pageSize={PAGE_SIZE} total={count ?? 0} />
+      <Pagination basePath={i18n.path("/admin/validations/identite")} params={{ vue: "identite", etat, page: String(page) }} page={page} pageSize={PAGE_SIZE} total={count ?? 0} />
     </Panel>
   );
 }

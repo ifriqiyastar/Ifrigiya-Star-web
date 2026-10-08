@@ -1,24 +1,17 @@
 import type { Metadata } from "next";
-import {
-  CheckIcon,
-  CornerDownRightIcon,
-  MessageSquareIcon,
-  ShieldCheckIcon,
-} from "lucide-react";
+import { EyeIcon, MessageSquareIcon, ShieldCheckIcon } from "lucide-react";
 
-import { ActionButton } from "@/components/admin/action-button";
 import { EmptyState } from "@/components/admin/empty-state";
-import { ContentWhy, ModerationFilters, RefuseContentDialog, mediaUrlOf, previewOf } from "@/components/admin/moderation/pieces";
+import { ContentWhy, ModerationFilters, commentPreviewOf, mediaUrlOf, previewOf, whyLines } from "@/components/admin/moderation/pieces";
 import { PageHeader } from "@/components/admin/page-header";
 import { Pagination } from "@/components/admin/pagination";
 import { Panel, PanelHeader } from "@/components/admin/panel";
 import { PostPreviewDialog } from "@/components/admin/post-preview-dialog";
 import { StatusPill } from "@/components/admin/status-pill";
 import { UserCell } from "@/components/admin/user-cell";
-import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { approveComment, approvePost, refuseComment, refusePost } from "@/lib/actions/content-validation";
-import { setCommentDeleted, setCommentHidden, setPostDeleted, setPostHidden } from "@/lib/actions/moderation";
+import { buttonVariants } from "@/components/ui/button";
+import { approveComment, refuseComment } from "@/lib/actions/content-validation";
+import { setCommentDeleted, setCommentHidden } from "@/lib/actions/moderation";
 import { getAdminAccess, requirePermission } from "@/lib/auth";
 import { CONTENT_MODERATION_STATUS } from "@/lib/labels";
 import { COMMENT_COLUMNS, PAGE_SIZE, POST_COLUMNS, THREAD_COLUMNS, fetchContentReports, fetchPendingContent, hasModerationColumns, likeTerm, selectWithModeration, str } from "@/lib/queries/moderation-content";
@@ -27,6 +20,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { ThreadEntry } from "@/components/admin/post-preview-dialog";
 import type { CommentRow, PostRow } from "@/lib/queries/moderation-content";
 import { getAdminI18n } from "@/lib/i18n/admin";
+import { cn } from "@/lib/utils";
 
 export async function generateMetadata(): Promise<Metadata> {
   const i18n = await getAdminI18n();
@@ -205,50 +199,109 @@ async function CommentsView({
     ]);
   };
 
+  // Ce qui met chaque commentaire en cause, resolu avant le rendu : la ligne
+  // le dessine et la popup le recoit, et deux calculs separes finiraient par
+  // ne plus dire la meme chose au meme endroit.
+  const why = new Map(
+    await Promise.all(
+      rows.map(
+        async (row) =>
+          [
+            row.id,
+            await whyLines({
+              report: reports.get(row.id),
+              hidden: row.is_hidden,
+              moderationStatus: row.moderation_status,
+              moderationReason: row.moderation_reason,
+              moderatedBy: row.moderated_by
+                ? displayName(profiles.get(row.moderated_by), undefined, i18n.locale)
+                : null,
+              moderatedAt: row.moderated_at,
+            }),
+          ] as const,
+      ),
+    ),
+  );
+
   /**
-   * Le declencheur « Voir la publication », ou rien.
+   * LE BOUTON QUI OUVRE LE COMMENTAIRE.
    *
-   * ⚠️ Rien, et pas un bouton inerte, quand la publication est introuvable :
-   * supprimee, ou filtree par la RLS. Un bouton qui n'ouvre rien fait douter
-   * de tout l'ecran — c'est la regle deja tenue pour les pastilles hors
-   * terrain du selecteur de postes cote mobile.
+   * ⚠️ C'est un `<button>` **du DOM**, pas le composant `Button` :
+   * `PostPreviewDialog` le clone pour y poser `data-slot` et Base UI le
+   * compose via `render`. Meme declencheur que sur les publications, pour que
+   * le meme geste porte le meme nom d'un ecran a l'autre.
    */
-  const parentTrigger = (comment: CommentRow, size: "xs" | "sm" = "xs") => {
-    const parent = parentById.get(comment.post_id);
-    if (!parent) return null;
-    const author = profiles.get(parent.author_id);
+  const trigger = (
+    <button type="button" className={cn(buttonVariants({ variant: "outline", size: "xs" }))}>
+      <EyeIcon />
+      {i18n.t("Examiner")}
+    </button>
+  );
+
+  /**
+   * La popup d'un commentaire : LUI est le sujet, la publication est le
+   * contexte.
+   *
+   * ⚠️⚠️ Jusqu'ici la popup ouverte depuis cet ecran portait les gestes **de
+   * la publication** — valider, masquer, supprimer agissaient sur le billet,
+   * pas sur le commentaire — et moderer le commentaire se faisait donc sur la
+   * ligne, c'est-a-dire sur un texte tronque, sans son fil, exactement ce que
+   * la popup existe pour eviter. Les quatre actions liees ci-dessous visent le
+   * commentaire.
+   *
+   * ⚠️ Elle s'ouvre **meme quand la publication est introuvable** (supprimee,
+   * ou filtree par la RLS) : auparavant le bouton disparaissait, ce qui
+   * rendait le commentaire totalement inmoderable. La popup dit alors que la
+   * publication manque — un dossier incomplet n'est pas un dossier absent.
+   */
+  const commentDialog = (row: CommentRow) => {
+    const author = profiles.get(row.author_id);
+    const parent = parentById.get(row.post_id);
+    const parentAuthor = parent ? profiles.get(parent.author_id) : undefined;
     return (
       <PostPreviewDialog
-        post={previewOf(
-          parent,
+        comment={commentPreviewOf(
+          row,
           author,
           displayName(author, undefined, i18n.locale),
-          mediaUrlOf(parent),
+          {
+            createdAtLabel: i18n.format.formatDateTime(row.created_at),
+            why: why.get(row.id),
+            replyTo: row.parent_comment_id
+              ? (parentCommentExcerpt(row.parent_comment_id) ??
+                i18n.t("(commentaire introuvable)"))
+              : null,
+          },
         )}
+        post={
+          parent
+            ? previewOf(
+                parent,
+                parentAuthor,
+                displayName(parentAuthor, undefined, i18n.locale),
+                mediaUrlOf(parent),
+              )
+            : undefined
+        }
         canValidate={canValidate && available}
         statusLabel={
-          available && parent.moderation_status
+          available && row.moderation_status
             ? {
-                label: i18n.labels.label(CONTENT_MODERATION_STATUS, parent.moderation_status),
-                tone: i18n.labels.entry(CONTENT_MODERATION_STATUS, parent.moderation_status)
+                label: i18n.labels.label(CONTENT_MODERATION_STATUS, row.moderation_status),
+                tone: i18n.labels.entry(CONTENT_MODERATION_STATUS, row.moderation_status)
                   .tone as "warning" | "success" | "danger",
               }
             : undefined
         }
-        onApprove={approvePost.bind(null, parent.id)}
-        onRefuse={refusePost.bind(null, parent.id)}
-        onToggleHidden={setPostHidden.bind(null, parent.id, !parent.is_hidden)}
-        onToggleDeleted={setPostDeleted.bind(null, parent.id, !parent.is_deleted)}
-        thread={threadOf(parent.id)}
-        // C'est ce commentaire-là qu'on modère : la popup le surligne dans le
-        // fil, sinon le modérateur doit le retrouver à la lecture.
-        focusCommentId={comment.id}
-        trigger={
-          <Button size={size} variant="outline">
-            <MessageSquareIcon />
-            {comment.parent_comment_id ? i18n.t("Voir le fil") : i18n.t("Voir la publication")}
-          </Button>
-        }
+        onApprove={approveComment.bind(null, row.id)}
+        onRefuse={refuseComment.bind(null, row.id)}
+        onToggleHidden={setCommentHidden.bind(null, row.id, !row.is_hidden)}
+        onToggleDeleted={setCommentDeleted.bind(null, row.id, !row.is_deleted)}
+        thread={parent ? threadOf(parent.id) : undefined}
+        // C'est ce commentaire-la qu'on modere : la popup le surligne dans le
+        // fil, sinon le moderateur doit le retrouver a la lecture.
+        focusCommentId={row.id}
+        trigger={trigger}
       />
     );
   };
@@ -270,7 +323,13 @@ async function CommentsView({
             {pending.map((row) => {
               const author = profiles.get(row.author_id);
               return (
-                <li key={row.id} className="space-y-3 px-4 py-4 sm:px-5">
+                <li key={row.id} className="px-4 py-3 sm:px-5">
+                  {/* Meme ligne que sur les publications : qui, quand, dans
+                      quel etat, et le bouton qui ouvre le dossier. Le texte du
+                      commentaire, la publication qu'il vise et le fil entier
+                      sont dans la popup — un commentaire se juge sur son
+                      contexte, et une file qui deroule chaque texte s'allonge a
+                      proportion de ce qui attend. */}
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <UserCell
                       name={displayName(author, undefined, i18n.locale)}
@@ -278,38 +337,15 @@ async function CommentsView({
                       avatarUrl={author?.avatar_url}
                       href={i18n.path(`/admin/utilisateurs/${row.author_id}`)}
                     />
-                    <StatusPill tone="warning">{i18n.t("En attente de validation")}</StatusPill>
-                  </div>
-
-                  {/* ⚠️ Le parent AVANT le texte, parce que c'est lui qui donne
-                      son sens au commentaire. Un modérateur qui lit « bien
-                      joué » sans savoir sous quoi ne peut pas trancher. */}
-                  {row.parent_comment_id ? (
-                    <p className="ms-0 border-s-2 border-border ps-3 text-xs text-muted-foreground">
-                      <span className="font-medium">{i18n.t("En réponse à")}</span>{" "}
-                      {parentCommentExcerpt(row.parent_comment_id) ?? i18n.t("(commentaire introuvable)")}
-                    </p>
-                  ) : null}
-                  <p className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm leading-relaxed whitespace-pre-line">
-                    {row.content}
-                  </p>
-
-                  <div className="flex flex-wrap items-center gap-2">
-                    {/* Le commentaire se juge sur la publication qu'il vise :
-                        elle s'ouvre en popup, image comprise, sans quitter la
-                        file. */}
-                    {parentTrigger(row)}
-                    {canValidate ? (
-                      <>
-                        <ActionButton action={approveComment.bind(null, row.id)}>
-                          <CheckIcon />
-                          {i18n.t("Valider")}
-                        </ActionButton>
-                        <RefuseContentDialog action={refuseComment.bind(null, row.id)} i18n={i18n} />
-                      </>
-                    ) : (
-                      <StatusPill tone="warning">{i18n.t("Super administrateur requis")}</StatusPill>
-                    )}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <StatusPill tone="warning">{i18n.t("En attente de validation")}</StatusPill>
+                      {canValidate ? null : (
+                        <StatusPill tone="neutral">
+                          {i18n.t("Super administrateur requis")}
+                        </StatusPill>
+                      )}
+                      {commentDialog(row)}
+                    </div>
                   </div>
                 </li>
               );
@@ -319,68 +355,34 @@ async function CommentsView({
       ) : null}
 
     <Panel>
-      <PanelHeader title={i18n.t("Commentaires")} />
+      <PanelHeader
+        icon={MessageSquareIcon}
+        title={i18n.t("Commentaires")}
+        description={i18n.t("Tout le fil, du plus recent au plus ancien. La ligne dit qui a commente, quand, dans quel etat et ce qui le met en cause ; « Examiner » ouvre le commentaire avec la publication qu'il vise, le fil complet et les decisions.")}
+      />
       {!rows.length ? (
         <EmptyState icon={MessageSquareIcon} title={i18n.t("Aucun commentaire")} />
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{i18n.t("Auteur")}</TableHead>
-              <TableHead>{i18n.t("Commentaire")}</TableHead>
-              <TableHead>{i18n.t("Etat")}</TableHead>
-              <TableHead>{i18n.t("Publie le")}</TableHead>
-              <TableHead className="text-right">{i18n.t("Actions")}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map((row) => {
-              const author = profiles.get(row.author_id);
-              return (
-                <TableRow key={row.id}>
-                  <TableCell>
-                    <UserCell
-                      name={displayName(author, undefined, i18n.locale)}
-                      secondary={author?.email}
-                      avatarUrl={author?.avatar_url}
-                      href={i18n.path(`/admin/utilisateurs/${row.author_id}`)}
-                    />
-                  </TableCell>
-                  <TableCell className="max-w-md whitespace-normal">
-                    {row.parent_comment_id ? (
-                      <span className="mb-1 block text-xs text-muted-foreground">
-                        <CornerDownRightIcon className="me-1 inline size-3" />
-                        {parentCommentExcerpt(row.parent_comment_id) ??
-                          i18n.t("(commentaire introuvable)")}
-                      </span>
-                    ) : null}
-                    {row.content}
-                    {/* Le bandeau vient APRES le texte ici, et avant devant
-                        une publication. Dans une carte il tient au-dessus sans
-                        gener ; dans une cellule de tableau il repousserait le
-                        commentaire hors de l'alignement des autres colonnes.
-                        Il reste dans tous les cas avant la colonne des
-                        gestes. */}
-                    <ContentWhy
-                      report={reports.get(row.id)}
-                      hidden={row.is_hidden}
-                      moderationStatus={row.moderation_status}
-                      moderationReason={row.moderation_reason}
-                      moderatedBy={
-                        row.moderated_by
-                          ? displayName(profiles.get(row.moderated_by), undefined, i18n.locale)
-                          : null
-                      }
-                      moderatedAt={row.moderated_at}
-                      // Sans cadre ici. La cellule du commentaire tombe a
-                      // ~130 px des 768 px — le rail de 16rem devient fixe au
-                      // meme point — et un panneau encadre y disputait la
-                      // place au texte qu'il annote. L'icone et le libelle
-                      // gras suffisent a le reperer dans une ligne de tableau.
-                      className="mt-2 border-0 bg-transparent px-0 py-0"
-                    />
-                  </TableCell>
-                  <TableCell>
+        /* ⚠️ UNE LISTE, PLUS UN TABLEAU — meme forme que les publications.
+           Le tableau portait cinq colonnes dont le commentaire entier et
+           quatre boutons de decision par ligne ; sa cellule de texte tombait a
+           ~130 px a 768 px (le rail de 16rem devient fixe au meme point), ce
+           qui ecrasait a la fois le texte et le bandeau de mise en cause. La
+           ligne ne porte plus que ce qui qualifie le commentaire, et la popup
+           porte le contenu, le contexte et les gestes. */
+        <ul className="divide-y divide-border">
+          {rows.map((row) => {
+            const author = profiles.get(row.author_id);
+            return (
+              <li key={row.id} className="px-4 py-3.5 sm:px-5">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <UserCell
+                    name={displayName(author, undefined, i18n.locale)}
+                    secondary={i18n.format.formatDateTime(row.created_at)}
+                    avatarUrl={author?.avatar_url}
+                    href={i18n.path(`/admin/utilisateurs/${row.author_id}`)}
+                  />
+                  <div className="flex flex-wrap items-center gap-2">
                     {row.is_deleted ? (
                       <StatusPill tone="danger">{i18n.t("Supprime")}</StatusPill>
                     ) : available && row.moderation_status && row.moderation_status !== "approuve" ? (
@@ -391,41 +393,29 @@ async function CommentsView({
                       </StatusPill>
                     ) : row.is_hidden ? (
                       <StatusPill tone="warning">{i18n.t("Masque")}</StatusPill>
-                    ) : (
-                      <StatusPill tone="success">{i18n.t("En ligne")}</StatusPill>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {i18n.format.formatDate(row.created_at)}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap items-center justify-end gap-2">
-                      {/* Le contexte avant la decision : la publication visee
-                          s'ouvre en popup depuis la liste comme depuis la
-                          file. */}
-                      {parentTrigger(row)}
-                      {available && canValidate && row.moderation_status !== "approuve" ? (
-                        <ActionButton action={approveComment.bind(null, row.id)}>
-                          <CheckIcon />
-                          {i18n.t("Valider")}
-                        </ActionButton>
-                      ) : null}
-                      <ActionButton action={setCommentHidden.bind(null, row.id, !row.is_hidden)}>
-                        {row.is_hidden ? i18n.t("Reafficher") : i18n.t("Masquer")}
-                      </ActionButton>
-                      <ActionButton
-                        variant={row.is_deleted ? "outline" : "destructive"}
-                        action={setCommentDeleted.bind(null, row.id, !row.is_deleted)}
-                      >
-                        {row.is_deleted ? i18n.t("Restaurer") : i18n.t("Supprimer")}
-                      </ActionButton>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+                    ) : null}
+                    {/* ⚠️ Pas de pastille « En ligne » : meme regle que sur les
+                        publications — l'etat normal du fil est l'absence de
+                        pastille, et le filtre « En ligne » reste le chemin
+                        pour ne lister que ce qui est visible. */}
+                    {commentDialog(row)}
+                  </div>
+                </div>
+
+                {/* ⚠️ Comme sur les publications, la trace de validation ne
+                    remonte pas ici : approuve est l'etat normal du fil, et un
+                    bandeau pose sous chaque ligne ne signale plus rien. Elle
+                    reste dans la popup, et le filtre « Validee » reste le
+                    chemin pour retrouver ce qui a ete approuve. */}
+                <ContentWhy
+                  lines={(why.get(row.id) ?? []).filter((line) => line.kind !== "validation")}
+                  hidden={row.is_hidden}
+                  className="mt-2.5"
+                />
+              </li>
+            );
+          })}
+        </ul>
       )}
       <Pagination basePath={i18n.path("/admin/moderation/commentaires")} params={params} page={page} pageSize={PAGE_SIZE} total={count} />
     </Panel>

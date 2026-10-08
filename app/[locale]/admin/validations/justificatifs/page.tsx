@@ -15,7 +15,7 @@ import { Panel, PanelHeader } from "@/components/admin/panel";
 import { StatusPill } from "@/components/admin/status-pill";
 import { UserCell } from "@/components/admin/user-cell";
 import { DocumentDossier } from "@/components/admin/validation-dossier";
-import { QueueError, ValidationFilter, ValidationMetrics, ValidationNotes } from "@/components/admin/validations/pieces";
+import { QueueError, ValidationFilter, ValidationMetrics, ValidationNotes, validationStatus } from "@/components/admin/validations/pieces";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { setDocumentStatus } from "@/lib/actions/users";
 import { requirePermission } from "@/lib/auth";
@@ -41,6 +41,12 @@ export default async function ValidationsDocumentsPage({
   const page = Math.max(1, Number(resolved.page ?? 1) || 1);
   const search =
     typeof resolved.q === "string" && resolved.q.trim() ? resolved.q.trim() : undefined;
+  // L'etat demande, ramene a une valeur que la table connait — « en attente »
+  // par defaut : c'est une file de travail, elle s'ouvre sur ce qui attend.
+  const etat = validationStatus(
+    "document",
+    typeof resolved.etat === "string" ? resolved.etat : undefined,
+  );
   const path = i18n.path("/admin/validations/justificatifs");
 
   return (
@@ -56,23 +62,23 @@ export default async function ValidationsDocumentsPage({
 
       <ValidationMetrics />
 
-      <ValidationFilter search={search} path={path} />
+      <ValidationFilter search={search} path={path} scope="document" etat={etat} />
 
-      <DocumentsQueue page={page} />
+      <DocumentsQueue page={page} etat={etat} />
 
       <ValidationNotes />
     </>
   );
 }
 
-async function DocumentsQueue({ page }: { page: number }) {
+async function DocumentsQueue({ page, etat }: { page: number; etat: string }) {
   const i18n = await getAdminI18n();
 
   const supabase = await createClient();
   const { data, error, count } = await supabase
     .from("professional_documents")
     .select("id, professional_id, document_label, storage_path, status, created_at", { count: "exact" })
-    .eq("status", "en_attente")
+    .eq("status", etat)
     .order("created_at", { ascending: false })
     .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
 
@@ -109,8 +115,16 @@ async function DocumentsQueue({ page }: { page: number }) {
       {!rows.length && !error ? (
         <EmptyState
           icon={FileTextIcon}
-          title={i18n.t("Aucun justificatif en attente")}
-          description={i18n.t("Toutes les pieces deposees ont ete examinees.")}
+          title={
+            etat === "en_attente"
+              ? i18n.t("Aucun justificatif en attente")
+              : i18n.t("Aucun dossier dans cet etat")
+          }
+          description={
+            etat === "en_attente"
+              ? i18n.t("Toutes les pieces deposees ont ete examinees.")
+              : i18n.t("Changez l'etat demande dans le bandeau ci-dessus pour retrouver les dossiers deja tranches.")
+          }
         />
       ) : (
         <Table>
@@ -162,15 +176,23 @@ async function DocumentsQueue({ page }: { page: number }) {
                           siblings={siblingsByPro.get(row.professional_id) ?? []}
                         />
                       </DetailDialog>
-                      <ActionButton action={setDocumentStatus.bind(null, row.id, "valide")}>
-                        <CheckIcon />
-                        {i18n.t("Valider")}</ActionButton>
-                      <ActionButton
-                        variant="destructive"
-                        action={setDocumentStatus.bind(null, row.id, "refuse")}
-                      >
-                        <XIcon />
-                        {i18n.t("Refuser")}</ActionButton>
+                      {/* Un geste qui ne peut rien changer n'est pas propose
+                          — voir la file des joueurs. */}
+                      {row.status === "valide" ? null : (
+                        <ActionButton action={setDocumentStatus.bind(null, row.id, "valide")}>
+                          <CheckIcon />
+                          {i18n.t("Valider")}
+                        </ActionButton>
+                      )}
+                      {row.status === "refuse" ? null : (
+                        <ActionButton
+                          variant="destructive"
+                          action={setDocumentStatus.bind(null, row.id, "refuse")}
+                        >
+                          <XIcon />
+                          {i18n.t("Refuser")}
+                        </ActionButton>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -179,7 +201,7 @@ async function DocumentsQueue({ page }: { page: number }) {
           </TableBody>
         </Table>
       )}
-      <Pagination basePath={i18n.path("/admin/validations/justificatifs")} params={{ vue: "justificatifs", page: String(page) }} page={page} pageSize={PAGE_SIZE} total={count ?? 0} />
+      <Pagination basePath={i18n.path("/admin/validations/justificatifs")} params={{ vue: "justificatifs", etat, page: String(page) }} page={page} pageSize={PAGE_SIZE} total={count ?? 0} />
     </Panel>
   );
 }

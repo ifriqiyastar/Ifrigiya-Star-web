@@ -1,12 +1,13 @@
 import Link from "next/link";
-import { CheckIcon, EyeOffIcon, FlagIcon, SearchIcon, XIcon } from "lucide-react";
+import { SearchIcon, XIcon } from "lucide-react";
 
 import { AutoFilterForm, FilterSearchIcon } from "@/components/admin/auto-filter-form";
 import { ReasonDialog } from "@/components/admin/reason-dialog";
-import type { PreviewPost } from "@/components/admin/post-preview-dialog";
+import type { PreviewComment, PreviewPost } from "@/components/admin/post-preview-dialog";
 import { getAdminI18n } from "@/lib/i18n/admin";
+import { WHY_ICON, WHY_TONE, type WhyLine } from "@/lib/moderation-why";
 import { REPORTABLE_TYPE, REPORT_STATUS } from "@/lib/labels";
-import type { ContentReport, PostRow } from "@/lib/queries/moderation-content";
+import type { CommentRow, ContentReport, PostRow } from "@/lib/queries/moderation-content";
 import { storageUrl } from "@/lib/supabase/config";
 import { cn } from "@/lib/utils";
 
@@ -26,22 +27,22 @@ export type Vue = (typeof MODERATION_VUES)[number];
 export const vuePath = (vue: Vue) => `/admin/moderation/${vue}` as const;
 
 /**
- * Le bandeau de mise en cause, pose AVANT le texte de la publication.
+ * Ce qui met une publication en cause, resolu **une fois** et serialisable.
  *
- * L'ordre n'est pas decoratif : le motif doit arriver avant le contenu, comme
- * le fil d'un commentaire arrive avant la decision qu'on prend dessus. Rien
- * ne s'affiche quand rien ne vise la publication — et c'est une reponse, pas
- * un vide : la liste montre tout le fil, la plupart des lignes n'ont aucune
- * raison particuliere d'etre regardees.
+ * ⚠️ La popup est un composant client : elle ne peut ni `await` le
+ * dictionnaire ni recevoir un composant d'icone. Le bandeau etait donc rendu
+ * sur la ligne et absent de la popup — c'est-a-dire que le motif manquait
+ * precisement la ou la decision se prend. Cette fonction rend des donnees
+ * pures ; `ContentWhy` les dessine cote serveur, `PostPreviewDialog` les
+ * redessine cote client a partir de `kind`.
  */
-export async function ContentWhy({
+export async function whyLines({
   report,
   hidden,
   moderationStatus,
   moderationReason,
   moderatedBy,
   moderatedAt,
-  className,
 }: {
   report?: ContentReport;
   hidden: boolean;
@@ -50,24 +51,14 @@ export async function ContentWhy({
   /** Nom deja resolu du decideur — la ligne ne porte qu'un identifiant. */
   moderatedBy?: string | null;
   moderatedAt?: string | null;
-  className?: string;
-}) {
+}): Promise<WhyLine[]> {
   const i18n = await getAdminI18n();
-
-  const lines: {
-    key: string;
-    icon: React.ComponentType<{ className?: string }>;
-    label: string;
-    detail: string;
-    tone: string;
-    href?: string;
-  }[] = [];
+  const lines: WhyLine[] = [];
 
   if (report) {
     lines.push({
       key: "report",
-      icon: FlagIcon,
-      tone: "text-destructive",
+      kind: "report",
       label:
         report.count > 1
           ? i18n.t("{0} signalements", { "0": report.count })
@@ -89,8 +80,7 @@ export async function ContentWhy({
   if (moderationStatus === "refuse") {
     lines.push({
       key: "refus",
-      icon: XIcon,
-      tone: "text-warning",
+      kind: "refus",
       label: i18n.t("Refus motive"),
       detail: [moderationReason?.trim() || i18n.t("Aucun motif enregistre"), trace]
         .filter(Boolean)
@@ -103,8 +93,7 @@ export async function ContentWhy({
     // ces lignes-la ferait passer un defaut de migration pour une decision.
     lines.push({
       key: "validation",
-      icon: CheckIcon,
-      tone: "text-success",
+      kind: "validation",
       label: i18n.t("Validee"),
       detail: trace,
     });
@@ -113,44 +102,76 @@ export async function ContentWhy({
     // mieux que de laisser chercher une trace qui n'existe pas.
     lines.push({
       key: "masque",
-      icon: EyeOffIcon,
-      tone: "text-warning",
+      kind: "masque",
       label: i18n.t("Retire du flux par l'administration"),
       detail: i18n.t("Un masquage direct n'enregistre pas de motif : seule une decision prise sur signalement en porte un."),
     });
   }
 
-  if (!lines.length) return null;
+  return lines;
+}
+
+/**
+ * Le bandeau de mise en cause, pose AVANT le texte de la publication.
+ *
+ * L'ordre n'est pas decoratif : le motif doit arriver avant le contenu, comme
+ * le fil d'un commentaire arrive avant la decision qu'on prend dessus. Rien
+ * ne s'affiche quand rien ne vise la publication — et c'est une reponse, pas
+ * un vide : la liste montre tout le fil, la plupart des lignes n'ont aucune
+ * raison particuliere d'etre regardees.
+ */
+export async function ContentWhy({
+  lines,
+  className,
+  ...source
+}: {
+  /** Deja resolues par l'appelant quand la popup les recoit aussi. */
+  lines?: WhyLine[];
+  report?: ContentReport;
+  hidden: boolean;
+  moderationStatus?: "en_attente" | "approuve" | "refuse";
+  moderationReason?: string | null;
+  moderatedBy?: string | null;
+  moderatedAt?: string | null;
+  className?: string;
+}) {
+  const i18n = await getAdminI18n();
+  const resolved = lines ?? (await whyLines(source));
+
+  if (!resolved.length) return null;
 
   return (
     <div className={cn("flex flex-col gap-1.5 rounded-lg border border-border bg-accent/40 px-3 py-2", className)}>
-      {lines.map((line) => (
-        // `items-start` et non `items-baseline` : sous 1024 px le detail se
-        // replie sur plusieurs lignes, et une icone centree sur le bloc
-        // flottait a hauteur de la deuxieme. Elle se cale sur la premiere.
-        <div key={line.key} className="flex min-w-0 flex-wrap items-start gap-x-2 gap-y-1 text-xs">
-          <line.icon className={cn("mt-0.5 size-3.5 shrink-0", line.tone)} />
-          {/* ⚠️ C'EST LE COMPTE QUI EST LE LIEN, pas un « Ouvrir le
-              signalement » pose a cote. Ce libelle mesurait ~150 px et etait
-              `shrink-0` : dans la cellule commentaire du tableau, qui tombe a
-              ~130 px a 768 px, il ne pouvait pas tenir et debordait **sous la
-              colonne voisine** — un debordement invisible a
-              `document.scrollWidth`, comme le `<select>` de 21 px. Cliquer ce
-              qui nomme le dossier est de toute facon plus direct. */}
-          {line.href ? (
-            <Link
-              href={line.href}
-              title={i18n.t("Ouvrir le signalement")}
-              className="font-semibold text-brand underline underline-offset-2"
-            >
-              {line.label}
-            </Link>
-          ) : (
-            <span className="font-semibold">{line.label}</span>
-          )}
-          <span className="min-w-0 flex-1 text-muted-foreground">{line.detail}</span>
-        </div>
-      ))}
+      {resolved.map((line) => {
+        const Icon = WHY_ICON[line.kind];
+        return (
+          // `items-start` et non `items-baseline` : sous 1024 px le detail se
+          // replie sur plusieurs lignes, et une icone centree sur le bloc
+          // flottait a hauteur de la deuxieme. Elle se cale sur la premiere.
+          <div key={line.key} className="flex min-w-0 flex-wrap items-start gap-x-2 gap-y-1 text-xs">
+            <Icon className={cn("mt-0.5 size-3.5 shrink-0", WHY_TONE[line.kind])} />
+            {/* ⚠️ C'EST LE COMPTE QUI EST LE LIEN, pas un « Ouvrir le
+                signalement » pose a cote. Ce libelle mesurait ~150 px et etait
+                `shrink-0` : dans la cellule commentaire du tableau, qui tombe a
+                ~130 px a 768 px, il ne pouvait pas tenir et debordait **sous la
+                colonne voisine** — un debordement invisible a
+                `document.scrollWidth`, comme le `<select>` de 21 px. Cliquer ce
+                qui nomme le dossier est de toute facon plus direct. */}
+            {line.href ? (
+              <Link
+                href={line.href}
+                title={i18n.t("Ouvrir le signalement")}
+                className="font-semibold text-brand underline underline-offset-2"
+              >
+                {line.label}
+              </Link>
+            ) : (
+              <span className="font-semibold">{line.label}</span>
+            )}
+            <span className="min-w-0 flex-1 text-muted-foreground">{line.detail}</span>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -195,6 +216,14 @@ export function previewOf(
   author: { id?: string; email?: string | null; avatar_url?: string | null } | undefined,
   name: string,
   mediaUrl: string | null,
+  /**
+   * Ce que la popup ne peut pas calculer elle-meme : la date mise en forme (la
+   * mettre en forme dans le navigateur ferait dependre le rendu du fuseau du
+   * poste, donc diverger de celui du serveur a l'hydratation) et le bandeau de
+   * mise en cause, qui demande le dictionnaire et une lecture des
+   * signalements.
+   */
+  extra: { createdAtLabel?: string; why?: WhyLine[] } = {},
 ): PreviewPost {
   return {
     id: row.id,
@@ -206,6 +235,37 @@ export function previewOf(
     isDeleted: row.is_deleted,
     moderationStatus: row.moderation_status,
     moderationReason: row.moderation_reason ?? null,
+    createdAtLabel: extra.createdAtLabel,
+    why: extra.why,
+    author: {
+      id: row.author_id,
+      name,
+      email: author?.email ?? null,
+      avatarUrl: author?.avatar_url ?? null,
+    },
+  };
+}
+
+/**
+ * Les donnees de la popup pour un COMMENTAIRE, construites au meme endroit
+ * pour la file d'attente et pour la liste — meme regle que `previewOf`.
+ */
+export function commentPreviewOf(
+  row: CommentRow,
+  author: { email?: string | null; avatar_url?: string | null } | undefined,
+  name: string,
+  extra: { createdAtLabel?: string; why?: WhyLine[]; replyTo?: string | null } = {},
+): PreviewComment {
+  return {
+    id: row.id,
+    content: row.content,
+    isHidden: row.is_hidden,
+    isDeleted: row.is_deleted,
+    moderationStatus: row.moderation_status,
+    moderationReason: row.moderation_reason ?? null,
+    createdAtLabel: extra.createdAtLabel,
+    why: extra.why,
+    replyTo: extra.replyTo,
     author: {
       id: row.author_id,
       name,

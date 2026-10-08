@@ -17,7 +17,7 @@ import { ReasonDialog } from "@/components/admin/reason-dialog";
 import { StatusPill } from "@/components/admin/status-pill";
 import { UserCell } from "@/components/admin/user-cell";
 import { ProfessionalDossier } from "@/components/admin/validation-dossier";
-import { QueueError, ValidationFilter, ValidationMetrics, ValidationNotes } from "@/components/admin/validations/pieces";
+import { QueueError, ValidationFilter, ValidationMetrics, ValidationNotes, validationStatus } from "@/components/admin/validations/pieces";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { setProfessionalStatus } from "@/lib/actions/users";
@@ -45,6 +45,12 @@ export default async function ValidationsProsPage({
   const selected = typeof resolved.dossier === "string" ? resolved.dossier : undefined;
   const search =
     typeof resolved.q === "string" && resolved.q.trim() ? resolved.q.trim() : undefined;
+  // L'etat demande, ramene a une valeur que la table connait — « en attente »
+  // par defaut : c'est une file de travail, elle s'ouvre sur ce qui attend.
+  const etat = validationStatus(
+    "profile",
+    typeof resolved.etat === "string" ? resolved.etat : undefined,
+  );
   const path = i18n.path("/admin/validations/professionnels");
 
   return (
@@ -55,14 +61,14 @@ export default async function ValidationsProsPage({
           { label: i18n.t("Comptes professionnels") },
         ]}
         title={i18n.t("Comptes professionnels a valider")}
-        description={i18n.t("Les clubs, academies, agents et recruteurs en attente. Un professionnel valide peut organiser des Scout Days et signer des evaluations.")}
+        description={i18n.t("Les clubs, academies, agents et recruteurs — en attente par defaut, les dossiers deja tranches se demandent dans le bandeau. Un professionnel valide peut organiser des Scout Days et signer des evaluations.")}
       />
 
       <ValidationMetrics />
 
-      <ValidationFilter search={search} path={path} />
+      <ValidationFilter search={search} path={path} scope="profile" etat={etat} />
 
-      <ProfessionalsQueue page={page} selected={selected} search={search} />
+      <ProfessionalsQueue page={page} selected={selected} search={search} etat={etat} />
 
       <ValidationNotes />
     </>
@@ -73,10 +79,13 @@ async function ProfessionalsQueue({
   page,
   selected,
   search,
+  etat,
 }: {
   page: number;
   selected?: string;
   search?: string;
+  /** Statut demande, deja valide par `validationStatus()`. */
+  etat: string;
 }) {
   const i18n = await getAdminI18n();
 
@@ -87,7 +96,7 @@ async function ProfessionalsQueue({
       "id, professional_type, organization_name, contact_full_name, position_title, country, city, status, status_reason, created_at, updated_at",
       { count: "exact" },
     )
-    .eq("status", "en_attente_validation")
+    .eq("status", etat)
     .order("updated_at", { ascending: false })
     .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
 
@@ -138,8 +147,16 @@ async function ProfessionalsQueue({
         {!rows.length && !error ? (
           <EmptyState
             icon={ShieldCheckIcon}
-            title={i18n.t("Aucun compte professionnel en attente")}
-            description={i18n.t("Les dossiers arrivent ici apres l'upload des justificatifs professionnels.")}
+            title={
+              etat === "en_attente_validation"
+                ? i18n.t("Aucun compte professionnel en attente")
+                : i18n.t("Aucun dossier dans cet etat")
+            }
+            description={
+              etat === "en_attente_validation"
+                ? i18n.t("Les dossiers arrivent ici apres l'upload des justificatifs professionnels.")
+                : i18n.t("Changez l'etat demande dans le bandeau ci-dessus pour retrouver les dossiers deja tranches.")
+            }
           />
         ) : (
           <Table>
@@ -199,11 +216,17 @@ async function ProfessionalsQueue({
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center justify-end gap-2">
-                        <ActionButton
-                          action={setProfessionalStatus.bind(null, row.id, "valide", undefined)}
-                        >
-                          <CheckIcon />
-                          {i18n.t("Valider")}</ActionButton>
+                        {/* Un geste qui ne peut rien changer n'est pas
+                            propose — voir la file des joueurs. */}
+                        {row.status === "valide" ? null : (
+                          <ActionButton
+                            action={setProfessionalStatus.bind(null, row.id, "valide", undefined)}
+                          >
+                            <CheckIcon />
+                            {i18n.t("Valider")}
+                          </ActionButton>
+                        )}
+                        {row.status === "refuse" ? null : (
                         <ReasonDialog
                           action={setProfessionalStatus.bind(null, row.id, "refuse")}
                           trigger={
@@ -216,6 +239,7 @@ async function ProfessionalsQueue({
                           placeholder={i18n.t("Justificatif non conforme, structure non identifiee…")}
                           submitLabel={i18n.t("Refuser le compte")}
                         />
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -226,7 +250,7 @@ async function ProfessionalsQueue({
         )}
         <Pagination
           basePath={i18n.path("/admin/validations/professionnels")}
-          params={{ vue: "professionnels", q: search, page: String(page) }}
+          params={{ vue: "professionnels", q: search, etat, page: String(page) }}
           page={page}
           pageSize={PAGE_SIZE}
           total={count ?? 0}

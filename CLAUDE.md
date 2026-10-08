@@ -222,18 +222,20 @@ Things that will bite whoever touches this next:
   how long it has waited, which is now the only cue for what is late. The one
   exception is a comment thread, which stays chronological — it is read like a
   conversation.
-- **"Voir la publication" opens the same popup**, from the comment queue and
-  from the comment list alike — a comment is judged on what it sits under, and
+- **"Examiner" opens the same popup**, from the comment queue and from the
+  comment list alike — a comment is judged on what it sits under, and
   "bien joue" under an announcement is not "bien joue" under an insult. The
   parent posts are loaded in **one** query for the whole page (`.in("id", …)`
   through `selectWithModeration`), never one per row, and their authors are
   folded into the same `fetchProfilesByIds` call — the post's author is not the
   comment's. ⚠️ **It was previously a link to
   `?vue=publications&q=<post_id>`, which could never work**: `q` is a full-text
-  filter on `content`, so searching an id matched nothing. When the parent is
-  unreachable (removed, or filtered by RLS) **nothing** is rendered rather than
-  an inert button — a control that opens nothing casts doubt on the whole
-  screen.
+  filter on `content`, so searching an id matched nothing. ⚠️ It was then a
+  **"Voir la publication" button that disappeared when the parent was
+  unreachable** (removed, or filtered by RLS) — defensible while the row still
+  carried the comment's own buttons, fatal once it did not: the comment became
+  unmoderable. Since Oct 2026 the popup opens anyway and says the post is
+  missing; an incomplete file is not an absent one.
 - `content.validate` was added to `ALL_ADMIN_PERMISSIONS`, so on a project
   where the permission migration has not run `getAdminAccess()` treats it as
   unseeded and the buttons still show — matching `requirePermission()`, which
@@ -381,12 +383,63 @@ a shared `ValidationMetrics` component rendered by each page rather than
 per-page copies. `ValidationFilter` and `ValidationNotes` follow the same rule;
 `PAGE_SIZE`, `EMPTY_ID`, `groupBy`, `countBy` moved to
 `lib/queries/validations-shared.ts`. The rail entry gained the same
-collapsible `children`, and **the count stays on the parent**: `fetchAdminQueue()`
-counts the four queues together under `validations`, and splitting it would
-mean a badge per queue in `NavBadges`.
+collapsible `children`.
 
 ⚠️ The index page cannot be deleted, same as moderation: `admin-queue.ts`, the
 account menu and bookmarks still carry `?vue=`.
+
+#### La pastille dit *ou*, et la file montre enfin ce qui est tranche (Oct 2026)
+
+Deux defauts signales par le client sur le meme ecran, et les deux etaient
+documentes ici comme des choix.
+
+⚠️ **« Le chiffre a cote de Validations ne dit pas ou il est. »** Exact : le
+compte restait sur le parent, et cette page affirmait que le repartir
+« demanderait une pastille par file dans `NavBadges` ». C'est precisement ce
+qu'il fallait faire — la meme correction avait deja ete faite pour la
+moderation en Oct 2026, pour la meme raison : un nombre qu'on ne peut pas
+situer fait ouvrir les quatre ecrans pour trouver les deux dossiers. `badges`
+porte desormais `joueurs`, `professionnels`, `justificatifs` et `identite` a
+cote du total `validations`, `NAV_ITEMS` les pose sur les quatre sous-entrees,
+et `NavMain` retire celle du parent quand le groupe est deplie pour que le
+meme nombre ne soit pas imprime deux fois. Rien a ajouter a `QUEUE_TABLES` ni
+a la migration temps reel : les quatre files y etaient deja, seules leurs
+pastilles manquaient.
+
+⚠️⚠️ **Les quatre ecrans ne montraient QUE ce qui attend**, `status` etant
+pose en dur dans la requete. Une fois le dossier tranche il sortait de
+l'ecran, et **plus rien dans le back-office ne le montrait** — ni pour
+verifier une decision, ni pour la reprendre, ni pour repondre a quelqu'un qui
+la conteste. C'est le meme manque que la moderation avait corrige en Sept 2026
+avec le filtre « Validee ». `ValidationFilter` porte maintenant un `<select>`
+d'etat, et `validationStatus(scope, etat)` ramene ce qui vient de l'URL a une
+valeur que la table connait.
+
+- ⚠️ **Deux familles de statuts, et les confondre ne leve aucune erreur.** Les
+  deux tables de profil disent `en_attente_validation` (enum
+  `player_profile_status`), les deux tables de pieces disent `en_attente` :
+  interroger l'une avec la valeur de l'autre rend une file **vide, sans
+  message** — PostgREST n'a rien a redire a un statut qui n'existe pas, il ne
+  trouve simplement rien. D'ou `ValidationScope` et une table unique des
+  valeurs permises.
+- **L'etat par defaut reste « en attente »** : ce sont des files de travail,
+  elles s'ouvrent sur ce qui attend. Une valeur inventee dans l'URL y retombe.
+- ⚠️ **Le vide doit nommer le filtre qui le produit.** « Aucun profil joueur en
+  attente » affiche sur une file reglee sur « Valides » ferait croire que rien
+  n'a jamais ete valide. Les quatre `EmptyState` basculent sur « Aucun dossier
+  dans cet etat ».
+- ⚠️ **Un geste qui ne peut rien changer n'est plus propose** : « Valider » sur
+  un dossier deja valide, « Refuser » sur un dossier deja refuse. Le chemin
+  inverse reste ouvert — reprendre un refus est exactement ce pour quoi on
+  vient lire l'historique. La validation en masse, elle, filtre deja
+  `status = 'en_attente_validation'` cote serveur et rend le nombre de lignes
+  reellement changees.
+- `etat` voyage dans `Pagination` : sans lui, la page 2 revenait a la file en
+  attente.
+- Mesure 375 → 1920 du bandeau contre la feuille compilee : le `<select>`
+  garde 143 px partout (c'est le controle qui etait tombe a 21 px sur la
+  moderation), le champ de recherche ne descend pas sous 206 px, et sous
+  1024 px le `<select>` passe a la ligne au lieu d'ecraser la recherche.
 
 ### Seeing what has been validated (Sept 2026)
 
@@ -686,6 +739,169 @@ so the two cannot drift.
   child escaping its frame. (At 320px `scrollWidth` exceeds `clientWidth` by
   6px — that is the vertical scrollbar gutter of `overflow-y-auto`, which
   `clientWidth` excludes and `scrollWidth` does not. Not an overflow.)
+  ⚠️ Chiffres d'origine : la popup est passee a 768 px et a une seule zone
+  defilante — voir la section suivante, remesuree 375 → 1920.
+
+### La liste des publications est un registre, la popup la surface de decision (Oct 2026)
+
+Demande client : « on pourrait mieux montrer ces donnees, utilise la popup ».
+`/admin/moderation/publications` affichait, par ligne : l'identite, les
+pastilles, le bandeau de mise en cause, trois lignes de texte, un bouton
+« Ouvrir le media » **et cinq boutons de decision**. Sur une page de vingt
+publications, cela faisait une centaine de boutons, dont « Supprimer », pris
+sur un extrait tronque — exactement ce qui avait deja ete corrige sur le
+tableau des signalements, et qui avait ete reecrit ici.
+
+| Avant | Apres |
+|---|---|
+| 3 lignes de texte + un bouton « Ouvrir le media » | la ligne ne porte plus de contenu du tout |
+| 5 boutons par ligne, hauteur variable | un seul bouton, « Examiner », a cote des pastilles |
+| popup = texte + media + fil | popup = mise en cause, contenu, media, **faits**, fil, gestes |
+
+**La ligne ne montre plus la publication, et c'est la demande du client**
+(deux allers-retours : d'abord une carte d'apercu vignette + extrait, puis son
+retrait pur et simple). Elle ne dit que ce qui la **qualifie** — qui, quand,
+dans quel etat, ce qui la met en cause — et le contenu se lit dans la popup.
+⚠️ Ce que cela coute, et qu'il faut savoir avant de « corriger » : on ne peut
+plus parcourir les textes du regard ; reperer une publication se fait par le
+bandeau de mise en cause, les pastilles d'etat et la recherche plein texte,
+pas en lisant la liste. `MediaThumb` a ete supprime avec l'apercu — l'image
+reste dans la popup, signee par le meme chemin.
+
+- ⚠️ **Aucun geste n'est perdu.** « Valider », « Refuser », « Masquer » et
+  « Supprimer » vivent tous dans la popup, au-dessus de la publication
+  complete. Le repechage d'un refus — le seul chemin de rattrapage d'un
+  contenu refuse par erreur, son auteur ne pouvant que le supprimer — s'y
+  trouve aussi ; il demande desormais d'ouvrir la ligne, c'est-a-dire de lire
+  le motif avant de revenir dessus.
+- ⚠️ **La pastille « En ligne » a disparu des deux listes** (demande client,
+  Oct 2026), pour la meme raison que la trace de validation : elle etait posee
+  sur presque toutes les lignes — c'est l'etat normal du fil — donc elle ne
+  distinguait rien et banalisait les pastilles qui, elles, appellent un geste
+  (En attente, Refusee, Masquee, Supprimee). **L'etat normal est desormais
+  l'absence de pastille.** Elle n'etait d'ailleurs pas une mesure : elle se
+  deduisait de `is_hidden = false`, `is_deleted = false` et
+  `moderation_status = 'approuve'` — les trois conditions que le fil mobile
+  filtre — et ne disait rien de l'audience. Le filtre « En ligne » du bandeau
+  reste le chemin pour ne lister que ce qui est visible, et il n'a pas bouge.
+- ⚠️ **La trace de validation ne remonte plus sur la ligne** (demande client,
+  Oct 2026). « Validee — <date> par <compte> » s'affichait sous chaque
+  publication approuvee, donc sous l'immense majorite d'entre elles : un
+  bandeau pose partout ne signale plus rien, et il repoussait les deux seules
+  lignes qui demandent un regard — un signalement, un refus motive. Elle n'est
+  pas perdue : la popup la porte (c'est la qu'on verifie qui a tranche et
+  quand) et le filtre « Validee » reste le chemin pour retrouver ce qui a ete
+  approuve — ce que demandait la section « Seeing what has been validated ».
+  Le filtrage se fait **a l'affichage de la ligne**, pas dans `whyLines()` :
+  la popup et la liste partagent le meme calcul, et seule la liste en retire
+  ce qui n'est pas une alerte. L'ecran des commentaires, lui, l'affiche
+  toujours — personne ne l'a signale la-bas, et sa table se lit autrement.
+- ⚠️⚠️ **Le bandeau de mise en cause manquait precisement la ou la decision se
+  prend.** `ContentWhy` est un composant serveur ; la popup est un composant
+  client et ne peut ni `await` le dictionnaire ni recevoir une icone. Les
+  lignes sont donc construites une fois par `whyLines()` et voyagent
+  **serialisees** (`kind` plutot qu'un composant d'icone) ; la liste et la
+  popup dessinent la meme chose. `lib/moderation-why.ts` porte le type et les
+  deux tables sorte → icone → couleur, dans un module neutre : une valeur
+  importee d'un module `"use client"` par un composant serveur n'est pas la
+  valeur mais une reference client, donc la dependance ne peut pas aller dans
+  l'autre sens.
+- **La popup dit enfin les faits** : date de depot, nature du media,
+  reference. La date est **mise en forme par le serveur et passee en
+  accessoire** — la formater dans le navigateur ferait dependre le rendu du
+  fuseau du poste, donc diverger a l'hydratation.
+- ⚠️ **Une seule zone defilante.** La popup defilait en entier *et* contenait
+  deux boites a defilement interne : trois ascenseurs imbriques, et des gestes
+  qui sortaient de l'ecran des qu'une publication etait longue. Entete et pied
+  sont fixes, le corps seul defile (`grid-rows-[auto_minmax(0,1fr)_auto]` +
+  `min-h-0`). Seul le fil de discussion garde sa boite — c'est un bloc
+  secondaire.
+- ⚠️⚠️ **Un libelle pose sous l'extrait se lit comme une suite du texte.**
+  Etape intermediaire, gardee ici parce qu'elle se reproduira : la ligne
+  entiere etait le declencheur, avec « Lire et decider » sous l'extrait.
+  Signale par le client sur un cas qui le montre d'un coup — « scoot day
+  aujourd hui !! » puis, juste dessous et dans la meme colonne, « Lire et
+  decider » : rien ne disait que l'un etait la publication et l'autre une
+  commande. Une commande est un **bouton nomme**, jamais une ligne de texte
+  posee dans la colonne du contenu.
+- ⚠️ **Le declencheur est un `<button>` du DOM, pas le composant `Button`.**
+  `PostPreviewDialog` le clone pour y poser `data-slot` et Base UI le compose
+  via `render` : un composant serveur a cette place recevrait les proprietes et
+  les jetterait, et la popup ne s'ouvrirait jamais. Il porte les classes de
+  `buttonVariants` pour avoir l'allure des autres boutons sans en etre un, et
+  il est ecrit **une fois** pour la file d'attente et pour la liste.
+- **Le bouton vit avec les pastilles d'etat**, dans le meme `flex-wrap` a
+  droite de l'identite : sous 1024 px le groupe passe a la ligne entier plutot
+  que d'ecraser l'identite, qui garde 234 px partout.
+- ⚠️ **Les vignettes sont signees en une demande pour la page entiere.**
+  `post-media` est prive (mobile 0051) : sans cela, vingt lignes auraient fait
+  vingt detours par `/admin/documents`, chacun refaisant un controle
+  d'administration et une signature — toutes les 30 s, puisque `AutoRefresh`
+  rejoue la page. `signStorageUrls()` (`lib/queries/signed-media.ts`) est la
+  generalisation de `signAvatarUrls()`, qui n'en est plus qu'une
+  specialisation : **une seule implementation**, un seul cache, et sa cle
+  porte le bucket — sans quoi un meme chemin servirait l'URL d'un autre bucket,
+  donc une image qui ne repond pas. Ce que la signature ne couvre pas (adresse
+  externe, echec) retombe sur `storageUrl()`.
+- `tests/signed-media.test.cjs` — 5 assertions, **verifiees par mutation** :
+  retirer le bucket de la cle de cache fait tomber le temoin des deux buckets.
+
+**Mesure 375 → 1920 contre la feuille compilee**, dans une coque reproduisant
+le rail de 16rem (recette ci-dessous). Deux defauts trouves et corriges, tous
+deux invisibles a `document.scrollWidth` :
+
+- ⚠️⚠️ **`line-clamp-2 block` n'ecrete rien.** `line-clamp-*` pose
+  `display:-webkit-box` ; `block` est du **meme groupe** pour tailwind-merge et
+  l'ecrasait. Mesure : l'extrait faisait 159 px de haut (sept lignes) a 375 px
+  au lieu de 46. La classe se suffit a elle-meme.
+- ⚠️ **Une colonne de grille `auto` ne descend pas sous la largeur minimale de
+  son contenu.** La popup debordait de 3 px a 375 px — une barre de defilement
+  horizontale dans une fenetre modale. `grid-cols-1`, soit
+  `repeat(1, minmax(0,1fr))`, la laisse retrecir. Meme mecanisme que les
+  `grid-cols-*` du bandeau de filtres, dans l'autre sens.
+
+Aux six largeurs, etat final : `scrollWidth === clientWidth` sur la page comme
+dans la popup, ligne a 108 px au-dessus de 1024 px (164-180 px en dessous,
+quand pastilles et bouton se replient), identite et bouton jamais rabotes,
+pied de popup toujours visible et corps qui defile quand il le faut.
+⚠️ Le sondeur signale aussi `scrollWidth > clientWidth` sur les elements
+`truncate` : c'est **le fonctionnement de la troncature**, pas un debordement —
+ne pas le corriger.
+
+### Les commentaires suivent la meme regle (Oct 2026)
+
+« Do the same for commentaire ». `/admin/moderation/commentaires` etait un
+tableau de cinq colonnes portant le commentaire entier, son parent, le bandeau
+de mise en cause **et quatre boutons de decision par ligne**. Il est devenu la
+meme liste que les publications : identite, etat, bouton « Examiner », bandeau
+dessous — et tout le reste dans la popup.
+
+⚠️⚠️ **La popup ouverte depuis cet ecran moderait la PUBLICATION, pas le
+commentaire.** « Valider », « Masquer », « Supprimer » y agissaient sur le
+billet ; les gestes du commentaire, eux, vivaient sur la ligne — donc pris sur
+un texte tronque, sans le fil, ce que la popup existe precisement pour eviter.
+`PostPreviewDialog` accepte desormais un **sujet** : `comment ?? post`.
+L'entete, les pastilles, les faits et les quatre gestes suivent le sujet ;
+quand c'est un commentaire, la publication devient le **contexte** (libelle
+« Sous la publication de X », cadre plus sourd) et le fil garde son
+surlignage.
+
+- ⚠️ **`post` est devenu facultatif.** Un commentaire dont la publication est
+  introuvable doit rester moderable ; la popup le dit au lieu de ne pas
+  s'ouvrir. Si ni l'un ni l'autre n'est fourni, elle ne rend rien — un
+  declencheur qui ouvre une fenetre vide fait douter de tout l'ecran.
+- **La nature du media disparait des faits pour un commentaire** : 0093 n'en
+  attache aucun, et afficher « Aucun » sur toutes les lignes serait du bruit.
+- **Le tableau est devenu une liste**, ce qui regle au passage la cellule de
+  commentaire qui tombait a ~130 px a 768 px — le point ou le rail de 16rem
+  devient fixe — et y ecrasait a la fois le texte et le bandeau.
+- Mesure 375 → 1920 de la popup en mode commentaire : `scrollWidth ===
+  clientWidth`, « En reponse a » et « Sous la publication de X » jamais
+  rabotes, pied visible partout, corps qui defile a 375 px.
+- **Ce que l'ecran ne fait plus** : moderer la publication parente depuis la
+  liste des commentaires. C'est l'ecran des publications qui porte ce geste, et
+  l'ambiguite — quatre boutons dont on ne savait pas sur quoi ils portaient —
+  etait le defaut corrige ici.
 
 ### The sign-in screen must send a captcha token
 

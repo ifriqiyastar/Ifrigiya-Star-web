@@ -57,10 +57,10 @@ export const NAV_ITEMS = [
      * demanderait un compteur par file dans `NavBadges`.
      */
     children: [
-      { href: "/admin/validations/joueurs", key: "validationsPlayers", badge: null, icon: BadgeCheckIcon },
-      { href: "/admin/validations/professionnels", key: "validationsPros", badge: null, icon: BriefcaseIcon },
-      { href: "/admin/validations/justificatifs", key: "validationsDocuments", badge: null, icon: FileTextIcon },
-      { href: "/admin/validations/identite", key: "validationsIdentity", badge: null, icon: IdCardIcon },
+      { href: "/admin/validations/joueurs", key: "validationsPlayers", badge: "joueurs" as const, icon: BadgeCheckIcon },
+      { href: "/admin/validations/professionnels", key: "validationsPros", badge: "professionnels" as const, icon: BriefcaseIcon },
+      { href: "/admin/validations/justificatifs", key: "validationsDocuments", badge: "justificatifs" as const, icon: FileTextIcon },
+      { href: "/admin/validations/identite", key: "validationsIdentity", badge: "identite" as const, icon: IdCardIcon },
     ],
   },
   {
@@ -193,6 +193,10 @@ export function firstAccessiblePath(permissions: AdminPermission[]): string {
 /** Les compteurs que le layout passe au rail. */
 export type NavBadgeKey =
   | "validations"
+  | "joueurs"
+  | "professionnels"
+  | "justificatifs"
+  | "identite"
   | "moderation"
   | "signalements"
   | "publications"

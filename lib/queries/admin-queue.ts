@@ -240,6 +240,17 @@ export async function fetchAdminQueue(
      */
     badges: {
       validations: counts.players + counts.professionals + counts.documents + counts.identity,
+      // ⚠️ Meme correction que pour la moderation, et pour la meme raison
+      // (signalee par le client) : un chiffre pose sur « Validations » dit
+      // qu'il y a du travail, jamais lequel des quatre ecrans le porte — on
+      // ouvrait les quatre pour trouver les deux dossiers. Chaque sous-entree
+      // compte desormais la sienne ; le groupe garde le total, et `NavMain`
+      // le retire quand il est deplie pour que le meme nombre ne soit pas
+      // imprime deux fois.
+      joueurs: counts.players,
+      professionnels: counts.professionals,
+      justificatifs: counts.documents,
+      identite: counts.identity,
       moderation: counts.reports + counts.removals + counts.posts + counts.comments,
       signalements: counts.reports + counts.removals,
       publications: counts.posts,
