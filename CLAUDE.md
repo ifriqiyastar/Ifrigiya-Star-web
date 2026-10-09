@@ -67,13 +67,30 @@ Below `xl` the same showcase sits **under** the store buttons rather than
 being hidden (client request, Oct 2026 — two original mobile-only treatments,
 a compact card and a "recruiter viewfinder" overlay, were rejected: the client
 wants the web composition itself). The hero container is `flex-col` until
-`xl:flex-row`. The composition is drawn for 30rem and is shrunk whole with CSS
-`zoom` in width steps (`0.66` / `0.75` from 360 px / `0.8` from 390 /
-`0.86` from 420 / `1` from 480) — `zoom` shrinks the layout box too, where
-`scale` would leave 33rem of empty space. The steps make it span the full
-screen width, gutters included, which is what keeps its text readable.
-Measured 360, 390 and 768 px, fr and ar: no horizontal overflow, centred, and
-the desktop layout at 1440 is unchanged.
+`xl:flex-row`. The composition is drawn for 30rem and is shrunk whole with
+`scale` by a factor `--s` set in width steps (`0.66` / `0.75` from 360 px /
+`0.8` from 390 / `0.86` from 420 / `1` from 480); the outer `Reveal` reserves
+`30rem × --s`. (`zoom` was used for one release and dropped: it is the less
+reliable of the two on iOS Safari.) The steps make it span the full screen
+width, gutters included, which is what keeps its text readable.
+⚠️⚠️ **The fade-in lives on the glass itself (`.site-showcase-lift`), never on
+an ancestor — not even during a transition.** It used to sit on each panel and
+on the `Reveal` wrapper: for 700 ms the glass blurred nothing, then the blur
+switched on at once at the end, panel by panel. On a phone, where the showcase
+now appears under your thumb while scrolling instead of at load, that read as
+a glitch (reported Oct 2026). An element's own opacity is applied after its
+backdrop blur and does not cut it. `Reveal` is only a trigger there (its fade
+is neutralised in `globals.css`), and the panels only slide. The floating
+animation is limited to `xl`: three blurred panels re-rendered every frame
+over a playing video is what a phone pays for during a scroll.
+Its four step cards animate **with the scroll** (client request, Oct 2026):
+each straightens up from a 3D tilt as it enters, then a lime line draws across
+its top — CSS `animation-timeline: view()` (block 4b of `globals.css`), the
+even card staggered on two columns; browsers without it keep `Reveal`'s fade.
+⚠️ The section is `overflow-clip`, **not** `overflow-hidden`: `hidden` makes it
+a scroll container, `view()` then tracks the section's own scroll — which never
+moves — and the cards stay frozen. Measured: with `hidden` they were flat at
+every scroll position.
 The Scout Days section shows `ScoutDaysPrism` instead of app screenshots: six
 player cards turning in 3D (CSS only, modelled on the client's Mojo Fantasy
 reference). Each card shows a player's name and role, then a six-axis

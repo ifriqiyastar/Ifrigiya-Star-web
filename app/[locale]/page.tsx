@@ -100,7 +100,7 @@ export default async function LandingPage() {
           revele au defilement. Sans JavaScript personne ne les observerait :
           on les reaffiche donc tous, plutot que de servir une page vide. */}
       <noscript>
-        <style>{".site-reveal{opacity:1;transform:none}.site-showcase-panel{opacity:1;translate:none}.site-gauge-arc{stroke-dashoffset:var(--gauge-to)}"}</style>
+        <style>{".site-reveal{opacity:1;transform:none}.site-showcase-panel{translate:none}.site-showcase-lift{opacity:1}.site-gauge-arc{stroke-dashoffset:var(--gauge-to)}"}</style>
       </noscript>
 
       <SiteNav />
@@ -247,11 +247,16 @@ const GAUGE_R = 30;
  * boutons de store (demande du client, oct. 2026) : le haut de page leur
  * reste, et la vitrine arrive au premier defilement. La composition est
  * dessinee pour 30rem ; plutot que de la redessiner pour le telephone, on la
- * reduit d'un bloc avec `zoom`, par paliers de largeur d'ecran. `zoom`
- * reduit aussi sa boite de mise en page, la ou `scale` laisserait un vide de
- * 33rem a reserver a la main. Les paliers lui font occuper toute la largeur de
- * l'ecran, marges comprises (le conteneur la centre) : c'est ce qui garde ses
- * textes lisibles.
+ * reduit d'un bloc par `scale`, d'un facteur `--s` pose par paliers de
+ * largeur d'ecran, et le bloc exterieur reserve la place reduite
+ * (`30rem × --s`). Pas `zoom` : il a ete essaye, et c'est la propriete la
+ * moins fiable des deux sur Safari iOS. Les paliers lui font occuper toute la
+ * largeur de l'ecran, marges comprises (le conteneur la centre) : c'est ce
+ * qui garde ses textes lisibles.
+ *
+ * `Reveal` n'y est qu'un declencheur (`is-visible`) : son fondu est
+ * neutralise dans `globals.css`, parce qu'une opacite sur un ancetre du verre
+ * coupe le flou — voir le bloc 6.
  */
 function ScoutingShowcase({ dict }: { dict: Dictionary }) {
   const t = dict.hero.card;
@@ -262,8 +267,8 @@ function ScoutingShowcase({ dict }: { dict: Dictionary }) {
   const circumference = 2 * Math.PI * GAUGE_R;
 
   return (
-    <Reveal variant="right" delay={360} className="site-showcase relative h-[33rem] w-[30rem] shrink-0 [zoom:0.66] min-[360px]:[zoom:0.75] min-[390px]:[zoom:0.8] min-[420px]:[zoom:0.86] min-[480px]:[zoom:1]">
-      <figure className="size-full">
+    <Reveal className="site-showcase relative h-[calc(33rem*var(--s))] w-[calc(30rem*var(--s))] shrink-0 [--s:0.66] min-[360px]:[--s:0.75] min-[390px]:[--s:0.8] min-[420px]:[--s:0.86] min-[480px]:[--s:1]">
+      <figure className="absolute top-0 left-1/2 h-[33rem] w-[30rem] origin-top -translate-x-1/2 scale-(--s)">
         <figcaption className="sr-only">{t.alt}</figcaption>
         <div aria-hidden className="relative size-full">
           <div className="absolute inset-x-0 top-1/2 mx-auto size-[22rem] -translate-y-1/2 rounded-full bg-(--site-accent)/10 blur-3xl" />
@@ -406,8 +411,12 @@ function ScoutDays({ dict }: { dict: Dictionary }) {
   return (
     <section
       id="scout-days"
-      className="scroll-mt-20 relative overflow-hidden py-16 sm:py-24 lg:py-28"
+      className="scroll-mt-20 relative overflow-clip py-16 sm:py-24 lg:py-28"
     >
+      {/* `overflow-clip` et non `overflow-hidden` : `hidden` fait de la
+          section un conteneur de defilement, et `view()` des cartes d'etapes
+          suivrait alors le sien — qui ne defile jamais — au lieu de celui de
+          la page. Les cartes resteraient figees. */}
       <div className="site-glow absolute inset-0 opacity-60" aria-hidden />
       <div className="relative mx-auto grid max-w-7xl gap-14 px-5 sm:px-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
         <div className="flex flex-col gap-8">
@@ -427,7 +436,7 @@ function ScoutDays({ dict }: { dict: Dictionary }) {
                 key={step.number}
                 as="li"
                 delay={i * 90}
-                className="flex flex-col gap-2 rounded-2xl border border-(--site-line) bg-(--site-card) p-5"
+                className="site-scroll-card relative flex flex-col gap-2 rounded-2xl border border-(--site-line) bg-(--site-card) p-5"
               >
                 <span className="font-heading text-sm font-extrabold text-(--site-accent)" aria-hidden>
                   {step.number}

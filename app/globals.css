@@ -922,6 +922,79 @@ body:has(.admin-dashboard-shell) {
   }
 }
 
+/* 4b. Les cartes d'etapes des Scout Days entrent **au rythme du
+       defilement** (demande du client, oct. 2026) : chaque carte se redresse
+       depuis une inclinaison en 3D en montant, puis un trait lime se trace en
+       haut de la carte. L'animation suit le doigt — remonter la page la
+       rejoue a l'envers — au lieu de se declencher une fois.
+
+       Meme mecanique que la parallaxe : `animation-timeline: view()`, sans
+       JavaScript. La ou elle n'existe pas (Firefox, anciens Safari), le
+       fondu de `Reveal` reste en place ; la ou elle existe, il est neutralise
+       pour que les deux ne se superposent pas. Sur deux colonnes, la carte
+       de droite part un peu plus tard (`nth-child(even)`) : sinon les deux
+       d'une meme rangee bougeraient d'un bloc. Seuls `transform` et
+       `opacity` bougent — pas de flou, qui coute cher pendant un
+       defilement sur telephone. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .site-scroll-card.site-reveal {
+      opacity: 1;
+      transform: none;
+      transition: none;
+      transform-origin: 50% 100%;
+      animation: site-scroll-card linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 32%;
+    }
+    .site-scroll-card::before {
+      content: "";
+      position: absolute;
+      inset-inline: 1.25rem;
+      top: 0;
+      height: 2px;
+      border-radius: 2px;
+      background: var(--site-accent);
+      transform-origin: left;
+      animation: site-scroll-line linear both;
+      animation-timeline: view();
+      animation-range: cover 22% cover 42%;
+    }
+    [dir="rtl"] .site-scroll-card::before {
+      transform-origin: right;
+    }
+    @media (min-width: 40rem) {
+      .site-scroll-card.site-reveal:nth-child(even) {
+        animation-range: entry 18% cover 40%;
+      }
+      .site-scroll-card:nth-child(even)::before {
+        animation-range: cover 30% cover 50%;
+      }
+    }
+  }
+}
+@keyframes site-scroll-card {
+  from {
+    opacity: 0;
+    transform: perspective(60rem) translate3d(0, 4.5rem, 0) rotateX(32deg) scale(0.9);
+  }
+  55% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes site-scroll-line {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
 /* 5. La pile d'etapes de « Comment ca marche ». Deux effets distincts :
 
       - `.site-step-card` : le glissement en profondeur des cartes. La courbe
@@ -969,9 +1042,17 @@ body:has(.admin-dashboard-shell) {
       la propriete `translate` et le flottement par `transform` : deux
       proprietes distinctes, qui se composent au lieu de s'ecraser.
 
-      ⚠️ Pas d'`opacity` < 1 au repos sur un ancetre du verre : c'est une
-      racine de `backdrop-filter`, le flou ne verrait plus la video derriere.
-      L'entree en fondu ne le fait que le temps de la transition. */
+      ⚠️⚠️ Jamais d'`opacity` < 1 sur un ancetre du verre, **meme le temps
+      d'une transition** : c'est une racine de `backdrop-filter`, le flou ne
+      voit plus la video derriere. Le fondu d'entree etait pose sur le
+      panneau et sur le bloc `Reveal` qui l'enveloppe : pendant 700 ms le
+      verre ne floutait rien, puis le flou s'allumait d'un coup a la fin de
+      la transition, panneau par panneau — l'« accroc » signale au defilement
+      sur telephone (oct. 2026), ou la vitrine apparait sous les yeux au lieu
+      de se jouer au chargement. Le fondu est donc porte par l'element de
+      verre **lui-meme** (`.site-showcase-lift`) : sa propre opacite
+      s'applique apres le flou, elle ne le coupe pas. Le panneau ne fait que
+      glisser (`translate`), et `Reveal` n'est plus qu'un declencheur. */
 .site-glass {
   background: rgb(10 10 10 / 0.42);
   border: 1px solid rgb(255 255 255 / 0.14);
@@ -981,21 +1062,28 @@ body:has(.admin-dashboard-shell) {
     0 20px 50px -16px rgb(0 0 0 / 0.6),
     inset 0 1px 0 rgb(255 255 255 / 0.08);
 }
+.site-showcase.site-reveal {
+  opacity: 1;
+  transform: none;
+  transition: none;
+}
 .site-showcase-panel {
-  opacity: 0;
   translate: 0 1rem;
-  transition:
-    opacity 700ms cubic-bezier(0.22, 1, 0.36, 1),
-    translate 700ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: translate 700ms cubic-bezier(0.22, 1, 0.36, 1);
   transition-delay: calc(450ms + var(--i, 0) * 130ms);
 }
 .site-showcase.is-visible .site-showcase-panel {
-  opacity: 1;
   translate: none;
 }
-.site-float {
-  animation: site-float 7s ease-in-out infinite;
-  animation-delay: calc(var(--i, 0) * -1.7s);
+/* Le flottement oblige a recalculer le flou de trois panneaux a chaque
+   image, par-dessus une video qui change deja a chaque image. Un ordinateur
+   l'absorbe ; un telephone le paie pendant le defilement. Reserve a `xl`, la
+   ou la vitrine est a cote du texte. */
+@media (min-width: 80rem) {
+  .site-float {
+    animation: site-float 7s ease-in-out infinite;
+    animation-delay: calc(var(--i, 0) * -1.7s);
+  }
 }
 @keyframes site-float {
   0%,
@@ -1014,10 +1102,15 @@ body:has(.admin-dashboard-shell) {
    sans lui, la carte grandirait sous le radar. Reserve aux ecrans qui
    survolent vraiment, sinon un toucher laisserait l'element grossi. */
 .site-showcase-lift {
+  opacity: 0;
   transition:
+    opacity 700ms cubic-bezier(0.22, 1, 0.36, 1) calc(450ms + var(--i, 0) * 130ms),
     scale 350ms cubic-bezier(0.22, 1, 0.36, 1),
     border-color 350ms ease,
     box-shadow 350ms ease;
+}
+.site-showcase.is-visible .site-showcase-lift {
+  opacity: 1;
 }
 @media (hover: hover) {
   .site-showcase-panel:hover {
@@ -1409,7 +1502,6 @@ body:has(.admin-dashboard-shell) {
     animation: none;
   }
   .site-showcase-panel {
-    opacity: 1;
     translate: none;
     transition: none;
   }
@@ -1417,6 +1509,7 @@ body:has(.admin-dashboard-shell) {
     animation: none;
   }
   .site-showcase-lift {
+    opacity: 1;
     transition: none;
   }
   .site-gauge-arc {
