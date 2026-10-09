@@ -29,11 +29,11 @@
     "card": {
       "alt": "Exemple de fiche d'évaluation après un Scout Day : six notes sur 100 et une note globale.",
       "title": "Fiche d'évaluation",
-      "example": "Exemple",
+      "example": "Profil",
       "overall": "Note globale",
       "profile": "Profil · 6 axes",
-      "verified": "Profil vérifié",
-      "verifiedNote": "Contrôlé par notre équipe"
+      "scouted": "Évalué en Scout Day",
+      "scoutedNote": "Noté sur 6 axes par un recruteur"
     }
   },
   "scoutDays": {

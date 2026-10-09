@@ -1006,6 +1006,32 @@ body:has(.admin-dashboard-shell) {
     transform: translateY(-0.5rem);
   }
 }
+/* Au survol, l'element vise grandit un peu, passe devant ses voisins et
+   prend un liseré lime (demande du client, oct. 2026). Le grossissement
+   passe par la propriete `scale` : `transform` est deja pris par le
+   flottement et `translate` par l'entree, les trois se composent. Le
+   passage au premier plan est indispensable, les panneaux se chevauchent :
+   sans lui, la carte grandirait sous le radar. Reserve aux ecrans qui
+   survolent vraiment, sinon un toucher laisserait l'element grossi. */
+.site-showcase-lift {
+  transition:
+    scale 350ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 350ms ease,
+    box-shadow 350ms ease;
+}
+@media (hover: hover) {
+  .site-showcase-panel:hover {
+    z-index: 10;
+  }
+  .site-showcase-panel:hover .site-showcase-lift {
+    scale: 1.06;
+    border-color: rgb(175 247 15 / 0.5);
+    box-shadow:
+      0 28px 70px -18px rgb(0 0 0 / 0.75),
+      0 0 0 1px rgb(175 247 15 / 0.15),
+      inset 0 1px 0 rgb(255 255 255 / 0.08);
+  }
+}
 /* La jauge se remplit une fois les panneaux poses. */
 .site-gauge-arc {
   stroke-dashoffset: var(--gauge-from);
@@ -1049,6 +1075,7 @@ body:has(.admin-dashboard-shell) {
   --prism-h: 28rem;
   --prism-r: 13.86rem;
   --prism-tilt: rotateZ(3deg) rotateX(11deg);
+  --prism-period: 14s;
 }
 /* Sur telephone, l'anneau et ses deux cartes laterales debordent de 375 px :
    on le reduit d'un bloc plutot que de le recalculer, ses proportions
@@ -1079,10 +1106,13 @@ body:has(.admin-dashboard-shell) {
   margin: calc(var(--prism-h) / -2) 0 0 calc(var(--prism-w) / -2);
   transform-style: preserve-3d;
   transform: var(--prism-tilt) translateZ(calc(var(--prism-r) * -1)) rotateY(0deg);
-  animation: site-prism-spin 14s linear infinite;
+  animation: site-prism-spin var(--prism-period) linear infinite;
 }
-/* Au survol, la rotation s'arrete : on peut lire la carte qu'on regarde. */
-.site-prism-stage:hover .site-prism {
+/* Au survol, la rotation s'arrete : on peut lire la carte qu'on regarde. Les
+   faces s'arretent avec elle, sinon elles se decaleraient de l'anneau. */
+.site-prism-stage:hover .site-prism,
+.site-prism-stage:hover .site-prism-card,
+.site-prism-stage:hover .site-prism-back {
   animation-play-state: paused;
 }
 .site-prism-face {
@@ -1092,9 +1122,76 @@ body:has(.admin-dashboard-shell) {
   transform: rotateY(calc(var(--k, 0) * 60deg)) translateZ(var(--prism-r));
 }
 /* Chaque cote ne se voit que de son cote : la face joueur de face, le dos
-   quand la carte est passee derriere. */
+   quand la carte est passee derriere.
+
+   ⚠️⚠️ Ce n'est PAS `backface-visibility` qui en decide, et la production l'a
+   montre (oct. 2026) : chez un collegue du client, les cartes passees
+   derriere montraient leur face joueur **en miroir** au lieu du logo. Rendu
+   dans un vrai WebKit (Playwright), le defaut se reproduit, et il resiste a
+   tout ce qui demande au navigateur de juger quel cote fait face — la
+   propriete posee sur chaque descendant, prefixe compris, comme un dos
+   recule d'un pixel pour laisser trancher le tri en profondeur : quand le
+   moteur ne compose pas la scene en 3D, aucun des deux n'existe.
+
+   La visibilite est donc **calculee**, pas deduite : une animation de
+   `visibility`, de meme periode que la rotation, montre la face pendant la
+   portion du tour ou la carte regarde l'ecran et le dos le reste du temps.
+   Elle ne depend d'aucun rendu 3D, donc d'aucun navigateur.
+
+   La portion se calcule, elle ne se regle pas a l'oeil. Une carte d'angle
+   θ fait face a l'observateur quand (D + r)·cos θ > r, ou D est la
+   perspective (1200px = 75rem) et r le rayon de l'anneau (13.86rem) :
+   cos θ > 13.86 / 88.86, soit |θ| < 81°, donc 81 / 360 = 22.5 % du tour de
+   part et d'autre. Pas 90° : avec la perspective, une carte passe de dos
+   avant d'etre de profil. Changer `--prism-r` ou la perspective impose de
+   refaire ce calcul — l'ecart ne se verrait que sur une carte presque de
+   chant, mais il se verrait.
+
+   La carte k occupe a l'instant t l'angle qu'occupait la carte 0 a
+   t - k·T/6 : d'ou le retard `(k - 6)·T/6`, negatif pour etre en phase des
+   le premier tour. `backface-visibility` reste pose : la ou il marche, il
+   ne fait que confirmer. */
 .site-prism-face > * {
+  -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
+  animation-duration: var(--prism-period);
+  animation-timing-function: step-end;
+  animation-iteration-count: infinite;
+  animation-delay: calc((var(--k, 0) - 6) * var(--prism-period) / 6);
+}
+.site-prism-card {
+  animation-name: site-prism-front;
+}
+.site-prism-back {
+  animation-name: site-prism-rear;
+}
+@keyframes site-prism-front {
+  0% {
+    visibility: visible;
+  }
+  22.5% {
+    visibility: hidden;
+  }
+  77.5% {
+    visibility: visible;
+  }
+  100% {
+    visibility: visible;
+  }
+}
+@keyframes site-prism-rear {
+  0% {
+    visibility: hidden;
+  }
+  22.5% {
+    visibility: visible;
+  }
+  77.5% {
+    visibility: hidden;
+  }
+  100% {
+    visibility: hidden;
+  }
 }
 .site-prism-card,
 .site-prism-back {
@@ -1319,6 +1416,9 @@ body:has(.admin-dashboard-shell) {
   .site-float {
     animation: none;
   }
+  .site-showcase-lift {
+    transition: none;
+  }
   .site-gauge-arc {
     stroke-dashoffset: var(--gauge-to);
     transition: none;
@@ -1327,6 +1427,13 @@ body:has(.admin-dashboard-shell) {
      visibles de biais, le volume se lit sans que rien ne tourne. */
   .site-prism {
     animation: none;
+  }
+  /* Les faces se figent avec lui, dans la phase de l'angle 0 : leur retard
+     negatif les y place deja. `animation: none` les rendrait toutes visibles,
+     face joueur des cartes du fond comprise. */
+  .site-prism-card,
+  .site-prism-back {
+    animation-play-state: paused;
   }
   /* Le ballon apparait et disparait en fondu, sans rebond, sans flotter et
      sans rouler ; la remontee est instantanee (cf. le composant). */

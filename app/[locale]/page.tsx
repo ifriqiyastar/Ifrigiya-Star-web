@@ -138,7 +138,9 @@ function Hero({ dict }: { dict: Dictionary }) {
     <section id="academie" className="relative isolate scroll-mt-16 overflow-hidden bg-black">
       <HeroVideo />
 
-      <div className="relative z-10 mx-auto flex min-h-[calc(100svh-4rem)] max-w-7xl items-center gap-12 px-5 pt-10 pb-16 sm:px-8 sm:pt-20 sm:pb-28 lg:min-h-[max(720px,calc(100svh-4rem))] lg:pt-24 lg:pb-32">
+      {/* En colonne sous `xl` : la vitrine passe sous les boutons de store au
+          lieu de disparaitre (demande du client, oct. 2026). */}
+      <div className="relative z-10 mx-auto flex min-h-[calc(100svh-4rem)] max-w-7xl flex-col items-center justify-center gap-12 px-5 pt-10 pb-16 sm:px-8 sm:pt-20 sm:pb-28 lg:min-h-[max(720px,calc(100svh-4rem))] lg:pt-24 lg:pb-32 xl:flex-row">
         <div className="flex w-full max-w-4xl flex-col items-start gap-7 sm:gap-6">
           {/* Ce que fait la plateforme, avant le slogan : le scouting, comme
               le premier mot du concurrent (demande du client, oct. 2026). Le
@@ -241,9 +243,15 @@ const GAUGE_R = 30;
  * Tailwind v4 pose ses `-translate-*` sur la propriete `translate`, celle
  * qu'utilise l'entree echelonnee de `.site-showcase-panel`.
  *
- * A partir de `xl` seulement, comme l'ancienne fiche : a 1024 px le titre
- * insecable ne laisse pas la place, et sur telephone le client a demande de
- * garder le haut de page aux boutons de store.
+ * A cote du texte a partir de `xl` ; en dessous, elle passe **sous** les
+ * boutons de store (demande du client, oct. 2026) : le haut de page leur
+ * reste, et la vitrine arrive au premier defilement. La composition est
+ * dessinee pour 30rem ; plutot que de la redessiner pour le telephone, on la
+ * reduit d'un bloc avec `zoom`, par paliers de largeur d'ecran. `zoom`
+ * reduit aussi sa boite de mise en page, la ou `scale` laisserait un vide de
+ * 33rem a reserver a la main. Les paliers lui font occuper toute la largeur de
+ * l'ecran, marges comprises (le conteneur la centre) : c'est ce qui garde ses
+ * textes lisibles.
  */
 function ScoutingShowcase({ dict }: { dict: Dictionary }) {
   const t = dict.hero.card;
@@ -254,7 +262,7 @@ function ScoutingShowcase({ dict }: { dict: Dictionary }) {
   const circumference = 2 * Math.PI * GAUGE_R;
 
   return (
-    <Reveal variant="right" delay={360} className="site-showcase relative hidden h-[33rem] w-[30rem] shrink-0 xl:block">
+    <Reveal variant="right" delay={360} className="site-showcase relative h-[33rem] w-[30rem] shrink-0 [zoom:0.66] min-[360px]:[zoom:0.75] min-[390px]:[zoom:0.8] min-[420px]:[zoom:0.86] min-[480px]:[zoom:1]">
       <figure className="size-full">
         <figcaption className="sr-only">{t.alt}</figcaption>
         <div aria-hidden className="relative size-full">
@@ -262,7 +270,7 @@ function ScoutingShowcase({ dict }: { dict: Dictionary }) {
 
           {/* La carte joueur. */}
           <div className="site-showcase-panel absolute inset-x-0 top-[5.5rem] mx-auto h-[22rem] w-[14.5rem]" style={{ "--i": 0 } as CSSProperties}>
-            <div className="relative size-full overflow-hidden rounded-[1.75rem] border border-white/20 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.8)]">
+            <div className="site-showcase-lift relative size-full overflow-hidden rounded-[1.75rem] border border-white/20 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.8)]">
               <Image
                 src="/images/testimonial-yassine.webp"
                 alt=""
@@ -286,7 +294,7 @@ function ScoutingShowcase({ dict }: { dict: Dictionary }) {
 
           {/* Note globale. */}
           <div className="site-showcase-panel absolute end-0 top-10 w-[10rem]" style={{ "--i": 1 } as CSSProperties}>
-            <div className="site-glass site-float flex flex-col items-center rounded-2xl px-4 pt-4 pb-3.5">
+            <div className="site-glass site-float site-showcase-lift flex flex-col items-center rounded-2xl px-4 pt-4 pb-3.5">
               <div className="relative size-[4.75rem]">
                 <svg viewBox="0 0 76 76" className="size-full -rotate-90">
                   <circle cx="38" cy="38" r={GAUGE_R} fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="5" />
@@ -317,26 +325,28 @@ function ScoutingShowcase({ dict }: { dict: Dictionary }) {
             </div>
           </div>
 
-          {/* Profil verifie : la validation manuelle des profils, un vrai geste
-              du produit (la file `/admin/validations`), pas un chiffre invente. */}
+          {/* Evalue en Scout Day : d'ou viennent les notes de la carte — la fiche
+              que l'organisateur envoie apres la journee, sur les six axes de
+              `lib/evaluation-axes.ts`. Un vrai geste du produit, pas un chiffre. */}
           <div className="site-showcase-panel absolute start-0 top-[16rem]" style={{ "--i": 2 } as CSSProperties}>
-            <div className="site-glass site-float flex items-center gap-3 rounded-2xl py-3 ps-3 pe-4">
+            <div className="site-glass site-float site-showcase-lift flex items-center gap-3 rounded-2xl py-3 ps-3 pe-4">
               <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-(--site-accent)/15">
                 <svg viewBox="0 0 24 24" className="size-[1.125rem] fill-none stroke-(--site-accent) stroke-2">
-                  <path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6l-7-3Z" strokeLinejoin="round" />
-                  <path d="m9 12 2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
+                  <rect x="5" y="4" width="14" height="17" rx="2" strokeLinejoin="round" />
+                  <path d="M9 4V3h6v1" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="m9 13 2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </span>
               <span className="flex flex-col">
-                <span className="text-xs font-semibold whitespace-nowrap">{t.verified}</span>
-                <span className="text-[0.6875rem] whitespace-nowrap text-(--site-muted)">{t.verifiedNote}</span>
+                <span className="text-xs font-semibold whitespace-nowrap">{t.scouted}</span>
+                <span className="text-[0.6875rem] whitespace-nowrap text-(--site-muted)">{t.scoutedNote}</span>
               </span>
             </div>
           </div>
 
           {/* Profil a six axes. */}
           <div className="site-showcase-panel absolute end-0 bottom-0 w-[14rem]" style={{ "--i": 3 } as CSSProperties}>
-            <div className="site-glass site-float rounded-2xl px-3 pt-3.5 pb-2">
+            <div className="site-glass site-float site-showcase-lift rounded-2xl px-3 pt-3.5 pb-2">
               <p className="px-1 text-[0.625rem] font-bold tracking-[0.16em] text-(--site-fg)/70 uppercase">{t.profile}</p>
               <RadarChart scores={joueur.profile} labels={axes} />
             </div>
@@ -592,7 +602,11 @@ function ScoutDaysPrism({ dict }: { dict: Dictionary }) {
   return (
     <figure className="site-prism-stage relative h-[25rem] sm:h-[36rem]">
       <figcaption className="sr-only">{description}</figcaption>
-      <div aria-hidden className="site-glow-center absolute inset-x-0 bottom-0 h-1/2 opacity-80" />
+      {/* Le halo sous l'anneau, a partir de `lg` seulement : en dessous, la
+          section s'empile et l'anneau finit juste au-dessus du halo vert du
+          bas de section — deux verts l'un sur l'autre (demande du client,
+          oct. 2026). */}
+      <div aria-hidden className="site-glow-center absolute inset-x-0 bottom-0 hidden h-1/2 opacity-80 lg:block" />
       <div aria-hidden className="site-prism-scale absolute inset-0">
         <div className="site-prism">
           {PRISM_CARDS.map((carte, i) => {

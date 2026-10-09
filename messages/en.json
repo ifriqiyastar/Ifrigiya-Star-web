@@ -29,11 +29,11 @@
     "card": {
       "alt": "Example of an evaluation after a Scout Day: six scores out of 100 and an overall score.",
       "title": "Evaluation report",
-      "example": "Example",
+      "example": "Profile",
       "overall": "Overall score",
       "profile": "Profile · 6 axes",
-      "verified": "Verified profile",
-      "verifiedNote": "Checked by our team"
+      "scouted": "Assessed at a Scout Day",
+      "scoutedNote": "Scored on 6 axes by a recruiter"
     }
   },
   "scoutDays": {

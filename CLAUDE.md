@@ -46,21 +46,34 @@ hero button did too, and was removed at the client's request).
 `security definer` read exposing only safe columns and the client's consent on
 what to show (organiser, price). Its six axes must follow `lib/evaluation-axes.ts`.
 The hero carries a kicker ("La plateforme de scouting du football africain")
-and, from `xl` only, `ScoutingShowcase`: our answer to the competitor's
+and `ScoutingShowcase` (beside the text from `xl`, below it under `xl`): our answer to the competitor's
 "Scouting Card", in frosted glass over the hero video (client's reference, Oct
 2026) — a player card in the middle, three `.site-glass` panels overlapping it
-(overall gauge, "Profil vérifié", six-axis radar; a "Progression" sparkline
+(overall gauge, "Évalué en Scout Day" — it replaced "Profil vérifié" at the
+client's request, Oct 2026 — six-axis radar; a "Progression" sparkline
 was removed at the client's request). The player is
 **Yassine**, the fictitious testimonial character, with **his** profile from
 `PRISM_PLAYERS[0]` — one face, one identity, one radar on the page. ⚠️ Those
 scores are **invented on
-purpose and labelled "Exemple" on the card**; the overall is their mean, like
-`overall_score`. Never drop that pill, and never swap in a real player's
-scores without consent. ⚠️ Keep `opacity` < 1 off the glass's ancestors at
+purpose**. The pill above the name read "Exemple" until Oct 2026; at the
+client's request it now reads just "Profil", so only the image's `alt`
+("Exemple de fiche d'évaluation…") still says the scores are illustrative. The overall is their mean, like
+`overall_score`. Never swap in a real player's scores without consent. ⚠️ Keep `opacity` < 1 off the glass's ancestors at
 rest: it becomes the `backdrop-filter` root and the blur stops seeing the
 video. The card is centred with `mx-auto`, not `-translate-*`, because
 Tailwind v4 writes those to `translate`, which the panels' staggered entrance
 uses.
+Below `xl` the same showcase sits **under** the store buttons rather than
+being hidden (client request, Oct 2026 — two original mobile-only treatments,
+a compact card and a "recruiter viewfinder" overlay, were rejected: the client
+wants the web composition itself). The hero container is `flex-col` until
+`xl:flex-row`. The composition is drawn for 30rem and is shrunk whole with CSS
+`zoom` in width steps (`0.66` / `0.75` from 360 px / `0.8` from 390 /
+`0.86` from 420 / `1` from 480) — `zoom` shrinks the layout box too, where
+`scale` would leave 33rem of empty space. The steps make it span the full
+screen width, gutters included, which is what keeps its text readable.
+Measured 360, 390 and 768 px, fr and ar: no horizontal overflow, centred, and
+the desktop layout at 1440 is unchanged.
 The Scout Days section shows `ScoutDaysPrism` instead of app screenshots: six
 player cards turning in 3D (CSS only, modelled on the client's Mojo Fantasy
 reference). Each card shows a player's name and role, then a six-axis
@@ -79,6 +92,18 @@ rims, no glow. ⚠️ Keep nothing but cards in that 3D scene. A central "core"
 was tried (it was a misreading of those backs) and Chrome split each card along
 the core panels' extended planes and dropped fragments — black bands across the
 front card, measured with and without it.
+⚠️⚠️ **Which side of a card shows is computed, not left to the browser**
+(Oct 2026). In production a colleague of the client saw the cards that had gone
+round show their player face **mirrored** instead of the logo:
+`backface-visibility` is not honoured everywhere, and neither are its usual
+patches (the property on every descendant, a back pushed 1 px behind for depth
+sorting) — an engine that does not composite the scene in 3D has neither. Each
+face now runs a `visibility` animation with the ring's period
+(`--prism-period`), phased by `--k`, that shows the front while the card faces
+the screen. The window is ±81°, not ±90°: with a 1200px perspective and a
+13.86rem radius a card turns its back before it is edge-on — recompute it if
+either changes (the formula is in `globals.css`). Hover and reduced motion
+must pause the faces together with the ring, or they drift apart.
 
 **The mockups are translated, and the folder is the language.** The app speaks
 the site's three languages, so `public/app/` holds one complete set per locale
