@@ -15,28 +15,64 @@
       "title": "Scannez pour telecharger",
       "description": "Visez ce code avec l'appareil photo de votre telephone : vous arriverez sur cette meme page, prete a vous montrer le bon store.",
       "close": "Fermer la fenetre"
-    }
+    },
+    "scoutDays": "Scout Days"
   },
   "hero": {
+    "kicker": "La plateforme de scouting du football africain",
+    "kickerShort": "Plateforme de scouting",
     "titleLine1": "Aucun talent africain",
     "titleLine2": "ne doit rester",
     "titleAccent": "invisible",
-    "lead": "Ifriqiya Soccer Star est une academie de football d'elite dediee a la formation, au developpement technique et a l'epanouissement des jeunes talents. Profil verifie, videos de match, journees de detection et contact direct avec les recruteurs — tout depuis votre telephone.",
-    "leadMobile": "Ifriqiya Soccer Star est une academie de football d'elite dediee a la formation, au developpement technique et a l'epanouissement des jeunes talents.",
-    "pillars": {
-      "detection": {
-        "title": "Detection",
-        "text": "Scout Days encadres"
-      },
-      "progression": {
-        "title": "Progression",
-        "text": "Evaluation apres chaque journee"
-      },
-      "excellence": {
-        "title": "Excellence",
-        "text": "Profils verifies un par un"
-      }
+    "lead": "Une académie de football d'élite pour révéler les jeunes talents : Scout Days, évaluation sur six axes et contact direct avec les recruteurs, depuis votre téléphone.",
+    "leadMobile": "Ifriqiya Soccer Star est une académie de football d'élite dédiée à la formation, au développement technique et à l'épanouissement des jeunes talents.",
+    "card": {
+      "alt": "Exemple de fiche d'évaluation après un Scout Day : six notes sur 100 et une note globale.",
+      "title": "Fiche d'évaluation",
+      "example": "Exemple",
+      "overall": "Note globale",
+      "profile": "Profil · 6 axes",
+      "verified": "Profil vérifié",
+      "verifiedNote": "Contrôlé par notre équipe"
     }
+  },
+  "scoutDays": {
+    "pill": "Scout Days",
+    "title": "Une journée sur le terrain, sous les yeux des recruteurs.",
+    "lead": "Inscris-toi depuis l'application, joue devant les recruteurs et reçois ton évaluation.",
+    "stepsAria": "Le déroulé d'un Scout Day",
+    "steps": [
+      {
+        "number": "01",
+        "title": "Un professionnel organise",
+        "text": "Un club, une académie ou un recruteur validé fixe la date, le lieu, les places et le tarif éventuel. L'académie vérifie chaque Scout Day avant sa publication."
+      },
+      {
+        "number": "02",
+        "title": "Tu vérifies ton éligibilité",
+        "text": "Âge, poste, niveau, pays : les critères sont affichés sur la fiche, et l'application te dit tout de suite si ton profil correspond."
+      },
+      {
+        "number": "03",
+        "title": "Tu joues devant eux",
+        "text": "Ton inscription confirmée, tu te présentes le jour venu et tu joues sous les yeux de l'organisateur."
+      },
+      {
+        "number": "04",
+        "title": "Tu reçois ton évaluation",
+        "text": "Une note sur six axes, que l'organisateur choisit de te transmettre dans l'application."
+      }
+    ],
+    "cta": "Trouver un Scout Day",
+    "ctaNote": "Les Scout Days à venir se consultent dans l'application, gratuite pour les joueurs.",
+    "axes": [
+      "Vitesse",
+      "Finition",
+      "Précision",
+      "Passe",
+      "Défense",
+      "Cognitif"
+    ]
   },
   "services": {
     "label": "Nos services",
@@ -159,6 +195,10 @@
         "a": "Aux jeunes joueuses et joueurs qui veulent etre vus, et aux professionnels du football — recruteurs, clubs, academies, agents — qui cherchent des talents. Les deux profils s'inscrivent depuis la meme application, avec des parcours distincts."
       },
       {
+        "q": "Qu'est-ce qu'un Scout Day ?",
+        "a": "Une journée de détection organisée par un professionnel validé — club, académie, recruteur ou agent — et vérifiée par l'académie avant d'être publiée. Sa fiche indique la date, le lieu, les places, le tarif éventuel et les critères d'éligibilité. L'inscription se fait depuis l'application, et après la journée l'organisateur peut vous transmettre une évaluation sur six axes."
+      },
+      {
         "q": "L'inscription est-elle payante ?",
         "a": "La creation d'un profil joueur est gratuite. Certaines journees de detection ont un tarif d'inscription, indique sur la fiche de l'evenement. Les professionnels disposent de formules d'abonnement selon l'etendue de la recherche de joueurs."
       },
@@ -191,7 +231,7 @@
       "Contact direct avec les pros"
     ],
     "appleStore": "l'App Store",
-    "applePrefix": "Telecharger sur",
+    "applePrefix": "Télécharger sur",
     "googleStore": "Google Play",
     "googlePrefix": "Disponible sur",
     "signInCaption": "Se connecter",
@@ -226,7 +266,9 @@
     "writeBody": "Une question sur l'academie, une detection ou un partenariat ? Notre equipe repond.",
     "motto": "Detection · Progression · Excellence",
     "privacy": "Confidentialité",
-    "terms": "Conditions"
+    "terms": "Conditions",
+    "scoutDays": "Les Scout Days",
+    "backToTop": "Revenir en haut de la page"
   },
   "language": {
     "label": "Langue",

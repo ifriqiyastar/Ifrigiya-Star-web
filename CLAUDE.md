@@ -35,6 +35,51 @@ its phone mockups are real screenshots of the mobile app in
 It carries **no audience figures and no testimonials** — inventing either on a
 public page manufactures evidence.
 
+**Scout Days are the page's second gesture** (client request, Oct 2026, after
+comparing with ifreq.io, which leads with its detection event). A dedicated
+`#scout-days` section sits right under the hero — organisation, eligibility,
+the day, the six-axis evaluation — followed by the video rail; the
+header, the drawer, the footer and the first carousel slide point at it (a
+hero button did too, and was removed at the client's request).
+⚠️ It is **explanatory, with no dates**: `anon` cannot read `scout_days`
+(`42501` on `is_admin`), and listing real events publicly needs both a
+`security definer` read exposing only safe columns and the client's consent on
+what to show (organiser, price). Its six axes must follow `lib/evaluation-axes.ts`.
+The hero carries a kicker ("La plateforme de scouting du football africain")
+and, from `xl` only, `ScoutingShowcase`: our answer to the competitor's
+"Scouting Card", in frosted glass over the hero video (client's reference, Oct
+2026) — a player card in the middle, three `.site-glass` panels overlapping it
+(overall gauge, "Profil vérifié", six-axis radar; a "Progression" sparkline
+was removed at the client's request). The player is
+**Yassine**, the fictitious testimonial character, with **his** profile from
+`PRISM_PLAYERS[0]` — one face, one identity, one radar on the page. ⚠️ Those
+scores are **invented on
+purpose and labelled "Exemple" on the card**; the overall is their mean, like
+`overall_score`. Never drop that pill, and never swap in a real player's
+scores without consent. ⚠️ Keep `opacity` < 1 off the glass's ancestors at
+rest: it becomes the `backdrop-filter` root and the blur stops seeing the
+video. The card is centred with `mx-auto`, not `-translate-*`, because
+Tailwind v4 writes those to `translate`, which the panels' staggered entrance
+uses.
+The Scout Days section shows `ScoutDaysPrism` instead of app screenshots: six
+player cards turning in 3D (CSS only, modelled on the client's Mojo Fantasy
+reference). Each card shows a player's name and role, then a six-axis
+**radar** (`RadarChart`) of an invented profile with **no figures**. The people
+are the three fictitious testimonial characters — Yassine, Karim, and Mehdi the
+coach (added at the client's request, keeping his coach role) — and name and
+role are read from `testimonials.items` so one face never carries two
+identities on the page. Order Y-K-M twice: the three visible cards are always
+three different people. Their photos are the AI portraits plus the "Pourquoi"
+training shot — `carousel-dribble.jpg` shows a real club's player and must
+never carry a score. The ring copies the reference video: spaced
+cards (14.5 × 28rem), each with a dark **back** carrying the logo and the
+brand name, the ring tilted forward so the backs of the
+cards that went round show through the gaps, lower than the front card; thin
+rims, no glow. ⚠️ Keep nothing but cards in that 3D scene. A central "core"
+was tried (it was a misreading of those backs) and Chrome split each card along
+the core panels' extended planes and dropped fragments — black bands across the
+front card, measured with and without it.
+
 **The mockups are translated, and the folder is the language.** The app speaks
 the site's three languages, so `public/app/` holds one complete set per locale
 (`fr`, `en`, `ar`) under identical file names, and `lib/app-screens.ts` resolves

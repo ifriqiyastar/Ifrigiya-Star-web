@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { BackToTop } from "@/components/site/back-to-top";
 import type { Locale } from "@/lib/i18n/config";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import { getDictionary, getLocale } from "@/lib/i18n/dictionaries";
@@ -34,6 +35,7 @@ export async function SiteFooter({
   const prefix = locale === "fr" ? "" : `/${locale}`;
 
   return (
+    <>
     <footer className="border-t border-(--site-line) py-14">
       <div className="mx-auto grid max-w-7xl gap-10 px-5 sm:px-8 md:grid-cols-2 lg:grid-cols-4">
         <div className="flex flex-col gap-4">
@@ -55,6 +57,7 @@ export async function SiteFooter({
           titre={t.academyHeading}
           liens={[
             { href: `${prefix}/#academie`, label: t.about },
+            { href: `${prefix}/#scout-days`, label: t.scoutDays },
             { href: `${prefix}/#comment`, label: t.how },
             { href: `${prefix}/#scout-days-videos`, label: t.scoutDaysVideo },
             { href: `${prefix}/#fonctionnalites`, label: t.app },
@@ -101,6 +104,13 @@ export async function SiteFooter({
         </div>
       </div>
     </footer>
+
+    {/* Le ballon de retour en haut : monte ici parce que chaque page publique
+        a ce pied de page, et qu'il est toujours dans `.site-shell`, dont il
+        lit les couleurs. Il est en `position: fixed`, sa place dans le DOM
+        ne compte pas. */}
+    <BackToTop label={t.backToTop} />
+    </>
   );
 }
 

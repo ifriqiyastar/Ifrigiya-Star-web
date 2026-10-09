@@ -15,28 +15,64 @@
       "title": "Scan to download",
       "description": "Point your phone's camera at this code: it opens this same page, ready to show you the right store.",
       "close": "Close this window"
-    }
+    },
+    "scoutDays": "Scout Days"
   },
   "hero": {
+    "kicker": "The scouting platform for African football",
+    "kickerShort": "Scouting platform",
     "titleLine1": "No African talent",
     "titleLine2": "should remain",
     "titleAccent": "invisible",
-    "lead": "Ifriqiya Soccer Star is an elite football academy devoted to training, technical development and the growth of young talent. A verified profile, match footage, scouting days and direct contact with recruiters — all from your phone.",
+    "lead": "An elite football academy that brings young talent to light: Scout Days, a six-axis evaluation and direct contact with recruiters, all from your phone.",
     "leadMobile": "Ifriqiya Soccer Star is an elite football academy devoted to training, technical development and the growth of young talent.",
-    "pillars": {
-      "detection": {
-        "title": "Scouting",
-        "text": "Supervised Scout Days"
-      },
-      "progression": {
-        "title": "Progression",
-        "text": "An assessment after every session"
-      },
-      "excellence": {
-        "title": "Excellence",
-        "text": "Profiles verified one by one"
-      }
+    "card": {
+      "alt": "Example of an evaluation after a Scout Day: six scores out of 100 and an overall score.",
+      "title": "Evaluation report",
+      "example": "Example",
+      "overall": "Overall score",
+      "profile": "Profile · 6 axes",
+      "verified": "Verified profile",
+      "verifiedNote": "Checked by our team"
     }
+  },
+  "scoutDays": {
+    "pill": "Scout Days",
+    "title": "A day on the pitch, in front of the recruiters.",
+    "lead": "Sign up from the app, play in front of recruiters and get your evaluation.",
+    "stepsAria": "How a Scout Day works",
+    "steps": [
+      {
+        "number": "01",
+        "title": "A professional organises",
+        "text": "A verified club, academy or recruiter sets the date, venue, places and any fee. The academy reviews every Scout Day before it is published."
+      },
+      {
+        "number": "02",
+        "title": "You check your eligibility",
+        "text": "Age, position, level, country: the criteria are on the event page, and the app tells you straight away whether your profile fits."
+      },
+      {
+        "number": "03",
+        "title": "You play in front of them",
+        "text": "Once your registration is confirmed, you turn up on the day and play under the organiser's eye."
+      },
+      {
+        "number": "04",
+        "title": "You get your evaluation",
+        "text": "A score on six axes, which the organiser chooses to share with you in the app."
+      }
+    ],
+    "cta": "Find a Scout Day",
+    "ctaNote": "Upcoming Scout Days are listed in the app, free for players.",
+    "axes": [
+      "Speed",
+      "Finishing",
+      "Accuracy",
+      "Passing",
+      "Defending",
+      "Cognitive"
+    ]
   },
   "services": {
     "label": "Our services",
@@ -159,6 +195,10 @@
         "a": "For young players who want to be seen, and for football professionals — recruiters, clubs, academies, agents — looking for talent. Both sign up from the same app, along separate paths."
       },
       {
+        "q": "What is a Scout Day?",
+        "a": "A scouting day run by a verified professional — club, academy, recruiter or agent — and reviewed by the academy before it is published. Its page shows the date, venue, places, any fee and the eligibility criteria. You sign up from the app, and after the day the organiser can send you an evaluation on six axes."
+      },
+      {
         "q": "Is signing up paid?",
         "a": "Creating a player profile is free. Some scouting days carry a registration fee, shown on the event page. Professionals have subscription plans that depend on how widely they search for players."
       },
@@ -226,7 +266,9 @@
     "writeBody": "A question about the academy, a scouting day or a partnership? Our team answers.",
     "motto": "Scouting · Progression · Excellence",
     "privacy": "Privacy",
-    "terms": "Terms"
+    "terms": "Terms",
+    "scoutDays": "Scout Days",
+    "backToTop": "Back to top"
   },
   "language": {
     "label": "Language",

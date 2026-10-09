@@ -959,6 +959,311 @@ body:has(.admin-dashboard-shell) {
   animation-delay: calc(var(--step-delay, 0) * 1ms);
 }
 
+/* 6. La vitrine du hero (`ScoutingShowcase`) : des panneaux de verre depoli
+      poses sur la video. Le fond est du noir translucide, pas du blanc :
+      sur une video claire un voile blanc delave le texte, un voile noir le
+      garde lisible quelle que soit l'image du moment.
+
+      Les panneaux arrivent un a un (`--i` pose le rang) puis flottent, chacun
+      decale dans son cycle pour ne jamais monter ensemble. L'entree passe par
+      la propriete `translate` et le flottement par `transform` : deux
+      proprietes distinctes, qui se composent au lieu de s'ecraser.
+
+      ⚠️ Pas d'`opacity` < 1 au repos sur un ancetre du verre : c'est une
+      racine de `backdrop-filter`, le flou ne verrait plus la video derriere.
+      L'entree en fondu ne le fait que le temps de la transition. */
+.site-glass {
+  background: rgb(10 10 10 / 0.42);
+  border: 1px solid rgb(255 255 255 / 0.14);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  backdrop-filter: blur(18px) saturate(150%);
+  box-shadow:
+    0 20px 50px -16px rgb(0 0 0 / 0.6),
+    inset 0 1px 0 rgb(255 255 255 / 0.08);
+}
+.site-showcase-panel {
+  opacity: 0;
+  translate: 0 1rem;
+  transition:
+    opacity 700ms cubic-bezier(0.22, 1, 0.36, 1),
+    translate 700ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: calc(450ms + var(--i, 0) * 130ms);
+}
+.site-showcase.is-visible .site-showcase-panel {
+  opacity: 1;
+  translate: none;
+}
+.site-float {
+  animation: site-float 7s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * -1.7s);
+}
+@keyframes site-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-0.5rem);
+  }
+}
+/* La jauge se remplit une fois les panneaux poses. */
+.site-gauge-arc {
+  stroke-dashoffset: var(--gauge-from);
+  transition: stroke-dashoffset 1300ms cubic-bezier(0.22, 1, 0.36, 1) 1000ms;
+}
+.site-showcase.is-visible .site-gauge-arc {
+  stroke-dashoffset: var(--gauge-to);
+}
+
+/* 7. L'anneau de cartes joueurs de la section Scout Days
+      (`ScoutDaysPrism`, `app/[locale]/page.tsx`), d'apres la video Mojo
+      Fantasy fournie par le client, etudiee image par image.
+
+      Ce que la video montre, et que la structure reprend :
+
+      - six cartes **separees** de 14.5rem autour d'un axe vertical, a 60
+        degres l'une de l'autre, avec un jour de 1.5rem entre deux bords.
+        `--prism-r` est l'apotheme d'un hexagone de cote 14.5rem + 1.5rem :
+        (16rem / 2) / tan(30deg) ≈ 13.86rem ;
+      - des cartes **a deux faces** : la face joueur, et un **dos** sombre
+        marque du logo (`.site-prism-back`). Les cartes du fond ne sont pas
+        cachees : on voit leur dos dans le jour entre deux cartes, comme dans
+        la video ;
+      - un anneau **penche vers l'avant** (`rotateX` positif) : le fond de
+        l'anneau descend, et le dos des cartes passees derriere apparait plus
+        bas que la carte de face, son pied sous elle ;
+      - une **bordure fine**, sans halo : un liseré clair, un peu plus vif en
+        haut, comme le verre des cartes de la maquette ;
+      - une rotation **continue**, environ un tour en 14 s.
+
+      L'anneau recule de `--prism-r` : la face avant reste dans le plan de
+      l'ecran, a sa vraie taille.
+
+      ⚠️ Rien d'autre que les cartes dans cette scene 3D. Un « noyau » de
+      panneaux pose au centre a ete essaye : Chrome decoupe alors chaque carte
+      le long du plan prolonge de ces panneaux et perd des fragments — des
+      bandes noires traversaient la carte de face. Les plans des cartes, eux,
+      ne se coupent pas entre eux. */
+.site-prism-stage {
+  --prism-w: 14.5rem;
+  --prism-h: 28rem;
+  --prism-r: 13.86rem;
+  --prism-tilt: rotateZ(3deg) rotateX(11deg);
+}
+/* Sur telephone, l'anneau et ses deux cartes laterales debordent de 375 px :
+   on le reduit d'un bloc plutot que de le recalculer, ses proportions
+   restent celles de la maquette. */
+.site-prism-scale {
+  perspective: 1200px;
+  transform: scale(0.64);
+  transform-origin: 50% 45%;
+}
+@media (min-width: 640px) {
+  .site-prism-scale {
+    transform: none;
+  }
+}
+/* De 1024 a 1279 px, la colonne de droite est trop etroite pour l'anneau
+   entier : mesure, la carte de droite depassait de 18 px a 1024 px. */
+@media (min-width: 1024px) and (max-width: 1279.98px) {
+  .site-prism-scale {
+    transform: scale(0.85);
+  }
+}
+.site-prism {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--prism-w);
+  height: var(--prism-h);
+  margin: calc(var(--prism-h) / -2) 0 0 calc(var(--prism-w) / -2);
+  transform-style: preserve-3d;
+  transform: var(--prism-tilt) translateZ(calc(var(--prism-r) * -1)) rotateY(0deg);
+  animation: site-prism-spin 14s linear infinite;
+}
+/* Au survol, la rotation s'arrete : on peut lire la carte qu'on regarde. */
+.site-prism-stage:hover .site-prism {
+  animation-play-state: paused;
+}
+.site-prism-face {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transform: rotateY(calc(var(--k, 0) * 60deg)) translateZ(var(--prism-r));
+}
+/* Chaque cote ne se voit que de son cote : la face joueur de face, le dos
+   quand la carte est passee derriere. */
+.site-prism-face > * {
+  backface-visibility: hidden;
+}
+.site-prism-card,
+.site-prism-back {
+  position: absolute;
+  inset: 0;
+  border-radius: 1.4rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-top-color: rgba(255, 255, 255, 0.32);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+/* Le dos doit se lire sur le noir de la page : un peu plus clair que la
+   face, et un liseré net, sinon le jour entre deux cartes ne montre rien. */
+.site-prism-back {
+  transform: rotateY(180deg);
+  background: linear-gradient(to bottom, #1c1c1c, #101010 55%, #090909);
+  border-color: rgba(255, 255, 255, 0.24);
+  border-top-color: rgba(255, 255, 255, 0.4);
+}
+
+@keyframes site-prism-spin {
+  to {
+    transform: var(--prism-tilt) translateZ(calc(var(--prism-r) * -1)) rotateY(-360deg);
+  }
+}
+
+/* 8. Le ballon de retour en haut (`components/site/back-to-top.tsx`).
+
+      - entree : il tombe du bas, depasse, puis rebondit deux fois en
+        s'ecrasant a chaque contact (`scale` asymetrique) — un ballon, pas une
+        pastille qui glisse ;
+      - repos : il flotte, et son halo au sol retrecit quand il monte ;
+      - clic : il s'ecrase puis part vers le haut avec la page ;
+      - defilement : le motif tourne (`--ball-spin`) et l'anneau se remplit
+        (`--ball-offset`), deux variables ecrites par le composant. */
+.site-ball {
+  transition:
+    opacity 300ms ease,
+    transform 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.site-ball[data-state="hidden"] {
+  opacity: 0;
+  transform: translate3d(0, 1.5rem, 0) scale(0.6);
+  pointer-events: none;
+}
+.site-ball[data-state="visible"] {
+  animation: site-ball-in 950ms both;
+}
+.site-ball[data-state="kicked"] {
+  animation: site-ball-kick 750ms forwards;
+  pointer-events: none;
+}
+
+.site-ball-float {
+  animation: site-ball-float 3.2s ease-in-out infinite;
+}
+.site-ball-shadow {
+  position: absolute;
+  inset-inline: 16%;
+  bottom: -0.7rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--site-accent) 55%, transparent);
+  filter: blur(6px);
+  animation: site-ball-shadow 3.2s ease-in-out infinite;
+}
+
+.site-ball-body {
+  transition: transform 300ms cubic-bezier(0.22, 1.16, 0.36, 1);
+}
+.site-ball:hover .site-ball-body {
+  transform: scale(1.07);
+}
+.site-ball:hover .site-ball-arrow {
+  animation: site-ball-nudge 700ms ease-in-out infinite;
+}
+
+.site-ball-progress {
+  stroke-dashoffset: var(--ball-offset, 100);
+  transition: stroke-dashoffset 150ms linear;
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--site-accent) 70%, transparent));
+}
+
+/* `view-box` : le centre de rotation est celui du dessin (50 50), pas celui
+   de la boite englobante du motif, qui deborde du cercle d'un cote. */
+.site-ball-pattern {
+  transform-box: view-box;
+  transform-origin: 50% 50%;
+  transform: rotate(var(--ball-spin, 0deg));
+}
+
+@keyframes site-ball-in {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 7rem, 0) scale(0.7);
+    animation-timing-function: cubic-bezier(0.2, 0.7, 0.4, 1);
+  }
+  45% {
+    opacity: 1;
+    transform: translate3d(0, -1rem, 0) scale(1);
+    animation-timing-function: cubic-bezier(0.6, 0, 0.8, 0.4);
+  }
+  62% {
+    transform: translate3d(0, 0, 0) scale(1.1, 0.88);
+    animation-timing-function: ease-out;
+  }
+  76% {
+    transform: translate3d(0, -0.4rem, 0) scale(0.98, 1.02);
+    animation-timing-function: ease-in;
+  }
+  88% {
+    transform: translate3d(0, 0, 0) scale(1.04, 0.96);
+    animation-timing-function: ease-out;
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes site-ball-kick {
+  0% {
+    transform: none;
+    animation-timing-function: ease-out;
+  }
+  18% {
+    transform: translate3d(0, 0.4rem, 0) scale(1.14, 0.84);
+    animation-timing-function: cubic-bezier(0.5, 0, 0.9, 0.5);
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(0, -60vh, 0) scale(0.5);
+  }
+}
+
+@keyframes site-ball-float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -5px, 0);
+  }
+}
+
+@keyframes site-ball-shadow {
+  0%,
+  100% {
+    transform: scaleX(1);
+    opacity: 0.75;
+  }
+  50% {
+    transform: scaleX(0.7);
+    opacity: 0.35;
+  }
+}
+
+@keyframes site-ball-nudge {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -3px, 0);
+  }
+}
+
 @keyframes site-shimmer {
   0% {
     transform: translateX(-130%);
@@ -1005,5 +1310,38 @@ body:has(.admin-dashboard-shell) {
   }
   .site-step-in {
     animation: none;
+  }
+  .site-showcase-panel {
+    opacity: 1;
+    translate: none;
+    transition: none;
+  }
+  .site-float {
+    animation: none;
+  }
+  .site-gauge-arc {
+    stroke-dashoffset: var(--gauge-to);
+    transition: none;
+  }
+  /* Le prisme s'arrete sur sa premiere carte : ses deux voisines restent
+     visibles de biais, le volume se lit sans que rien ne tourne. */
+  .site-prism {
+    animation: none;
+  }
+  /* Le ballon apparait et disparait en fondu, sans rebond, sans flotter et
+     sans rouler ; la remontee est instantanee (cf. le composant). */
+  .site-ball[data-state="visible"],
+  .site-ball[data-state="kicked"],
+  .site-ball-float,
+  .site-ball-shadow,
+  .site-ball:hover .site-ball-arrow {
+    animation: none;
+  }
+  .site-ball[data-state="hidden"] {
+    transform: none;
+  }
+  .site-ball:hover .site-ball-body,
+  .site-ball-pattern {
+    transform: none;
   }
 }

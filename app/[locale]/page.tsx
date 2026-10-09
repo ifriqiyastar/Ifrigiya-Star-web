@@ -1,4 +1,5 @@
 import Image from "next/image";
+import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 
 import { Check, Phone, Pill, SectionHeading } from "@/components/site/pieces";
@@ -33,8 +34,6 @@ import { LOCALES, localePath, ogImagePath, type Locale } from "@/lib/i18n/config
  * vraies captures de l'application mobile. Aucun chiffre d'audience n'est
  * invente. La section Temoignages contient des exemples explicitement
  * fictifs et des portraits generes par IA, pas des avis de membres reels.
- * Les trois indicateurs du bandeau disent ce que la plateforme fait,
- * pas combien de gens l'utilisent.
  *
  * La palette est celle de la charte et rien d'autre — #000000, #aff70f,
  * #CCCCCC, #FFFFFF — portee par le bloc `.site-shell` de `globals.css`.
@@ -101,7 +100,7 @@ export default async function LandingPage() {
           revele au defilement. Sans JavaScript personne ne les observerait :
           on les reaffiche donc tous, plutot que de servir une page vide. */}
       <noscript>
-        <style>{".site-reveal{opacity:1;transform:none}"}</style>
+        <style>{".site-reveal{opacity:1;transform:none}.site-showcase-panel{opacity:1;translate:none}.site-gauge-arc{stroke-dashoffset:var(--gauge-to)}"}</style>
       </noscript>
 
       <SiteNav />
@@ -109,10 +108,15 @@ export default async function LandingPage() {
       <main>
         <Hero dict={dict} />
         <Piliers />
+        {/* Les Scout Days juste sous le titre, puis leurs videos : demande du
+            client (oct. 2026), sur le modele du concurrent qui place son
+            evenement de detection en premiere section. Ils n'etaient jusque-la
+            qu'un element de liste parmi d'autres dans chaque section. */}
+        <ScoutDays dict={dict} />
+        <ScoutDaysVideosSection />
         <HighlightsCarousel />
         <StepsTimeMachine />
         <Pourquoi dict={dict} />
-        <ScoutDaysVideosSection />
         <Fonctionnalites dict={dict} locale={locale} />
         <NotreVision dict={dict} />
         <TestimonialsSection />
@@ -134,8 +138,22 @@ function Hero({ dict }: { dict: Dictionary }) {
     <section id="academie" className="relative isolate scroll-mt-16 overflow-hidden bg-black">
       <HeroVideo />
 
-      <div className="relative z-10 mx-auto flex min-h-[calc(100svh-4rem)] max-w-7xl items-center px-5 pt-10 pb-16 sm:px-8 sm:pt-20 sm:pb-28 lg:min-h-[max(720px,calc(100svh-4rem))] lg:pt-24 lg:pb-32">
+      <div className="relative z-10 mx-auto flex min-h-[calc(100svh-4rem)] max-w-7xl items-center gap-12 px-5 pt-10 pb-16 sm:px-8 sm:pt-20 sm:pb-28 lg:min-h-[max(720px,calc(100svh-4rem))] lg:pt-24 lg:pb-32">
         <div className="flex w-full max-w-4xl flex-col items-start gap-7 sm:gap-6">
+          {/* Ce que fait la plateforme, avant le slogan : le scouting, comme
+              le premier mot du concurrent (demande du client, oct. 2026). Le
+              titre reste le slogan de la charte, mot pour mot. */}
+          <Reveal className="-mb-2 sm:mb-0">
+            <span className="inline-flex items-center gap-2.5 rounded-full border border-(--site-accent)/50 bg-black/50 px-4 py-1.5 text-xs font-semibold tracking-wide text-(--site-fg) backdrop-blur-sm sm:text-sm">
+              <span aria-hidden className="size-2 shrink-0 animate-pulse rounded-full bg-(--site-accent)" />
+              {/* Version courte sous `sm` : la phrase entiere passait sur
+                  deux lignes a 375 px, et une pastille coupee en deux se lit
+                  comme une erreur. */}
+              <span className="sm:hidden">{t.kickerShort}</span>
+              <span className="hidden sm:inline">{t.kicker}</span>
+            </span>
+          </Reveal>
+
           {/* Le titre tenait sur deux lignes insecables a toutes les tailles,
               et c'est ce qui le cassait sur telephone : pour que « ne doit
               rester (invisible) » tienne sur 360 px sans se couper, la borne
@@ -151,8 +169,13 @@ function Hero({ dict }: { dict: Dictionary }) {
               et les deux appels a l'action toujours visibles sans defiler. Sa
               borne haute (2.25 rem) rejoint exactement le `sm:text-4xl` qui
               prend le relais a 640 px, pour qu'aucune marche ne se voie au
-              passage du palier. */}
-          <Reveal as="h1" delay={80} className="font-heading text-[clamp(1.75rem,8.75vw,2.25rem)] leading-[1.25] font-extrabold drop-shadow-sm sm:text-4xl sm:leading-[1.08] lg:text-6xl">
+              passage du palier.
+
+              Sur grand ecran il plafonne a `text-5xl` (48 px) : a `text-6xl`
+              les deux lignes insecables occupaient presque toute la largeur et
+              venaient serrer la fiche de scouting a sa droite (demande du
+              client, oct. 2026). */}
+          <Reveal as="h1" delay={80} className="font-heading text-[clamp(1.75rem,8.75vw,2.25rem)] leading-[1.25] font-extrabold drop-shadow-sm sm:text-4xl sm:leading-[1.08] lg:text-5xl">
             <span className="block sm:whitespace-nowrap">{t.titleLine1}</span>
             <span className="block sm:whitespace-nowrap">
               {t.titleLine2}{" "}
@@ -188,29 +211,139 @@ function Hero({ dict }: { dict: Dictionary }) {
               tone="clair"
             />
           </Reveal>
-
-          {/* Trois piliers, pas trois chiffres d'audience : ce sont les
-              fondamentaux nommes par la charte, et ils sont verifiables. Mise
-              en avant comme des statistiques (grand libelle colore, legende
-              en dessous) sans en inventer la donnee. */}
-          {/* Absents sur telephone, a la demande du client : le bloc y
-              rivalisait avec le titre et les boutons de store pour la place
-              au-dessus de la ligne de flottaison. Ils reapparaissent a partir
-              de `sm`, ou l'ecran a la place pour la rangee complete. */}
-          <Reveal as="dl" delay={320} className="mt-4 hidden w-full max-w-xl gap-0 divide-x divide-(--site-line) border-t border-(--site-line) pt-6 sm:grid sm:grid-cols-3">
-            {[t.pillars.detection, t.pillars.progression, t.pillars.excellence].map(({ title: titre, text: texte }) => (
-              <div key={titre} className="px-5 first:ps-0 last:pe-0">
-                <dt className="font-heading text-2xl leading-tight font-extrabold text-(--site-accent)">
-                  {titre}
-                </dt>
-                <dd className="mt-1 text-xs leading-snug text-(--site-fg)/80">{texte}</dd>
-              </div>
-            ))}
-          </Reveal>
         </div>
 
+        <ScoutingShowcase dict={dict} />
       </div>
     </section>
+  );
+}
+
+const GAUGE_R = 30;
+
+/**
+ * La vitrine du hero : notre reponse a la « Scouting Card » du concurrent, sur
+ * le modele de verre depoli fourni par le client (oct. 2026). Une carte joueur
+ * au centre, et autour trois panneaux flous qui laissent passer la video :
+ * note globale, profil verifie, profil a six axes. (Un panneau « Progression »
+ * a ete retire a la demande du client, oct. 2026.)
+ *
+ * ⚠️ C'est un **exemple**, et la carte le dit dans sa pastille — ne jamais la
+ * retirer. Le joueur est Yassine, le joueur fictif des Temoignages (portrait
+ * genere), avec **son** profil de `PRISM_PLAYERS` : le meme visage ne doit pas
+ * porter deux identites ni deux radars sur la meme page. La note globale est
+ * la moyenne des six, comme la colonne `overall_score`.
+ *
+ * Les panneaux debordent sur la carte expres : c'est le flou de
+ * `backdrop-filter` par-dessus le portrait qui donne la profondeur. Leurs
+ * positions sont logiques (`start`/`end`), la composition se retourne en
+ * arabe. La carte est centree par `mx-auto` et non par `translate` :
+ * Tailwind v4 pose ses `-translate-*` sur la propriete `translate`, celle
+ * qu'utilise l'entree echelonnee de `.site-showcase-panel`.
+ *
+ * A partir de `xl` seulement, comme l'ancienne fiche : a 1024 px le titre
+ * insecable ne laisse pas la place, et sur telephone le client a demande de
+ * garder le haut de page aux boutons de store.
+ */
+function ScoutingShowcase({ dict }: { dict: Dictionary }) {
+  const t = dict.hero.card;
+  const axes = dict.scoutDays.axes;
+  const joueur = PRISM_PLAYERS[0];
+  const temoin = dict.testimonials.items[joueur.testimonial];
+  const overall = Math.round(joueur.profile.reduce((sum, value) => sum + value, 0) / joueur.profile.length);
+  const circumference = 2 * Math.PI * GAUGE_R;
+
+  return (
+    <Reveal variant="right" delay={360} className="site-showcase relative hidden h-[33rem] w-[30rem] shrink-0 xl:block">
+      <figure className="size-full">
+        <figcaption className="sr-only">{t.alt}</figcaption>
+        <div aria-hidden className="relative size-full">
+          <div className="absolute inset-x-0 top-1/2 mx-auto size-[22rem] -translate-y-1/2 rounded-full bg-(--site-accent)/10 blur-3xl" />
+
+          {/* La carte joueur. */}
+          <div className="site-showcase-panel absolute inset-x-0 top-[5.5rem] mx-auto h-[22rem] w-[14.5rem]" style={{ "--i": 0 } as CSSProperties}>
+            <div className="relative size-full overflow-hidden rounded-[1.75rem] border border-white/20 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.8)]">
+              <Image
+                src="/images/testimonial-yassine.webp"
+                alt=""
+                fill
+                sizes="232px"
+                className="object-cover"
+                style={{ objectPosition: "50% 12%" }}
+              />
+              <div className="absolute inset-0 bg-linear-to-t from-black via-black/20 to-transparent" />
+              <div className="absolute inset-x-5 bottom-5 flex flex-col items-start">
+                <span className="rounded-full border border-(--site-accent)/60 bg-black/50 px-2.5 py-0.5 text-[0.6875rem] font-semibold text-(--site-accent) backdrop-blur-md">
+                  {t.example}
+                </span>
+                <p className="font-heading mt-2.5 text-2xl leading-none font-extrabold uppercase">{temoin.name}</p>
+                {/* Le role passe a la ligne avant d'atteindre le panneau du radar, qui
+                    deborde sur le coin de la carte. */}
+                <p className="mt-1.5 max-w-[7.5rem] text-xs leading-snug text-(--site-fg)/75">{temoin.role}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Note globale. */}
+          <div className="site-showcase-panel absolute end-0 top-10 w-[10rem]" style={{ "--i": 1 } as CSSProperties}>
+            <div className="site-glass site-float flex flex-col items-center rounded-2xl px-4 pt-4 pb-3.5">
+              <div className="relative size-[4.75rem]">
+                <svg viewBox="0 0 76 76" className="size-full -rotate-90">
+                  <circle cx="38" cy="38" r={GAUGE_R} fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="5" />
+                  <circle
+                    cx="38"
+                    cy="38"
+                    r={GAUGE_R}
+                    fill="none"
+                    stroke="var(--site-accent)"
+                    strokeWidth="5"
+                    strokeLinecap="round"
+                    strokeDasharray={circumference}
+                    className="site-gauge-arc"
+                    style={
+                      {
+                        "--gauge-from": circumference,
+                        "--gauge-to": circumference * (1 - overall / 100),
+                      } as CSSProperties
+                    }
+                  />
+                </svg>
+                <span className="font-heading absolute inset-0 flex items-center justify-center text-2xl font-extrabold">
+                  {overall}
+                </span>
+              </div>
+              <p className="mt-2 text-center text-[0.625rem] font-bold tracking-[0.16em] text-(--site-fg)/70 uppercase">{t.overall}</p>
+              <p dir="ltr" className="text-[0.6875rem] text-(--site-muted)">/100</p>
+            </div>
+          </div>
+
+          {/* Profil verifie : la validation manuelle des profils, un vrai geste
+              du produit (la file `/admin/validations`), pas un chiffre invente. */}
+          <div className="site-showcase-panel absolute start-0 top-[16rem]" style={{ "--i": 2 } as CSSProperties}>
+            <div className="site-glass site-float flex items-center gap-3 rounded-2xl py-3 ps-3 pe-4">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-(--site-accent)/15">
+                <svg viewBox="0 0 24 24" className="size-[1.125rem] fill-none stroke-(--site-accent) stroke-2">
+                  <path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6l-7-3Z" strokeLinejoin="round" />
+                  <path d="m9 12 2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+              <span className="flex flex-col">
+                <span className="text-xs font-semibold whitespace-nowrap">{t.verified}</span>
+                <span className="text-[0.6875rem] whitespace-nowrap text-(--site-muted)">{t.verifiedNote}</span>
+              </span>
+            </div>
+          </div>
+
+          {/* Profil a six axes. */}
+          <div className="site-showcase-panel absolute end-0 bottom-0 w-[14rem]" style={{ "--i": 3 } as CSSProperties}>
+            <div className="site-glass site-float rounded-2xl px-3 pt-3.5 pb-2">
+              <p className="px-1 text-[0.625rem] font-bold tracking-[0.16em] text-(--site-fg)/70 uppercase">{t.profile}</p>
+              <RadarChart scores={joueur.profile} labels={axes} />
+            </div>
+          </div>
+        </div>
+      </figure>
+    </Reveal>
   );
 }
 
@@ -240,6 +373,278 @@ function Piliers() {
         </div>
       </div>
     </section>
+  );
+}
+
+/* -------------------------------------------------------------- scout days */
+
+/**
+ * La section qui explique un Scout Day, de l'organisation a l'evaluation.
+ *
+ * Explicative et sans dates, volontairement : les evenements a venir ne sont
+ * pas lisibles par un visiteur anonyme (la base refuse `scout_days` a `anon`),
+ * et les publier sur le site demande l'accord du client sur ce qui peut etre
+ * montre (organisateur, tarif). Le bouton mene donc a l'application, ou ils
+ * se consultent.
+ *
+ * Les six axes sont ceux de la migration mobile 0091 — ceux de
+ * `lib/evaluation-axes.ts`, dans le meme ordre. Si l'evaluation change, cette
+ * liste change avec elle.
+ */
+function ScoutDays({ dict }: { dict: Dictionary }) {
+  const t = dict.scoutDays;
+  return (
+    <section
+      id="scout-days"
+      className="scroll-mt-20 relative overflow-hidden py-16 sm:py-24 lg:py-28"
+    >
+      <div className="site-glow absolute inset-0 opacity-60" aria-hidden />
+      <div className="relative mx-auto grid max-w-7xl gap-14 px-5 sm:px-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
+        <div className="flex flex-col gap-8">
+          <Reveal variant="left" className="flex flex-col items-start gap-5">
+            <Pill>{t.pill}</Pill>
+            <h2 className="font-heading max-w-2xl text-[1.75rem] leading-[1.1] font-extrabold text-balance sm:text-4xl lg:text-5xl">
+              {t.title}
+            </h2>
+            <p className="max-w-xl text-sm leading-relaxed text-(--site-muted) sm:text-base">
+              {t.lead}
+            </p>
+          </Reveal>
+
+          <ol aria-label={t.stepsAria} className="grid gap-4 sm:grid-cols-2">
+            {t.steps.map((step, i) => (
+              <Reveal
+                key={step.number}
+                as="li"
+                delay={i * 90}
+                className="flex flex-col gap-2 rounded-2xl border border-(--site-line) bg-(--site-card) p-5"
+              >
+                <span className="font-heading text-sm font-extrabold text-(--site-accent)" aria-hidden>
+                  {step.number}
+                </span>
+                <h3 className="font-heading text-lg leading-snug font-extrabold">{step.title}</h3>
+                <p className="text-sm leading-relaxed text-(--site-muted)">{step.text}</p>
+              </Reveal>
+            ))}
+          </ol>
+
+          <Reveal delay={120} className="flex flex-col items-start gap-3">
+            <a
+              href="#telecharger"
+              className="site-shimmer inline-flex items-center justify-center gap-3 rounded-full bg-(--site-accent) px-7 py-3.5 text-sm font-semibold text-(--site-ink) transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-(--site-accent)"
+            >
+              {t.cta}
+              <svg viewBox="0 0 24 24" className="size-4 fill-none stroke-current stroke-2 rtl:-scale-x-100" aria-hidden="true">
+                <path d="M5 12h14m-6-6 6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </a>
+            <p className="text-xs text-(--site-muted)">{t.ctaNote}</p>
+          </Reveal>
+        </div>
+
+        {/* Le prisme de cartes joueurs, sur le modele demande par le client
+            (oct. 2026) a la place des deux captures de l'application. */}
+        <Reveal
+          variant="right"
+          delay={120}
+          className="relative mx-auto w-full max-w-lg lg:me-0 lg:ms-auto"
+        >
+          <ScoutDaysPrism dict={dict} />
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * Les personnes de l'anneau : les trois personnages fictifs de la section
+ * Temoignages (`testimonials.items`, portraits generes par IA) — Yassine,
+ * Karim, et Mehdi, l'entraineur (ajoute a la demande du client, oct. 2026).
+ * Le nom et le role viennent de la, deja traduits, et c'est voulu : le meme
+ * visage ne doit pas porter deux identites sur la meme page. Mehdi garde donc
+ * son role d'entraineur sur sa carte.
+ *
+ * `profile` : six notes sur 100 dans l'ordre de `scoutDays.axes` (Vitesse,
+ * Finition, Precision, Passe, Defense, Cognitif). **Inventees** — aucun
+ * chiffre n'est affiche, seule la forme du radar — et taillees sur chacun :
+ * un milieu qui distribue, un ailier qui accelere, un technicien qui lit le
+ * jeu. Une seule par personne, pour qu'un meme nom ne montre jamais deux
+ * radars differents.
+ */
+const PRISM_PLAYERS = [
+  { testimonial: 0, profile: [70, 64, 82, 90, 62, 86] },
+  { testimonial: 1, profile: [92, 78, 72, 70, 44, 70] },
+  { testimonial: 2, profile: [56, 62, 84, 88, 70, 94] },
+] as const;
+
+/**
+ * Les six cartes : une personne et une photo chacune, dans l'ordre Yassine,
+ * Karim, Mehdi, deux fois. Les trois cartes visibles en meme temps (la face
+ * avant et ses deux voisines) montrent donc toujours trois personnes
+ * differentes, et chacune ne revient que sur la carte opposee, qui montre
+ * alors son dos. Chacun a deux photos ou deux cadrages, pour que ses cartes
+ * ne soient pas des copies.
+ */
+const PRISM_CARDS = [
+  { player: 0, src: "/images/testimonial-yassine.webp", position: "50% 8%" },
+  { player: 1, src: "/images/joueur-africain.jpg", position: "50% 6%" },
+  { player: 2, src: "/images/testimonial-mehdi.webp", position: "50% 6%" },
+  { player: 0, src: "/images/pourquoi-training-tunisian.webp", position: "50% 4%" },
+  { player: 1, src: "/images/testimonial-karim.webp", position: "50% 10%" },
+  { player: 2, src: "/images/testimonial-mehdi.webp", position: "50% 18%" },
+] as const;
+
+/**
+ * Le radar a six branches des fiches joueurs, a la place de la note chiffree
+ * (demande du client, oct. 2026, sur le modele des cartes de jeux de
+ * football).
+ *
+ * Un hexagone pointe en haut : quatre anneaux de grille (25, 50, 75, 100),
+ * six rayons, puis le profil rempli en vert avec un point a chaque sommet.
+ * Les libelles sont **centres** sur leur point (`textAnchor="middle"`) : un
+ * ancrage `start`/`end` s'inverserait sous le `dir="rtl"` de la page arabe et
+ * enverrait les libelles lateraux sur le graphique.
+ */
+const RADAR = { w: 232, h: 186, cx: 116, cy: 96, r: 60, label: 80 } as const;
+
+function radarPoint(index: number, ratio: number, radius: number = RADAR.r): string {
+  const angle = ((-90 + index * 60) * Math.PI) / 180;
+  const x = RADAR.cx + radius * ratio * Math.cos(angle);
+  const y = RADAR.cy + radius * ratio * Math.sin(angle);
+  return `${x.toFixed(1)},${y.toFixed(1)}`;
+}
+
+function RadarChart({ scores, labels }: { scores: readonly number[]; labels: readonly string[] }) {
+  const ring = (ratio: number) => labels.map((_, i) => radarPoint(i, ratio)).join(" ");
+  const profile = scores.map((score, i) => radarPoint(i, score / 100)).join(" ");
+
+  return (
+    <svg viewBox={`0 0 ${RADAR.w} ${RADAR.h}`} className="h-auto w-full">
+      {[0.25, 0.5, 0.75, 1].map((ratio) => (
+        <polygon
+          key={ratio}
+          points={ring(ratio)}
+          fill={ratio === 1 ? "rgba(255,255,255,0.03)" : "none"}
+          stroke="rgba(255,255,255,0.14)"
+          strokeWidth="1"
+        />
+      ))}
+      {labels.map((_, i) => {
+        const [x, y] = radarPoint(i, 1).split(",");
+        return <line key={i} x1={RADAR.cx} y1={RADAR.cy} x2={x} y2={y} stroke="rgba(255,255,255,0.1)" strokeWidth="1" />;
+      })}
+
+      <polygon
+        points={profile}
+        fill="var(--site-accent)"
+        fillOpacity="0.32"
+        stroke="var(--site-accent)"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      {scores.map((score, i) => {
+        const [x, y] = radarPoint(i, score / 100).split(",");
+        return <circle key={i} cx={x} cy={y} r="3.4" fill="#000000" stroke="var(--site-accent)" strokeWidth="1.6" />;
+      })}
+
+      {labels.map((label, i) => {
+        const [x, y] = radarPoint(i, 1, RADAR.label).split(",");
+        return (
+          <text
+            key={label}
+            x={x}
+            y={y}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fill="rgba(255,255,255,0.82)"
+            fontSize="11"
+            fontWeight="600"
+          >
+            {label}
+          </text>
+        );
+      })}
+    </svg>
+  );
+}
+
+/**
+ * L'anneau de cartes joueurs, d'apres la video Mojo Fantasy du client : six
+ * cartes espacees autour d'un axe vertical, penche vers l'avant pour qu'on
+ * voie le dos des cartes passees derriere. Il tourne en continu (14 s le
+ * tour) et se met en pause au survol.
+ *
+ * Chaque carte porte le nom et le role du joueur, puis le radar de son profil
+ * (`PRISM_PLAYERS`), sans aucun chiffre : la forme illustre l'evaluation,
+ * elle ne pretend pas etre un resultat. Le nom en tete remplace la pastille
+ * « Exemple » (choix du client, oct. 2026), comme sur les cartes de la
+ * maquette.
+ *
+ * Tout est en CSS (`.site-prism*` dans `globals.css`). Le decor est
+ * `aria-hidden` : un lecteur d'ecran recoit une phrase qui dit ce que les
+ * cartes montrent, plutot que six cartes qui defilent.
+ */
+function ScoutDaysPrism({ dict }: { dict: Dictionary }) {
+  const axes = dict.scoutDays.axes;
+  const testimonials = dict.testimonials.items;
+  const description = `${dict.hero.card.title} — ${axes.join(", ")}`;
+
+  return (
+    <figure className="site-prism-stage relative h-[25rem] sm:h-[36rem]">
+      <figcaption className="sr-only">{description}</figcaption>
+      <div aria-hidden className="site-glow-center absolute inset-x-0 bottom-0 h-1/2 opacity-80" />
+      <div aria-hidden className="site-prism-scale absolute inset-0">
+        <div className="site-prism">
+          {PRISM_CARDS.map((carte, i) => {
+            const joueur = PRISM_PLAYERS[carte.player];
+            const temoin = testimonials[joueur.testimonial];
+            return (
+            <div
+              key={i}
+              className="site-prism-face"
+              style={{ "--k": i } as CSSProperties}
+            >
+              {/* Le dos : ce qu'on voit d'une carte passee derriere, dans le
+                  jour entre deux cartes de face. Le logo porte sa propre
+                  plaque noire arrondie (cf. `BrandMark`) : rien a ajouter
+                  autour. Le nom de marque ne se traduit pas. */}
+              <div className="site-prism-back flex flex-col items-center justify-center gap-3">
+                <Image src="/brand/ifriqiya-star.svg" alt="" width={84} height={84} />
+                <span className="font-heading text-sm font-extrabold tracking-wide text-(--site-fg)/85">
+                  Ifriqiya Soccer Star
+                </span>
+              </div>
+
+              {/* La face : le radar en haut, le portrait en bas, comme les
+                  cartes de la maquette, cernee d'un liseré fin et sans halo. */}
+              <div className="site-prism-card flex flex-col overflow-hidden bg-linear-to-b from-[#121212] via-[#080808] to-black">
+                <div className="relative z-10 flex flex-col items-center px-3 pt-4 text-center">
+                  <p className="font-heading text-xl leading-tight font-extrabold">{temoin.name}</p>
+                  <p className="mt-0.5 text-[0.6875rem] font-medium text-(--site-muted)">{temoin.role}</p>
+                  <RadarChart scores={joueur.profile} labels={axes} />
+                </div>
+
+                {/* Le portrait prend toute la hauteur laissee sous le radar
+                    (`flex-1`, pas une part fixe) : c'est lui qui profite de
+                    la carte allongee (demande du client, oct. 2026). Seul un
+                    fondu court, en haut, le raccorde au fond de la carte. */}
+                <div className="relative mt-1 min-h-0 flex-1">
+                  <Image
+                    src={carte.src}
+                    alt=""
+                    fill
+                    sizes="232px"
+                    className="object-cover [mask-image:linear-gradient(to_bottom,transparent,black_18%)]"
+                    style={{ objectPosition: carte.position }}
+                  />
+                </div>
+              </div>
+            </div>
+            );
+          })}
+        </div>
+      </div>
+    </figure>
   );
 }
 

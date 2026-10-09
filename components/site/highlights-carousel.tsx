@@ -14,7 +14,7 @@ import { Reveal } from "@/components/site/reveal";
  * les dictionnaires.
  */
 const SLIDE_MEDIA = [
-  { href: "#comment", image: "/images/carousel-scouting.jpg" },
+  { href: "#scout-days", image: "/images/carousel-scouting.jpg" },
   { href: "#fonctionnalites", image: "/images/carousel-dribble.jpg" },
   { href: "#vision", image: "/images/carousel-values.jpg" },
 ] as const;

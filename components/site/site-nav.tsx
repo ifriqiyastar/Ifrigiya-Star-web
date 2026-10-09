@@ -7,6 +7,7 @@ import QRCode from "react-qr-code";
 import {
   ArrowRightIcon,
   ArrowUpRightIcon,
+  CalendarDaysIcon,
   CircleHelpIcon,
   CompassIcon,
   FileTextIcon,
@@ -78,7 +79,10 @@ export function SiteNav() {
   // leur propre bloc, en bas du tiroir. Une seule liste plate, pas les deux
   // colonnes du pied de page : la maquette demandee par le client est une
   // pile de cartes, sans titres de groupe.
+  // Scout Days en tete : c'est la section que le client veut mettre en avant
+  // (oct. 2026), et la seule a avoir aussi son lien dans l'entete.
   const drawerLinks = [
+    { href: `${prefix}/#scout-days`, label: nav.scoutDays, Icon: CalendarDaysIcon },
     { href: `${prefix}/#comment`, label: foot.how, Icon: RouteIcon },
     { href: `${prefix}/#fonctionnalites`, label: foot.app, Icon: SmartphoneIcon },
     { href: `${prefix}/#vision`, label: foot.values, Icon: CompassIcon },
@@ -185,6 +189,16 @@ export function SiteNav() {
           </Link>
 
           <div className="ms-auto flex items-center gap-2 sm:gap-4">
+            {/* Le seul lien de section de l'entete : les Scout Days sont ce
+                que le client veut voir en avant. Sous `lg`, il est en tete du
+                tiroir. */}
+            <Link
+              href={`${prefix}/#scout-days`}
+              className="hidden items-center gap-2 text-sm font-semibold whitespace-nowrap text-[var(--site-fg)] transition-colors hover:text-[var(--site-accent)] lg:inline-flex"
+            >
+              <CalendarDaysIcon className="size-4 text-[var(--site-accent)]" aria-hidden />
+              {nav.scoutDays}
+            </Link>
             {os === "ios" || os === "android" ? (
               <Link
                 href={`${prefix}/#telecharger`}
