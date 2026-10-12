@@ -8,6 +8,7 @@ import { SiteFooter } from "@/components/site/site-footer";
 import { ContactSection } from "@/components/site/contact-section";
 import { TestimonialsSection } from "@/components/site/testimonials-section";
 import { ScoutDaysVideosSection } from "@/components/site/scout-days-videos-section";
+import { FeatureSwipe } from "@/components/site/feature-swipe";
 import { StepsTimeMachine } from "@/components/site/steps-time-machine";
 import { HeroVideo } from "@/components/site/hero-video";
 import { HighlightsCarousel } from "@/components/site/highlights-carousel";
@@ -742,8 +743,11 @@ function Fonctionnalites({ dict, locale }: { dict: Dictionary; locale: Locale })
             traitement que le collage de la section Valeurs (telephones
             legerement inclines, superposes), applique ici a trois captures
             au lieu de deux. Le halo derriere reprend celui des autres
-            sections, pour que la grappe ne flotte pas sur un noir uni. */}
-        <Reveal className="relative mx-auto mt-10 flex h-[26rem] max-w-3xl items-center justify-center sm:mt-0 sm:h-[31rem]">
+            sections, pour que la grappe ne flotte pas sur un noir uni.
+            Reservee a `md` et au-dela : sous cette largeur le telephone
+            central recouvrait les deux autres, et `FeatureSwipe` prend le
+            relais (une capture par carte, sa legende dessous). */}
+        <Reveal className="relative mx-auto hidden h-[31rem] max-w-3xl items-center justify-center md:flex">
           <div aria-hidden className="site-glow-center absolute inset-0 opacity-70" />
           <Phone
             screen={screens[0]}
@@ -765,7 +769,9 @@ function Fonctionnalites({ dict, locale }: { dict: Dictionary; locale: Locale })
           />
         </Reveal>
 
-        <div className="mt-12 grid gap-10 sm:grid-cols-3 lg:mt-16">
+        <FeatureSwipe screens={screens} />
+
+        <div className="mt-12 hidden gap-10 md:grid md:grid-cols-3 lg:mt-16">
           {t.items.map((fonction, i) => {
             const Icon = FEATURE_ICONS[i];
             return (
