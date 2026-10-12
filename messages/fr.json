@@ -24,8 +24,8 @@
     "titleLine1": "Aucun talent africain",
     "titleLine2": "ne doit rester",
     "titleAccent": "invisible",
-    "lead": "Une académie de football d'élite pour révéler les jeunes talents : Scout Days, évaluation sur six axes et contact direct avec les recruteurs, depuis votre téléphone.",
-    "leadMobile": "Ifriqiya Soccer Star est une académie de football d'élite dédiée à la formation, au développement technique et à l'épanouissement des jeunes talents.",
+    "lead": "Une application pionnière, à la pointe de la technologie : Scout Days encadrés par des entraîneurs qualifiés, suivi GPS, évaluation sur six axes et contact direct avec les recruteurs.",
+    "leadMobile": "Ifriqiya Soccer Star est l'application pionnière du scouting africain, à la pointe de la technologie, pour révéler les jeunes talents.",
     "card": {
       "alt": "Exemple de fiche d'évaluation après un Scout Day : six notes sur 100 et une note globale.",
       "title": "Fiche d'évaluation",
@@ -33,13 +33,13 @@
       "overall": "Note globale",
       "profile": "Profil · 6 axes",
       "scouted": "Évalué en Scout Day",
-      "scoutedNote": "Noté sur 6 axes par un recruteur"
+      "scoutedNote": "Noté par un entraîneur qualifié"
     }
   },
   "scoutDays": {
     "pill": "Scout Days",
     "title": "Une journée sur le terrain, sous les yeux des recruteurs.",
-    "lead": "Inscris-toi depuis l'application, joue devant les recruteurs et reçois ton évaluation.",
+    "lead": "Inscris-toi depuis l'application, joue devant des entraîneurs qualifiés, équipé d'un GPS, et reçois un vrai rapport.",
     "stepsAria": "Le déroulé d'un Scout Day",
     "steps": [
       {
@@ -54,13 +54,13 @@
       },
       {
         "number": "03",
-        "title": "Tu joues devant eux",
-        "text": "Ton inscription confirmée, tu te présentes le jour venu et tu joues sous les yeux de l'organisateur."
+        "title": "Tu joues, équipé d'un GPS",
+        "text": "Le jour venu, tu joues équipé d'un traceur GPS, sous les yeux d'entraîneurs qualifiés qui encadrent la journée."
       },
       {
         "number": "04",
-        "title": "Tu reçois ton évaluation",
-        "text": "Une note sur six axes, que l'organisateur choisit de te transmettre dans l'application."
+        "title": "Tu reçois un vrai rapport",
+        "text": "Les mesures du GPS et le regard des entraîneurs se retrouvent dans une évaluation sur six axes, que l'organisateur choisit de te transmettre dans l'application."
       }
     ],
     "cta": "Trouver un Scout Day",
@@ -128,10 +128,10 @@
     "checks": [
       "Profil verifie par l'academie",
       "Videos et photos de match",
-      "Journees de detection encadrees",
+      "Entraineurs qualifies en Scout Day",
       "Criteres d'eligibilite transparents",
       "Contact direct avec les recruteurs",
-      "Moderation et signalement"
+      "Suivi GPS pendant les Scout Days"
     ]
   },
   "features": {

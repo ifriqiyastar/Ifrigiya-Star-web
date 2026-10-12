@@ -24,8 +24,8 @@
     "titleLine1": "No African talent",
     "titleLine2": "should remain",
     "titleAccent": "invisible",
-    "lead": "An elite football academy that brings young talent to light: Scout Days, a six-axis evaluation and direct contact with recruiters, all from your phone.",
-    "leadMobile": "Ifriqiya Soccer Star is an elite football academy devoted to training, technical development and the growth of young talent.",
+    "lead": "A pioneering, cutting-edge app: Scout Days run by qualified coaches, GPS tracking, a six-axis evaluation and direct contact with recruiters.",
+    "leadMobile": "Ifriqiya Soccer Star is the pioneering scouting app for African football, built on cutting-edge technology to bring young talent to light.",
     "card": {
       "alt": "Example of an evaluation after a Scout Day: six scores out of 100 and an overall score.",
       "title": "Evaluation report",
@@ -33,13 +33,13 @@
       "overall": "Overall score",
       "profile": "Profile · 6 axes",
       "scouted": "Assessed at a Scout Day",
-      "scoutedNote": "Scored on 6 axes by a recruiter"
+      "scoutedNote": "Scored by a qualified coach"
     }
   },
   "scoutDays": {
     "pill": "Scout Days",
     "title": "A day on the pitch, in front of the recruiters.",
-    "lead": "Sign up from the app, play in front of recruiters and get your evaluation.",
+    "lead": "Sign up from the app, play in front of qualified coaches with a GPS tracker, and get a real report.",
     "stepsAria": "How a Scout Day works",
     "steps": [
       {
@@ -54,13 +54,13 @@
       },
       {
         "number": "03",
-        "title": "You play in front of them",
-        "text": "Once your registration is confirmed, you turn up on the day and play under the organiser's eye."
+        "title": "You play, GPS on",
+        "text": "On the day, you play wearing a GPS tracker, under the eye of qualified coaches who run the session."
       },
       {
         "number": "04",
-        "title": "You get your evaluation",
-        "text": "A score on six axes, which the organiser chooses to share with you in the app."
+        "title": "You get a real report",
+        "text": "The GPS measurements and the coaches' assessment come together in a six-axis evaluation, which the organiser chooses to share with you in the app."
       }
     ],
     "cta": "Find a Scout Day",
@@ -128,10 +128,10 @@
     "checks": [
       "Profile verified by the academy",
       "Match videos and photos",
-      "Supervised scouting days",
+      "Qualified coaches at Scout Days",
       "Transparent eligibility criteria",
       "Direct contact with recruiters",
-      "Moderation and reporting"
+      "GPS tracking during Scout Days"
     ]
   },
   "features": {
