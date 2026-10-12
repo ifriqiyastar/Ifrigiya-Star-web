@@ -91,6 +91,15 @@ even card staggered on two columns; browsers without it keep `Reveal`'s fade.
 a scroll container, `view()` then tracks the section's own scroll — which never
 moves — and the cards stay frozen. Measured: with `hidden` they were flat at
 every scroll position.
+The testimonials are a **sticky card stack** (block 4c, Oct 2026 — a 3D
+scroll entrance was tried first and rejected by the client): each card sticks
+under the nav one notch lower than the previous, the next slides over it, and
+the covered one recedes and darkens. Sticking is pure CSS; `CardStack` only
+writes `--p`, how covered each card is, because a stuck card's own `view()`
+timeline stops advancing exactly while it is being covered. A stuck card must
+fit whole on screen or its name is covered unread: the mobile card is compact
+for that (~550 px), and below a 41rem-high viewport the stack falls back to a
+plain list.
 The Scout Days section shows `ScoutDaysPrism` instead of app screenshots: six
 player cards turning in 3D (CSS only, modelled on the client's Mojo Fantasy
 reference). Each card shows a player's name and role, then a six-axis
@@ -120,7 +129,9 @@ face now runs a `visibility` animation with the ring's period
 the screen. The window is ±81°, not ±90°: with a 1200px perspective and a
 13.86rem radius a card turns its back before it is edge-on — recompute it if
 either changes (the formula is in `globals.css`). Hover and reduced motion
-must pause the faces together with the ring, or they drift apart.
+must pause the faces together with the ring, or they drift apart. The hover
+pause is gated on `(hover: hover) and (pointer: fine)`: on a touch screen a
+tap leaves a sticky `:hover`, and tapping a card froze the ring (Oct 2026).
 
 **The mockups are translated, and the folder is the language.** The app speaks
 the site's three languages, so `public/app/` holds one complete set per locale

@@ -995,6 +995,55 @@ body:has(.admin-dashboard-shell) {
   }
 }
 
+/* 4c. Les temoignages en pile (demande du client, oct. 2026, apres un
+       premier essai d'entree en 3D qu'il n'a pas retenu). Chaque carte se
+       colle sous l'entete — 64 px — avec un cran de plus que la precedente,
+       pour que le haut des cartes du dessous depasse comme dans un paquet ;
+       la suivante glisse par-dessus, et celle qu'elle recouvre recule et
+       s'assombrit.
+
+       `--p` (ecrit par `CardStack`) mesure ce recouvrement : 0 = libre,
+       1 = couverte par la suivante, 2 = par les deux. Le collage est du CSS
+       pur et fonctionne sans JavaScript ; seul le recul en depend.
+
+       ⚠️ Aucun ancetre ne doit etre en `overflow: hidden/auto` : il
+       deviendrait le conteneur de defilement et `sticky` collerait a lui,
+       c'est-a-dire a rien. `.site-shell` est en `overflow-x-clip` pour cette
+       raison. */
+.site-stack-item {
+  position: sticky;
+  top: calc(4.75rem + var(--i, 0) * 0.75rem);
+}
+@media (min-width: 48rem) {
+  .site-stack-item {
+    top: calc(6.5rem + var(--i, 0) * 1.25rem);
+  }
+}
+/* Ecran trop bas pour qu'une carte collee tienne entiere (telephone en
+   paysage, petits ecrans) : la suivante recouvrirait le nom avant qu'on ait
+   pu le lire. La liste redevient une liste. Seuil mesure : une carte fait
+   ~555 px sur telephone, collee a 76 px plus deux crans de 12 px. */
+@media (max-height: 41rem) {
+  .site-stack-item {
+    position: relative;
+    top: auto;
+  }
+}
+.site-stack-card {
+  transform-origin: 50% 0;
+  transform: scale(calc(1 - min(var(--p, 0), 2) * 0.05));
+}
+.site-stack-shade {
+  opacity: calc(min(var(--p, 0), 1.4) * 0.5);
+}
+@media (prefers-reduced-motion: reduce) {
+  /* La pile reste — c'est une disposition, pas un mouvement — mais la carte
+     ne recule plus au fil du defilement. */
+  .site-stack-card {
+    transform: none;
+  }
+}
+
 /* 5. La pile d'etapes de « Comment ca marche ». Deux effets distincts :
 
       - `.site-step-card` : le glissement en profondeur des cartes. La courbe
@@ -1202,11 +1251,18 @@ body:has(.admin-dashboard-shell) {
   animation: site-prism-spin var(--prism-period) linear infinite;
 }
 /* Au survol, la rotation s'arrete : on peut lire la carte qu'on regarde. Les
-   faces s'arretent avec elle, sinon elles se decaleraient de l'anneau. */
-.site-prism-stage:hover .site-prism,
-.site-prism-stage:hover .site-prism-card,
-.site-prism-stage:hover .site-prism-back {
-  animation-play-state: paused;
+   faces s'arretent avec elle, sinon elles se decaleraient de l'anneau.
+
+   ⚠️ Seulement avec une souris (`hover: hover` + `pointer: fine`). Sur un
+   ecran tactile, un tap pose un `:hover` « collant » qui reste actif tant
+   qu'on n'a pas tape ailleurs : toucher une carte figeait l'anneau
+   (signale par le client sur telephone, oct. 2026). */
+@media (hover: hover) and (pointer: fine) {
+  .site-prism-stage:hover .site-prism,
+  .site-prism-stage:hover .site-prism-card,
+  .site-prism-stage:hover .site-prism-back {
+    animation-play-state: paused;
+  }
 }
 .site-prism-face {
   position: absolute;
