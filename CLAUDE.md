@@ -35,6 +35,28 @@ its phone mockups are real screenshots of the mobile app in
 It carries **no audience figures and no testimonials** — inventing either on a
 public page manufactures evidence.
 
+**The footer carries the two official social accounts** (YouTube, Instagram —
+client request, Oct 2026), as a row of two round icon links closing the brand
+column, under the signature. Three things about them:
+
+- ⚠️ **`lucide-react` v1 ships no brand icons** — they were deprecated through
+  the 0.x series and removed — so the two marks are official paths written out
+  in `components/site/site-footer.tsx`, in `fill-current`, the same convention
+  as `AppleMark` in `store-buttons.tsx`. YouTube's play triangle is a
+  **counter-wound subpath of the same `d`** — moving it into a second `<path>`
+  would fill it in the plate's own colour and erase it. (The fill rule changes
+  nothing: measured, `nonzero` and `evenodd` render the same image.) The two
+  boxes are not the same size (20 px against 18 px) because
+  YouTube's glyph is 24 wide for 17 high while Instagram's fills its square;
+  at equal boxes Instagram reads bigger.
+- ⚠️ **The `?si=…` of the supplied YouTube address was stripped.** It is the
+  share token of whoever copied the link from the YouTube app — not part of the
+  channel address — and it would attribute every arrival from the site to that
+  one share.
+- Icon-only links, so **`aria-label` is mandatory** (the label is translated in
+  the three dictionaries, brand name kept in Latin even in Arabic) and the SVG
+  is `aria-hidden`, or a screen reader announces the name twice.
+
 **Scout Days are the page's second gesture** (client request, Oct 2026, after
 comparing with ifreq.io, which leads with its detection event). A dedicated
 `#scout-days` section sits right under the hero — organisation, eligibility,
