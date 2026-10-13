@@ -21,6 +21,13 @@ import {
 } from "lucide-react";
 
 import { LanguageSwitcher } from "@/components/language-switcher";
+import {
+  INSTAGRAM_URL,
+  InstagramMark,
+  SocialLink,
+  YOUTUBE_URL,
+  YoutubeMark,
+} from "@/components/site/social";
 import { useI18n } from "@/lib/i18n/client";
 import { useDeviceOs } from "@/lib/use-device-os";
 import { QR_REDIRECT_PARAM } from "@/lib/store-urls";
@@ -80,7 +87,9 @@ export function SiteNav() {
   // colonnes du pied de page : la maquette demandee par le client est une
   // pile de cartes, sans titres de groupe.
   // Scout Days en tete : c'est la section que le client veut mettre en avant
-  // (oct. 2026), et la seule a avoir aussi son lien dans l'entete.
+  // (oct. 2026). Son lien de l'entete, lui, a laisse la place aux comptes
+  // sociaux — le tiroir et le pied de page restent les deux chemins vers
+  // cette section.
   const drawerLinks = [
     { href: `${prefix}/#scout-days`, label: nav.scoutDays, Icon: CalendarDaysIcon },
     { href: `${prefix}/#comment`, label: foot.how, Icon: RouteIcon },
@@ -189,16 +198,27 @@ export function SiteNav() {
           </Link>
 
           <div className="ms-auto flex items-center gap-2 sm:gap-4">
-            {/* Le seul lien de section de l'entete : les Scout Days sont ce
-                que le client veut voir en avant. Sous `lg`, il est en tete du
-                tiroir. */}
-            <Link
-              href={`${prefix}/#scout-days`}
-              className="hidden items-center gap-2 text-sm font-semibold whitespace-nowrap text-[var(--site-fg)] transition-colors hover:text-[var(--site-accent)] lg:inline-flex"
-            >
-              <CalendarDaysIcon className="size-4 text-[var(--site-accent)]" aria-hidden />
-              {nav.scoutDays}
-            </Link>
+            {/* Les comptes sociaux, a la place du lien Scout Days que
+                l'entete portait jusqu'ici (demande client, oct. 2026). Memes
+                pastilles qu'en pied de page — `components/site/social.tsx` —
+                mais d'un cran plus petites : l'entete ne fait que 64 px de
+                haut et deux cercles de 40 px y pesent trop a cote du bouton
+                de telechargement. Comme le lien qu'elles remplacent, elles
+                n'apparaissent qu'a partir de `lg` ; sous cette largeur, elles
+                sont au bas du tiroir. La section Scout Days, elle, reste
+                atteignable depuis le tiroir et le pied de page. */}
+            <ul className="hidden items-center gap-2 lg:flex">
+              <li>
+                <SocialLink href={YOUTUBE_URL} label={foot.youtube} className="size-9">
+                  <YoutubeMark className="size-[18px]" />
+                </SocialLink>
+              </li>
+              <li>
+                <SocialLink href={INSTAGRAM_URL} label={foot.instagram} className="size-9">
+                  <InstagramMark className="size-4" />
+                </SocialLink>
+              </li>
+            </ul>
             {os === "ios" || os === "android" ? (
               <Link
                 href={`${prefix}/#telecharger`}
@@ -328,6 +348,20 @@ export function SiteNav() {
             {nav.contact}
             <ArrowUpRightIcon className="size-4 text-[var(--site-muted)] rtl:-scale-x-100" />
           </Link>
+          {/* Les memes pastilles que l'entete : sous `lg` celle-ci ne les
+              affiche pas, et le tiroir est son equivalent sur telephone. */}
+          <ul className="flex items-center gap-2 px-3 pt-1">
+            <li>
+              <SocialLink href={YOUTUBE_URL} label={foot.youtube}>
+                <YoutubeMark />
+              </SocialLink>
+            </li>
+            <li>
+              <SocialLink href={INSTAGRAM_URL} label={foot.instagram}>
+                <InstagramMark />
+              </SocialLink>
+            </li>
+          </ul>
         </div>
       </aside>
 
