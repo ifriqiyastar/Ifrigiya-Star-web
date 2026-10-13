@@ -3,6 +3,7 @@ import type { AdminTranslations } from "@/lib/i18n/admin-shared";
 import Link from "next/link";
 import { CalendarDaysIcon, ChevronLeftIcon, ChevronRightIcon, MapPinIcon } from "lucide-react";
 
+import { AgendaPager } from "@/components/admin/agenda-pager";
 import { Panel, PanelHeader } from "@/components/admin/panel";
 import { buttonVariants } from "@/components/ui/button";
 import { SCOUT_DAY_STATUS } from "@/lib/labels";
@@ -82,6 +83,13 @@ function shiftMonth(month: string, delta: number) {
 const MAX_PER_DAY = 3;
 
 /**
+ * Taille d'une page de l'agenda de telephone. Meme valeur que les files du
+ * back-office : la grille mensuelle, elle, n'est jamais paginee — un mois se
+ * lit d'un coup d'oeil ou il ne sert a rien.
+ */
+const AGENDA_PAGE_SIZE = 8;
+
+/**
  * Calendrier mensuel de tous les Scout Days (§12.3).
  *
  * Rendu cote serveur : le mois affiche vit dans l'URL (`?mois=YYYY-MM`), donc
@@ -151,11 +159,10 @@ export async function ScoutDayCalendar({
   };
 
   const navButton = cn(buttonVariants({ variant: "outline", size: "icon-sm" }));
-  const sorted = [...events].sort(
-    (a, b) =>
-      a.event_date.localeCompare(b.event_date) ||
-      (a.start_time ?? "").localeCompare(b.start_time ?? ""),
-  );
+  // L'agenda de telephone est groupe par jour : une entree par date occupee,
+  // dans l'ordre, chacune portant ses evenements deja tries par heure
+  // ci-dessus. Remplace une liste a plat ou chaque ligne repetait sa date.
+  const byDay = [...byDate.entries()].sort(([a], [b]) => a.localeCompare(b));
 
   return (
     <Panel>
@@ -189,7 +196,7 @@ export async function ScoutDayCalendar({
             >
               <ChevronLeftIcon />
             </Link>
-            <span className="min-w-36 text-center text-sm font-semibold capitalize">
+            <span className="min-w-28 text-center text-sm font-semibold capitalize sm:min-w-36">
               {getMONTHLABEL(i18n).format(firstOfMonth)}
             </span>
             <Link
@@ -301,58 +308,166 @@ export async function ScoutDayCalendar({
           })}
         </div>
 
-        {/* Agenda : seul affichage sous `sm`, relais de la grille masquee a
-            cette largeur (cf. commentaire au-dessus). Retire des `sm:` pour
-            ne pas repeter en liste ce que la grille montre deja. */}
+        {/* --- SOUS `sm` : vue du mois en pastilles, puis agenda par jour ---
+
+            La grille au-dessus est masquee ici (une vignette lisible ne tient
+            pas dans un septieme de largeur), mais la remplacer par une simple
+            liste faisait disparaitre **toute** notion de mois : on ne voyait
+            plus ni les trous, ni les grappes, ni ou l'on en est. Cette grille
+            compacte ne porte donc que des points de statut — pas de titre a
+            caser — et chaque jour occupe renvoie a son groupe dans l'agenda. */}
         <div className="sm:hidden">
-          <p className="mb-2 text-xs font-medium text-muted-foreground">
+          <div className="grid grid-cols-7 gap-1">
+            {getWEEKDAYS(i18n).map((day) => (
+              <span
+                key={day}
+                className="pb-1 text-center text-[0.625rem] font-medium text-muted-foreground"
+              >
+                {day.slice(0, 2)}
+              </span>
+            ))}
+
+            {cells.map((date, index) => {
+              if (!date) return <span key={`vide-${index}`} aria-hidden />;
+
+              const dayEvents = byDate.get(date) ?? [];
+              const isToday = date === today;
+              const number = (
+                <span
+                  className={cn(
+                    "flex size-6 items-center justify-center rounded-full text-[0.6875rem] tabular-nums",
+                    isToday
+                      ? "bg-brand font-bold text-brand-foreground"
+                      : dayEvents.length
+                        ? "font-semibold text-foreground"
+                        : "text-muted-foreground",
+                  )}
+                >
+                  {Number(date.slice(-2))}
+                </span>
+              );
+              // Une rangee de points de hauteur fixe, occupee ou non : sans
+              // elle, les jours sans evenement seraient plus courts et la
+              // grille ondulerait d'une semaine a l'autre.
+              const dots = (
+                <span className="flex h-1.5 items-center justify-center gap-0.5">
+                  {dayEvents.slice(0, 3).map((event) => (
+                    <span
+                      key={event.id}
+                      className={cn("size-1.5 rounded-full", styleFor(event.status).dot)}
+                    />
+                  ))}
+                </span>
+              );
+              const inner = (
+                <>
+                  {number}
+                  {dots}
+                </>
+              );
+
+              if (!dayEvents.length) {
+                return (
+                  <span
+                    key={date}
+                    className="flex min-h-11 flex-col items-center justify-center gap-1 rounded-lg"
+                  >
+                    {inner}
+                  </span>
+                );
+              }
+              return (
+                <a
+                  key={date}
+                  href={`#jour-${date}`}
+                  aria-label={i18n.t("{0} evenement(s) ce jour", { "0": dayEvents.length })}
+                  className="flex min-h-11 flex-col items-center justify-center gap-1 rounded-lg bg-secondary/50 transition-colors hover:bg-secondary"
+                >
+                  {inner}
+                </a>
+              );
+            })}
+          </div>
+
+          <p className="mt-4 mb-2 text-xs font-medium text-muted-foreground">
             {i18n.t("Agenda du mois")}</p>
-          {!sorted.length ? (
+          {!byDay.length ? (
             <p className="flex items-center gap-2 py-3 text-xs text-muted-foreground">
               <CalendarDaysIcon className="size-3.5" />
               {i18n.t("Aucun evenement programme ce mois-ci.")}</p>
           ) : (
-            <ul className="flex flex-col gap-1.5">
-              {sorted.map((event) => (
-                <li key={event.id}>
-                  <Link
-                    href={i18n.path(`/admin/scout-days/${event.id}`)}
+            <AgendaPager
+              pageSize={AGENDA_PAGE_SIZE}
+              counts={byDay.map(([, list]) => list.length)}
+              ids={byDay.map(([date]) => `jour-${date}`)}
+            >
+              {byDay.map(([date, dayEvents]) => (
+                // Le jour est ecrit UNE fois, en tete de son groupe. Chaque
+                // ligne le repetait dans une colonne de 96 px fixes, qui
+                // mangeait presque un tiers de la largeur utile.
+                <section key={date} id={`jour-${date}`} className="scroll-mt-20">
+                  <h3
                     className={cn(
-                      "flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl px-3 py-2 transition-colors",
-                      styleFor(event.status).chip,
-                      // Le jour courant se signale par un liseré, pas par un
-                      // aplat concurrent : la couleur de fond appartient a
-                      // l'evenement, comme dans la grille.
-                      event.event_date === today && "ring-2 ring-brand ring-inset",
+                      "mb-1.5 flex items-center gap-2 text-xs font-semibold capitalize",
+                      date === today ? "text-brand" : "text-muted-foreground",
                     )}
                   >
-                    <span className="w-24 shrink-0 text-xs font-semibold opacity-75 capitalize">
-                      {getDAYLABEL(i18n).format(new Date(`${event.event_date}T00:00:00Z`))}
-                    </span>
-                    {event.start_time ? (
-                      <span className="shrink-0 text-xs font-semibold opacity-75 tabular-nums">
-                        {event.start_time.slice(0, 5)}
-                      </span>
+                    {getDAYLABEL(i18n).format(new Date(`${date}T00:00:00Z`))}
+                    {date === today ? (
+                      <span className="micro-label rounded bg-brand px-1.5 py-0.5 text-brand-foreground">
+                        {i18n.t("Aujourd'hui")}</span>
                     ) : null}
-                    <span className="min-w-0 flex-1 truncate text-sm font-semibold">
-                      {event.title}
-                    </span>
-                    {event.location ? (
-                      <span className="flex min-w-0 shrink-0 items-center gap-1 text-xs opacity-75">
-                        <MapPinIcon className="size-3" />
-                        <span className="max-w-32 truncate">{event.location}</span>
-                      </span>
-                    ) : null}
-                    <span className="shrink-0 text-xs font-semibold opacity-75">
-                      {i18n.labels.label(SCOUT_DAY_STATUS, event.status)}
-                    </span>
-                  </Link>
-                </li>
+                  </h3>
+                  <ul className="flex flex-col gap-1.5">
+                    {dayEvents.map((event) => (
+                      <li key={event.id}>
+                        <Link
+                          href={i18n.path(`/admin/scout-days/${event.id}`)}
+                          className="flex items-stretch gap-2.5 rounded-lg bg-secondary/50 p-2.5 transition-colors hover:bg-secondary"
+                        >
+                          {/* Un liseré de statut plutot qu'un aplat plein sur
+                              toute la ligne : dix lignes saturees empilees sur
+                              un telephone etouffent le titre, qui est ce qu'on
+                              vient lire. La couleur code toujours le statut, et
+                              le libelle reste ecrit en dessous — elle ne porte
+                              jamais l'information seule. */}
+                          <span
+                            className={cn("w-1 shrink-0 rounded-full", styleFor(event.status).dot)}
+                          />
+                          <span className="flex min-w-0 flex-1 flex-col">
+                            <span className="flex items-baseline gap-2">
+                              {event.start_time ? (
+                                <span className="shrink-0 text-xs font-semibold text-muted-foreground tabular-nums">
+                                  {event.start_time.slice(0, 5)}
+                                </span>
+                              ) : null}
+                              <span className="min-w-0 flex-1 truncate text-sm font-semibold">
+                                {event.title}
+                              </span>
+                            </span>
+                            <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[0.6875rem] text-muted-foreground">
+                              <span className="font-medium">
+                                {i18n.labels.label(SCOUT_DAY_STATUS, event.status)}
+                              </span>
+                              {event.location ? (
+                                <span className="flex min-w-0 items-center gap-1">
+                                  <MapPinIcon className="size-3 shrink-0" />
+                                  <span className="truncate">{event.location}</span>
+                                </span>
+                              ) : null}
+                            </span>
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
               ))}
-            </ul>
+            </AgendaPager>
           )}
         </div>
       </div>
+
     </Panel>
   );
 }

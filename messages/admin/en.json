@@ -23,6 +23,8 @@
       "notificationsTemplate": "Email template",
       "blog": "Blog",
       "finances": "Subscriptions & payments",
+      "financesPayments": "Payments",
+      "financesSubscriptions": "Subscriptions",
       "settings": "Settings"
     },
     "sections": {
@@ -44,6 +46,8 @@
     "queueHint": "The back-office queues, limited to your permissions.",
     "queueEmpty": "No queue is waiting.",
     "campaigns": "Notification campaigns",
+    "markAllRead": "Mark all as read",
+    "markAllReadHint": "Clears the badge. The dossiers still need handling.",
     "dashboard": "Dashboard",
     "fallbackTitle": "Administration"
   },
@@ -1743,6 +1747,7 @@
     "Mois precedent": "Previous month",
     "Mois suivant": "Next month",
     "autre(s)": "more",
+    "{0} evenement(s) ce jour": "{0} event(s) on this day",
     "Agenda du mois": "Monthly agenda",
     "Aucun evenement programme ce mois-ci.": "No events scheduled this month.",
     "Modifier": "Edit",

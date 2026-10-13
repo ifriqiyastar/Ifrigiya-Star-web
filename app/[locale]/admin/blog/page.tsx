@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import { CalendarClockIcon, CheckCheckIcon, NewspaperIcon, PenLineIcon, PlusIcon, Trash2Icon } from "lucide-react";
 
 import { ActionButton } from "@/components/admin/action-button";
+import { STACKED_ON_MOBILE } from "@/components/admin/table-stack";
 import { EmptyState } from "@/components/admin/empty-state";
 import { FilterBar } from "@/components/admin/filter-bar";
 import { KpiTile } from "@/components/admin/kpi-tile";
@@ -27,7 +28,7 @@ import { requirePermission } from "@/lib/auth";
 import { makeFormat } from "@/lib/format";
 import { getAdminLocale } from "@/lib/i18n/admin";
 import { BLOG_STATUS } from "@/lib/labels";
-import { effectiveBlogStatus, fetchBlogMonths, fetchBlogStats, listBlogPosts } from "@/lib/queries/blog";
+import { BLOG_PAGE_SIZE, effectiveBlogStatus, fetchBlogMonths, fetchBlogStats, listBlogPosts } from "@/lib/queries/blog";
 import { publicStorageUrl } from "@/lib/supabase/config";
 import { cn } from "@/lib/utils";
 
@@ -135,13 +136,13 @@ export default async function BlogPage({ searchParams }: PageProps<"/[locale]/ad
             description={i18n.t("Aucun article ne correspond a ces criteres.")}
           />
         ) : (
-          <Table>
+          <Table className={STACKED_ON_MOBILE}>
             <TableHeader>
               <TableRow>
                 <TableHead>{i18n.t("Article")}</TableHead>
                 <TableHead>{i18n.t("Statut")}</TableHead>
-                <TableHead>{i18n.t("Auteur")}</TableHead>
-                <TableHead>{i18n.t("Derniere modification")}</TableHead>
+                <TableHead className="max-lg:hidden">{i18n.t("Auteur")}</TableHead>
+                <TableHead className="max-lg:hidden">{i18n.t("Derniere modification")}</TableHead>
                 <TableHead className="text-right">{i18n.t("Actions")}</TableHead>
               </TableRow>
             </TableHeader>
@@ -182,10 +183,10 @@ export default async function BlogPage({ searchParams }: PageProps<"/[locale]/ad
                         </p>
                       ) : null}
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
+                    <TableCell className="text-xs text-muted-foreground max-lg:hidden">
                       {row.author_name ?? "—"}
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
+                    <TableCell className="text-xs text-muted-foreground max-lg:hidden">
                       {i18n.format.formatDateTime(row.updated_at)}
                     </TableCell>
                     <TableCell>
@@ -226,7 +227,7 @@ export default async function BlogPage({ searchParams }: PageProps<"/[locale]/ad
           basePath={i18n.path("/admin/blog")}
           params={params}
           page={page}
-          pageSize={20}
+          pageSize={BLOG_PAGE_SIZE}
           total={count}
         />
       </Panel>

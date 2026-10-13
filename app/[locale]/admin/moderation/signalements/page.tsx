@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 
 import { ActionButton } from "@/components/admin/action-button";
+import { STACKED_ON_MOBILE } from "@/components/admin/table-stack";
 import { EmptyState } from "@/components/admin/empty-state";
 import { ModerationFilters } from "@/components/admin/moderation/pieces";
 import { NoteCards } from "@/components/admin/note-cards";
@@ -354,13 +355,27 @@ async function ReportsView({
           description={i18n.t("Rien a instruire avec ces criteres.")}
         />
       ) : (
-        <Table>
+        <Table className={STACKED_ON_MOBILE}>
           <TableHeader>
             <TableRow>
+              {/* ⚠️ Il y avait ici un sixieme en-tete, « Priorite », sans
+                  aucune cellule en face : le corps n'en compte que cinq. Tout
+                  ce qui suivait etait donc rendu sous le mauvais en-tete — la
+                  pastille de statut sous « Priorite », les boutons sous
+                  « Statut / horodatage » — et « Instruction & decision » ne
+                  surmontait rien. L'en-tete orphelin est retire pour reccoler
+                  les colonnes au corps.
+
+                  La legende de la barre au-dessus decrit toujours trois
+                  niveaux de priorite (Critique / Niveau 2 / Niveau 1) que rien
+                  ne rend : seul un retrait a valider teinte sa ligne
+                  (`row-flagged`). Retablir une vraie colonne de priorite est
+                  une decision produit — la regle est documentee dans
+                  `docs/ai-reference/moderation.md` — pas un reglage de mise en
+                  page, donc rien n'est invente ici. */}
               <TableHead>{i18n.t("Contenu signale")}</TableHead>
-              <TableHead>{i18n.t("Auteur & identifiant")}</TableHead>
+              <TableHead className="max-lg:hidden">{i18n.t("Auteur & identifiant")}</TableHead>
               <TableHead>{i18n.t("Motif du signalement")}</TableHead>
-              <TableHead>{i18n.t("Priorite")}</TableHead>
               <TableHead>{i18n.t("Statut / horodatage")}</TableHead>
               <TableHead className="text-right">{i18n.t("Instruction & decision")}</TableHead>
             </TableRow>
@@ -429,7 +444,7 @@ async function ReportsView({
                       </div>
                     </TableCell>
 
-                    <TableCell>
+                    <TableCell className="max-lg:hidden">
                       {contentAuthor ? (
                         <UserCell
                           name={displayName(contentAuthor, undefined, i18n.locale)}

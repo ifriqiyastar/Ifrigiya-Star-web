@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 
 import { ActionButton } from "@/components/admin/action-button";
+import { STACKED_ON_MOBILE } from "@/components/admin/table-stack";
 import { EmptyState } from "@/components/admin/empty-state";
 import { FilterBar } from "@/components/admin/filter-bar";
 import { MetricStrip } from "@/components/admin/metric-strip";
@@ -204,7 +205,7 @@ export default async function NotificationsPage({
           du journal qu'elles resument. Aucune ne se calcule sur la page
           affichee : « destinataires servis sur les campagnes affichees »
           changeait de valeur a chaque page tournee. */}
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <MetricStrip
           icon={MegaphoneIcon}
           label={i18n.t("Campagnes (30 j)")}
@@ -312,14 +313,14 @@ export default async function NotificationsPage({
             }
           />
         ) : (
-          <Table>
+          <Table className={STACKED_ON_MOBILE}>
             <TableHeader>
               <TableRow>
                 <TableHead>{i18n.t("Campagne & message")}</TableHead>
                 <TableHead>{i18n.t("Audience")}</TableHead>
                 <TableHead>{i18n.t("Statut")}</TableHead>
-                <TableHead>{i18n.t("Destinataires")}</TableHead>
-                <TableHead>{i18n.t("Expédition")}</TableHead>
+                <TableHead className="max-lg:hidden">{i18n.t("Destinataires")}</TableHead>
+                <TableHead className="max-lg:hidden">{i18n.t("Expédition")}</TableHead>
                 <TableHead className="text-right">{i18n.t("Action")}</TableHead>
               </TableRow>
             </TableHeader>
@@ -367,7 +368,7 @@ export default async function NotificationsPage({
                         </p>
                       ) : null}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="max-lg:hidden">
                       <div className="flex items-baseline gap-1">
                         <span className="font-heading text-lg font-extrabold text-brand tabular-nums">
                           {i18n.format.formatNumber(campaign.recipient_count ?? 0)}
@@ -377,7 +378,7 @@ export default async function NotificationsPage({
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="max-lg:hidden">
                       <p className="text-xs text-foreground">
                         {i18n.format.formatDateTime(campaign.created_at)}
                       </p>

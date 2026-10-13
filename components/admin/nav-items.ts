@@ -4,6 +4,8 @@ import {
   CalendarDaysIcon,
   BellIcon,
   ClipboardCheckIcon,
+  CreditCardIcon,
+  ReceiptTextIcon,
   FileTextIcon,
   FlagIcon,
   GavelIcon,
@@ -161,6 +163,16 @@ export const NAV_ITEMS = [
     badge: null,
     permission: "finance.manage" as AdminPermission,
     section: "pilotage",
+    /**
+     * Deux vues, deux routes, donc deux entrees — meme traitement que la
+     * moderation et les validations. Aucun compteur : il n'y a pas de file
+     * d'attente ici, un paiement en attente est un etat, pas un dossier qui
+     * reclame une decision.
+     */
+    children: [
+      { href: "/admin/finances/paiements", key: "financesPayments", badge: null, icon: ReceiptTextIcon },
+      { href: "/admin/finances/abonnements", key: "financesSubscriptions", badge: null, icon: CreditCardIcon },
+    ],
   },
 ] as const;
 
@@ -179,6 +191,48 @@ export type NavChildKey = NavParent["children"][number]["key"];
  */
 export const navLabel = (dict: AdminDictionary, key: NavKey | NavChildKey) =>
   dict.nav.items[key];
+
+/**
+ * Toutes les entrees du rail a plat, parents et enfants confondus. Sert la
+ * resolution de titre ci-dessous ; l'ordre est celui de `NAV_ITEMS`, donc un
+ * parent precede toujours ses enfants a longueur de chemin egale.
+ */
+type FlatNavEntry = { href: string; key: NavKey | NavChildKey };
+
+// Le type de retour est annote sur la lambda, pas seulement sur la constante :
+// `NAV_ITEMS` est `as const`, donc chaque branche du ternaire s'infere avec ses
+// propres `href` litteraux et les deux refusent de s'unifier.
+const FLAT_NAV: FlatNavEntry[] = NAV_ITEMS.flatMap((item): FlatNavEntry[] =>
+  "children" in item
+    ? [
+        { href: item.href, key: item.key },
+        ...item.children.map((child): FlatNavEntry => ({ href: child.href, key: child.key })),
+      ]
+    : [{ href: item.href, key: item.key }],
+);
+
+/**
+ * L'intitule de la section qui couvre ce chemin, dans la langue du
+ * back-office. `route` doit deja etre prive de son prefixe de langue
+ * (`stripLocale()`).
+ *
+ * ⚠️ Le bandeau mobile tirait son titre du **dernier segment de l'URL**, et
+ * les routes du back-office sont ecrites en francais : sur
+ * `/en/admin/utilisateurs` il affichait « utilisateurs », et « scout days »
+ * la ou le rail, lui, disait « Scout Days ». Le titre de l'ecran etait donc
+ * le seul endroit du back-office qui ne se traduisait pas — et il n'est
+ * visible que sous `lg`, c'est-a-dire uniquement sur telephone et tablette.
+ *
+ * Correspondance par prefixe **le plus long** : `/admin/moderation/medias`
+ * doit repondre « Medias » et non « Moderation », et `/admin` ne doit pas
+ * capter tous les autres ecrans.
+ */
+export function navTitle(dict: AdminDictionary, route: string): string | null {
+  const match = FLAT_NAV
+    .filter((entry) => route === entry.href || route.startsWith(`${entry.href}/`))
+    .sort((a, b) => b.href.length - a.href.length)[0];
+  return match ? navLabel(dict, match.key) : null;
+}
 
 /**
  * La premiere section que ces permissions ouvrent, dans l'ordre ci-dessus —

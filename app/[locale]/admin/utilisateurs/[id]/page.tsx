@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 
 import { AccountActions } from "@/components/admin/account-actions";
+import { STACKED_ON_MOBILE } from "@/components/admin/table-stack";
 import { ActionButton } from "@/components/admin/action-button";
 import { DefinitionList } from "@/components/admin/definition-list";
 import { DocumentPreviewDialog } from "@/components/admin/document-preview-dialog";
@@ -729,13 +730,13 @@ async function DossierView({ profileId, role }: { profileId: string; role: strin
               description={i18n.t("Le compte n'a pas encore depose de piece.")}
             />
           ) : (
-            <Table>
+            <Table className={STACKED_ON_MOBILE}>
               <TableHeader>
                 <TableRow>
                   <TableHead>{i18n.t("Piece")}</TableHead>
                   <TableHead>{i18n.t("Statut")}</TableHead>
-                  <TableHead>{i18n.t("Examine le")}</TableHead>
-                  <TableHead>{i18n.t("Depose le")}</TableHead>
+                  <TableHead className="max-lg:hidden">{i18n.t("Examine le")}</TableHead>
+                  <TableHead className="max-lg:hidden">{i18n.t("Depose le")}</TableHead>
                   <TableHead className="text-right">{i18n.t("Actions")}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -754,10 +755,10 @@ async function DossierView({ profileId, role }: { profileId: string; role: strin
                         {i18n.labels.label(DOCUMENT_STATUS, row.status as string)}
                       </StatusPill>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="text-muted-foreground max-lg:hidden">
                       {i18n.format.formatDate(row.reviewed_at)}
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="text-muted-foreground max-lg:hidden">
                       {i18n.format.formatDate(row.created_at)}
                     </TableCell>
                     <TableCell>
@@ -826,7 +827,7 @@ async function ContentView({ profileId, role }: { profileId: string; role: strin
 
   return (
     <>
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <section className="grid grid-cols-2 gap-3 xl:grid-cols-5">
         <StatCard label={i18n.t("Videos")} value={i18n.format.formatNumber(content.videos.length)} icon={VideoIcon} />
         <StatCard label={i18n.t("Photos")} value={i18n.format.formatNumber(content.photos.length)} icon={ImageIcon} />
         <StatCard
@@ -858,13 +859,13 @@ async function ContentView({ profileId, role }: { profileId: string; role: strin
             {!content.videos.length ? (
               <EmptyState icon={VideoIcon} title={i18n.t("Aucune video")} />
             ) : (
-              <Table>
+              <Table className={STACKED_ON_MOBILE}>
                 <TableHeader>
                   <TableRow>
                     <TableHead>{i18n.t("Titre")}</TableHead>
                     <TableHead>{i18n.t("Source")}</TableHead>
-                    <TableHead>{i18n.t("Duree")}</TableHead>
-                    <TableHead>{i18n.t("Ajoutee le")}</TableHead>
+                    <TableHead className="max-lg:hidden">{i18n.t("Duree")}</TableHead>
+                    <TableHead className="max-lg:hidden">{i18n.t("Ajoutee le")}</TableHead>
                     <TableHead className="text-right">{i18n.t("Actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -880,7 +881,7 @@ async function ContentView({ profileId, role }: { profileId: string; role: strin
                     const thumbnail = video.thumbnail_url as string | null;
                     return (
                       <TableRow key={String(video.id)}>
-                        <TableCell className="max-w-72">
+                        <TableCell className="md:max-w-72">
                           {url ? (
                             <MediaPreviewDialog
                               kind={youtube ? "youtube" : "video"}
@@ -921,10 +922,10 @@ async function ContentView({ profileId, role }: { profileId: string; role: strin
                             {video.youtube_url ? "YouTube" : i18n.t("Importee")}
                           </StatusPill>
                         </TableCell>
-                        <TableCell className="tabular-nums text-muted-foreground">
+                        <TableCell className="tabular-nums text-muted-foreground max-lg:hidden">
                           {video.duration_sec ? i18n.t("{0} s", { "0": video.duration_sec }) : "—"}
                         </TableCell>
-                        <TableCell className="text-muted-foreground">
+                        <TableCell className="text-muted-foreground max-lg:hidden">
                           {i18n.format.formatDate(video.created_at as string)}
                         </TableCell>
                         <TableCell className="text-right">
@@ -953,7 +954,7 @@ async function ContentView({ profileId, role }: { profileId: string; role: strin
             {!content.photos.length ? (
               <EmptyState icon={ImageIcon} title={i18n.t("Aucune photo")} />
             ) : (
-              <ul className="grid gap-3 px-4 py-5 sm:grid-cols-3 sm:px-5 lg:grid-cols-4">
+              <ul className="grid grid-cols-2 gap-3 px-4 py-5 sm:grid-cols-3 sm:px-5 lg:grid-cols-4">
                 {content.photos.map((photo) => {
                   const url = privateStorageUrl("player-photos", photo.storage_path);
                   return (
@@ -1011,9 +1012,9 @@ async function ContentView({ profileId, role }: { profileId: string; role: strin
                   return (
                     <li
                       key={String(cv.id)}
-                      className="flex items-center justify-between gap-3 px-4 py-3 text-sm sm:px-5"
+                      className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-3 text-sm sm:px-5"
                     >
-                      <span className="flex items-center gap-2">
+                      <span className="flex min-w-0 flex-wrap items-center gap-2">
                         <FileTextIcon className="size-3.5 text-muted-foreground" />
                         {i18n.format.formatDateTime(cv.generated_at as string)}
                         {cv.is_current ? <StatusPill tone="brand">{i18n.t("Courant")}</StatusPill> : null}
@@ -1053,7 +1054,7 @@ async function FinancesView({ profileId, role }: { profileId: string; role: stri
 
   return (
     <>
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <StatCard label={i18n.t("Total encaisse")} value={i18n.format.formatAmount(totalPaid)} />
         <StatCard label={i18n.t("Paiements")} value={i18n.format.formatNumber(data.payments.length)} />
         {role === "player" ? (
@@ -1074,14 +1075,14 @@ async function FinancesView({ profileId, role }: { profileId: string; role: stri
         {!data.subscriptions.length ? (
           <EmptyState title={i18n.t("Aucun abonnement")} />
         ) : (
-          <Table>
+          <Table className={STACKED_ON_MOBILE}>
             <TableHeader>
               <TableRow>
                 <TableHead>{i18n.t("Offre")}</TableHead>
                 <TableHead>{i18n.t("Statut")}</TableHead>
-                <TableHead>{i18n.t("Debut")}</TableHead>
-                <TableHead>{i18n.t("Fin")}</TableHead>
-                <TableHead>{i18n.t("Renouvellement")}</TableHead>
+                <TableHead className="max-lg:hidden">{i18n.t("Debut")}</TableHead>
+                <TableHead className="max-lg:hidden">{i18n.t("Fin")}</TableHead>
+                <TableHead className="max-lg:hidden">{i18n.t("Renouvellement")}</TableHead>
                 <TableHead className="text-right">{i18n.t("Actions")}</TableHead>
               </TableRow>
             </TableHeader>
@@ -1102,13 +1103,13 @@ async function FinancesView({ profileId, role }: { profileId: string; role: stri
                         {i18n.labels.label(SUBSCRIPTION_STATUS, subscription.status as string)}
                       </StatusPill>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="text-muted-foreground max-lg:hidden">
                       {i18n.format.formatDate(subscription.starts_at as string)}
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="text-muted-foreground max-lg:hidden">
                       {i18n.format.formatDate(subscription.ends_at as string)}
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="text-muted-foreground max-lg:hidden">
                       {subscription.auto_renew ? i18n.t("Automatique") : i18n.t("Desactive")}
                     </TableCell>
                     <TableCell>
@@ -1152,15 +1153,15 @@ async function FinancesView({ profileId, role }: { profileId: string; role: stri
         {!data.payments.length ? (
           <EmptyState title={i18n.t("Aucun paiement")} />
         ) : (
-          <Table>
+          <Table className={STACKED_ON_MOBILE}>
             <TableHeader>
               <TableRow>
                 <TableHead>{i18n.t("Objet")}</TableHead>
                 <TableHead>{i18n.t("Montant")}</TableHead>
-                <TableHead>{i18n.t("Moyen")}</TableHead>
+                <TableHead className="max-lg:hidden">{i18n.t("Moyen")}</TableHead>
                 <TableHead>{i18n.t("Statut")}</TableHead>
-                <TableHead>{i18n.t("Reference")}</TableHead>
-                <TableHead>{i18n.t("Encaisse le")}</TableHead>
+                <TableHead className="max-lg:hidden">{i18n.t("Reference")}</TableHead>
+                <TableHead className="max-lg:hidden">{i18n.t("Encaisse le")}</TableHead>
                 <TableHead className="text-right">{i18n.t("Actions")}</TableHead>
               </TableRow>
             </TableHeader>
@@ -1175,7 +1176,7 @@ async function FinancesView({ profileId, role }: { profileId: string; role: stri
                   <TableCell className="font-medium tabular-nums">
                     {i18n.format.formatAmount(payment.amount as number, (payment.currency as string) ?? "TND")}
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="text-muted-foreground max-lg:hidden">
                     {i18n.labels.label(PAYMENT_METHOD, payment.method as string)}
                   </TableCell>
                   <TableCell>
@@ -1183,10 +1184,10 @@ async function FinancesView({ profileId, role }: { profileId: string; role: stri
                       {i18n.labels.label(PAYMENT_STATUS, payment.status as string)}
                     </StatusPill>
                   </TableCell>
-                  <TableCell className="max-w-40 truncate text-xs text-muted-foreground">
+                  <TableCell className="max-w-40 truncate text-xs text-muted-foreground max-lg:hidden">
                     {(payment.provider_reference as string) ?? "—"}
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="text-muted-foreground max-lg:hidden">
                     {i18n.format.formatDate(payment.paid_at as string)}
                   </TableCell>
                   <TableCell className="text-right">
@@ -1210,14 +1211,14 @@ async function FinancesView({ profileId, role }: { profileId: string; role: stri
           {!data.registrations.length ? (
             <EmptyState title={i18n.t("Aucune inscription")} />
           ) : (
-            <Table>
+            <Table className={STACKED_ON_MOBILE}>
               <TableHeader>
                 <TableRow>
                   <TableHead>{i18n.t("Evenement")}</TableHead>
                   <TableHead>{i18n.t("Date")}</TableHead>
                   <TableHead>{i18n.t("Statut")}</TableHead>
-                  <TableHead>{i18n.t("Eligibilite")}</TableHead>
-                  <TableHead>{i18n.t("Inscrit le")}</TableHead>
+                  <TableHead className="max-lg:hidden">{i18n.t("Eligibilite")}</TableHead>
+                  <TableHead className="max-lg:hidden">{i18n.t("Inscrit le")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -1249,14 +1250,14 @@ async function FinancesView({ profileId, role }: { profileId: string; role: stri
                           {i18n.labels.label(REGISTRATION_STATUS, registration.status as string)}
                         </StatusPill>
                       </TableCell>
-                      <TableCell className="text-muted-foreground">
+                      <TableCell className="text-muted-foreground max-lg:hidden">
                         {registration.is_eligible === null
                           ? i18n.t("Non verifiee")
                           : registration.is_eligible
                             ? i18n.t("Eligible")
                             : i18n.t("Non eligible")}
                       </TableCell>
-                      <TableCell className="text-muted-foreground">
+                      <TableCell className="text-muted-foreground max-lg:hidden">
                         {i18n.format.formatDate(registration.registered_at as string)}
                       </TableCell>
                     </TableRow>
@@ -1336,7 +1337,7 @@ function HeaderFigure({
   tone?: "brand" | "info";
 }) {
   return (
-    <div className="flex flex-col text-right">
+    <div className="flex flex-col lg:text-right">
       <span className="micro-label text-muted-foreground">{name}</span>
       <span
         className={cn(
@@ -1362,9 +1363,9 @@ function ActivityRow({
   pill?: string;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded bg-background px-3 py-1.5">
+    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 rounded bg-background px-3 py-1.5">
       <dt className="text-xs text-muted-foreground">{name}</dt>
-      <dd className="flex items-center gap-2">
+      <dd className="flex min-w-0 items-center gap-2">
         <span className="font-mono text-xs font-semibold tabular-nums">{value}</span>
         {pill ? (
           <span className="micro-label rounded bg-brand/20 px-1.5 py-0.5 text-brand">{pill}</span>

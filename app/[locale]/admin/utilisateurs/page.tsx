@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 import { AutoFilterForm, FilterSearchIcon } from "@/components/admin/auto-filter-form";
+import { STACKED_ON_MOBILE } from "@/components/admin/table-stack";
 import { CreateEditorDialog } from "@/components/admin/create-editor-dialog";
 import { EmptyState } from "@/components/admin/empty-state";
 import { KpiTile } from "@/components/admin/kpi-tile";
@@ -168,8 +169,11 @@ export default async function UsersPage({ searchParams }: PageProps<"/[locale]/a
                 RBAC, qui reste par l'editeur SQL (202608240006). */}
             {canCreateEditor ? <CreateEditorDialog /> : null}
             <Link
-              href={href(
-                i18n.path(`/admin/utilisateurs/export${exportQuery.size ? `?${exportQuery}` : ""}`),
+              // Meme defaut que les onglets du tableau de bord : `href()` et
+              // `i18n.path()` prefixent chacun la langue, donc l'export menait
+              // a `/en/en/admin/utilisateurs/export`.
+              href={i18n.path(
+                `/admin/utilisateurs/export${exportQuery.size ? `?${exportQuery}` : ""}`,
               )}
               className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-accent px-3 text-sm font-semibold hover:bg-accent/70"
             >
@@ -241,7 +245,7 @@ export default async function UsersPage({ searchParams }: PageProps<"/[locale]/a
           frappe — la ou il fallait cliquer « Appliquer ». */}
       <AutoFilterForm className="flex flex-col items-stretch justify-between gap-3 rounded-lg border border-border bg-card p-3 lg:flex-row lg:items-center">
         <div className="flex flex-1 items-center gap-2">
-          <div className="flex w-full max-w-md items-center gap-2 rounded-lg bg-background px-3 py-1.5">
+          <div className="flex h-10 w-full max-w-md items-center gap-2 rounded-lg bg-background px-3 sm:h-auto sm:py-1.5">
             <FilterSearchIcon icon={<SearchIcon className="size-4" />} />
             <input
               type="search"
@@ -254,7 +258,7 @@ export default async function UsersPage({ searchParams }: PageProps<"/[locale]/a
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
           <Selector
             name="role"
             label={d.filterType}
@@ -286,13 +290,17 @@ export default async function UsersPage({ searchParams }: PageProps<"/[locale]/a
             options={[{ value: "oui", label: d.deletionPending }]}
             all={d.filterAllFem}
           />
+          {/* Le bouton de remise a zero occupe la rangee entiere sous `sm` :
+              dans une grille de deux il se serait retrouve a cote d'un filtre,
+              a la meme taille, alors qu'il ne filtre pas — il annule. */}
           <Link
             href={href("/admin/utilisateurs")}
             title={d.resetFilters}
             aria-label={d.resetFilters}
-            className="inline-flex size-9 items-center justify-center rounded-lg bg-muted text-muted-foreground hover:bg-accent hover:text-foreground"
+            className="col-span-2 inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-muted text-muted-foreground hover:bg-accent hover:text-foreground sm:size-9 sm:h-9"
           >
             <RotateCcwIcon className="size-4" />
+            <span className="text-xs font-semibold sm:hidden">{d.resetFilters}</span>
           </Link>
         </div>
       </AutoFilterForm>
@@ -311,21 +319,89 @@ export default async function UsersPage({ searchParams }: PageProps<"/[locale]/a
             description={d.emptyDesc}
           />
         ) : (
-          <Table>
+          <Table className={STACKED_ON_MOBILE}>
             <TableHeader>
               <TableRow>
+                {/* Sept colonnes ne tiennent pas sur un telephone : la table
+                    partait en defilement horizontal avec sa premiere colonne
+                    figee, et l'etat d'un compte ne pouvait jamais etre lu en
+                    meme temps que le bouton qui agit dessus.
+
+                    Sous `md` la table devient une pile de rangees compactes
+                    (`STACKED_ON_MOBILE`) : l'identite sur sa ligne, puis role,
+                    conformite et etat en pastilles avec le geste au bout.
+                    Seules les deux cellules de pur contexte portent encore
+                    `max-lg:hidden` — la fiche les porte deja. La variante est
+                    posee sur la cellule elle-meme : elle suit la colonne si
+                    l'ordre change, ce qu'un rang numerote dans une feuille de
+                    style ne ferait pas. */}
                 <TableHead>{d.colUser}</TableHead>
                 <TableHead>{d.colRole}</TableHead>
                 <TableHead>{d.colCompliance}</TableHead>
-                <TableHead>{d.colDetail}</TableHead>
+                <TableHead className="max-lg:hidden">{d.colDetail}</TableHead>
                 <TableHead>{d.colState}</TableHead>
-                <TableHead className="text-right">{d.colRegistered}</TableHead>
+                <TableHead className="text-right max-lg:hidden">{d.colRegistered}</TableHead>
                 <TableHead className="text-right">{d.colActions}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {rows.map((row) => {
                 const isSelf = row.id === admin.userId;
+
+                // Definies une fois, rendues deux fois : dans leur colonne a
+                // partir de `md`, et repliees dans la cellule d'identite en
+                // dessous. Deux blocs de JSX separes auraient diverge.
+                const rolePill = (
+                  <span
+                    className={cn(
+                      "micro-label inline-flex items-center rounded-full px-2 py-0.5",
+                      row.role === "player"
+                        ? "bg-brand/15 text-brand"
+                        : row.role === "professional"
+                          ? "bg-info/15 text-info"
+                          : "bg-warning/15 text-warning",
+                    )}
+                  >
+                    {row.role === "admin"
+                      ? (adminRoleById.get(row.id) ?? dict.roles.fallback)
+                      : label(ROLE, row.role)}
+                  </span>
+                );
+
+                const compliancePill =
+                  row.role === "admin" ? (
+                    // Pour un administrateur, cette colonne repete son role
+                    // RBAC. Deux colonnes eloignees le supportent ; dans la
+                    // rangee compacte les deux pastilles se touchent et se
+                    // lisent comme un doublon — d'ou le retrait sous `md`.
+                    <span className="inline-flex items-center gap-1.5 rounded bg-muted px-2 py-0.5 text-[0.6875rem] font-semibold text-warning max-md:hidden">
+                      <ShieldCheckIcon className="size-3" />
+                      {adminRoleById.get(row.id) ?? dict.roles.fallback}
+                    </span>
+                  ) : row.businessStatus ? (
+                    <StatusPill tone={entry(ACCOUNT_STATUS, row.businessStatus).tone} dot>
+                      {label(ACCOUNT_STATUS, row.businessStatus)}
+                    </StatusPill>
+                  ) : (
+                    <StatusPill tone="neutral" dot>
+                      {d.notVerified}
+                    </StatusPill>
+                  );
+
+                const statePill = row.deletion_requested_at ? (
+                  <StatusPill tone="danger" dot>
+                    {d.deletionRequested}
+                  </StatusPill>
+                ) : row.is_active ? (
+                  <StatusPill tone="success" dot>
+                    {d.active}
+                  </StatusPill>
+                ) : (
+                  <StatusPill tone="neutral" dot>
+                    {d.deactivated}
+                  </StatusPill>
+                );
+
                 return (
                   <TableRow key={row.id}>
                     <TableCell>
@@ -348,41 +424,11 @@ export default async function UsersPage({ searchParams }: PageProps<"/[locale]/a
                       </span>
                     </TableCell>
 
-                    <TableCell>
-                      <span
-                        className={cn(
-                          "micro-label inline-flex items-center rounded-full px-2 py-0.5",
-                          row.role === "player"
-                            ? "bg-brand/15 text-brand"
-                            : row.role === "professional"
-                              ? "bg-info/15 text-info"
-                              : "bg-warning/15 text-warning",
-                        )}
-                      >
-                        {row.role === "admin"
-                          ? (adminRoleById.get(row.id) ?? dict.roles.fallback)
-                          : label(ROLE, row.role)}
-                      </span>
-                    </TableCell>
+                    <TableCell>{rolePill}</TableCell>
 
-                    <TableCell>
-                      {row.role === "admin" ? (
-                        <span className="inline-flex items-center gap-1.5 rounded bg-muted px-2 py-0.5 text-[0.6875rem] font-semibold text-warning">
-                          <ShieldCheckIcon className="size-3" />
-                          {adminRoleById.get(row.id) ?? dict.roles.fallback}
-                        </span>
-                      ) : row.businessStatus ? (
-                        <StatusPill tone={entry(ACCOUNT_STATUS, row.businessStatus).tone} dot>
-                          {label(ACCOUNT_STATUS, row.businessStatus)}
-                        </StatusPill>
-                      ) : (
-                        <StatusPill tone="neutral" dot>
-                          {d.notVerified}
-                        </StatusPill>
-                      )}
-                    </TableCell>
+                    <TableCell>{compliancePill}</TableCell>
 
-                    <TableCell>
+                    <TableCell className="max-lg:hidden">
                       {row.detail ? (
                         <span className="flex items-center gap-1.5">
                           <span
@@ -407,23 +453,9 @@ export default async function UsersPage({ searchParams }: PageProps<"/[locale]/a
                       )}
                     </TableCell>
 
-                    <TableCell>
-                      {row.deletion_requested_at ? (
-                        <StatusPill tone="danger" dot>
-                          {d.deletionRequested}
-                        </StatusPill>
-                      ) : row.is_active ? (
-                        <StatusPill tone="success" dot>
-                          {d.active}
-                        </StatusPill>
-                      ) : (
-                        <StatusPill tone="neutral" dot>
-                          {d.deactivated}
-                        </StatusPill>
-                      )}
-                    </TableCell>
+                    <TableCell>{statePill}</TableCell>
 
-                    <TableCell className="text-right text-xs text-muted-foreground tabular-nums">
+                    <TableCell className="text-right text-xs text-muted-foreground tabular-nums max-lg:hidden">
                       {formatDate(row.created_at)}
                     </TableCell>
 
@@ -435,7 +467,7 @@ export default async function UsersPage({ searchParams }: PageProps<"/[locale]/a
                           aria-label={fill(d.openRecordOf, {
                             name: row.full_name || d.thisAccount,
                           })}
-                          className="inline-flex size-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"
+                          className="inline-flex size-10 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground md:size-7"
                         >
                           <EyeIcon className="size-4" />
                         </Link>
@@ -536,12 +568,15 @@ function Selector({
   all: string;
 }) {
   return (
-    <label className="flex items-center gap-1.5 rounded-lg bg-background px-2.5 py-1.5">
-      <span className="micro-label text-muted-foreground">{name_}</span>
+    <label className="flex h-10 min-w-0 items-center gap-1.5 rounded-lg bg-background px-2.5 sm:h-auto sm:py-1.5">
+      <span className="micro-label shrink-0 text-muted-foreground">{name_}</span>
+      {/* `min-w-0` sur les deux : dans une case de grille, un `<select>` porte
+          une largeur intrinseque issue de sa plus longue option et deborde de
+          sa colonne au lieu de s'y ajuster. */}
       <select
         name={name}
         defaultValue={value ?? ""}
-        className="cursor-pointer bg-transparent pr-1 text-xs font-semibold text-foreground outline-none"
+        className="min-w-0 flex-1 cursor-pointer bg-transparent pr-1 text-xs font-semibold text-foreground outline-none sm:flex-none"
       >
         <option value="">{all}</option>
         {choices.map((choice) => (

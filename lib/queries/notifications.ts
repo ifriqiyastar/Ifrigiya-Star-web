@@ -1,7 +1,11 @@
 import { fetchProfilesByIds } from "@/lib/queries/profiles";
 import { createClient } from "@/lib/supabase/server";
 
-export const CAMPAIGNS_PAGE_SIZE = 20;
+// Huit lignes par page (demande client) : les files du back-office se
+// lisent surtout sur telephone, ou chaque ligne est une rangee compacte de
+// deux lignes de texte — vingt d'entre elles faisaient une page qu'on ne
+// parcourt plus, on la fait defiler.
+export const CAMPAIGNS_PAGE_SIZE = 8;
 
 /** Les quatre etats que la table accepte (contrainte `check` de 202608240001). */
 export const CAMPAIGN_STATUSES = ["sent", "failed", "processing", "queued"] as const;

@@ -11,7 +11,11 @@ import { createClient } from "@/lib/supabase/server";
  */
 
 /** Taille d'une page de liste. */
-export const PAGE_SIZE = 20;
+// Huit lignes par page (demande client) : les files du back-office se
+// lisent surtout sur telephone, ou chaque ligne est une rangee compacte de
+// deux lignes de texte — vingt d'entre elles faisaient une page qu'on ne
+// parcourt plus, on la fait defiler.
+export const PAGE_SIZE = 8;
 /** Plafond des files d'attente. */
 export const QUEUE_SIZE = 50;
 

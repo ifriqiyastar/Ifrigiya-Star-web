@@ -305,20 +305,13 @@
 }
 
 @media (max-width: 767px) {
-  .admin-content [data-slot="table-head"],
-  .admin-content [data-slot="table-cell"] {
-    padding-inline: 0.625rem;
-  }
-
-  .admin-content [data-slot="table-head"]:first-child,
-  .admin-content [data-slot="table-cell"]:first-child {
-    position: sticky;
-    left: 0;
-    z-index: 1;
-    background: var(--card);
-    box-shadow: 1px 0 0 var(--border);
-  }
-
+  /* Les deux regles qui vivaient ici — paddings reduits et premiere colonne
+     figee — rendaient tolerable un tableau qui defilait horizontalement. Sous
+     768 px il n'y en a plus : chaque ligne devient une rangee compacte
+     (`STACKED_ON_MOBILE`, components/admin/table-stack.ts). Le liseré de la
+     colonne collante dessinait desormais un separateur parasite, et la
+     specificite de `.admin-content [data-slot=…]` passait devant les
+     utilitaires Tailwind qui disposent la rangee. */
   .admin-content [data-slot="button"] {
     min-height: 2.5rem;
   }

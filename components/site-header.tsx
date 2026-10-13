@@ -9,6 +9,7 @@ import {
   BellIcon,
   BriefcaseIcon,
   CalendarDaysIcon,
+  CheckCheckIcon,
   CheckCircle2Icon,
   ChevronRightIcon,
   FileTextIcon,
@@ -32,6 +33,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
+import { navTitle } from "@/components/admin/nav-items"
 import { useAdminQueue } from "@/components/admin/queue-live"
 import { useQueueSeen } from "@/components/admin/queue-seen"
 import { LanguageMenu } from "@/components/admin/language-menu"
@@ -173,20 +175,29 @@ export function SiteHeader({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query])
 
+  // Le meme intitule que le rail, donc traduit. Il se lisait auparavant dans
+  // le dernier segment de l'URL — toujours ecrit en francais — ce qui
+  // affichait « utilisateurs » sur /en/admin/utilisateurs. Ce titre n'est
+  // rendu que sous `lg` : le defaut ne se voyait que sur telephone.
   const title =
     route === "/admin"
       ? dict.header.dashboard
-      : route.split("/").filter(Boolean).at(-1)?.replaceAll("-", " ") ??
-        dict.header.fallbackTitle
+      : navTitle(dict, route) ?? dict.header.fallbackTitle
   return (
     <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b border-border bg-secondary transition-[width,height] ease-linear">
-      <div className="flex w-full items-center gap-2 px-3 sm:px-5 lg:px-6">
+      <div className="flex w-full min-w-0 items-center gap-2 px-3 sm:px-5 lg:px-6">
         <SidebarTrigger className="-ml-1 md:hidden" />
         <Separator
           orientation="vertical"
-          className="mx-2 h-4 data-vertical:self-auto md:hidden"
+          className="mx-2 hidden h-4 data-vertical:self-auto sm:block md:hidden"
         />
-        <h1 className="text-sm font-semibold capitalize sm:text-base lg:hidden">{title}</h1>
+        {/* `min-w-0` + `truncate` : un intitule long (« Validations des
+            professionnels ») poussait sinon la cloche et le selecteur de
+            langue hors du cadre, puisqu'un texte ne se comprime pas tout
+            seul dans une rangee flex. */}
+        <h1 className="min-w-0 flex-1 truncate text-sm font-semibold sm:text-base lg:hidden">
+          {title}
+        </h1>
         {search ? (
           <form className="relative ml-1 hidden w-full max-w-sm lg:block" onSubmit={(event) => { event.preventDefault(); runSearch(query); }}>
             <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -194,12 +205,18 @@ export function SiteHeader({
             <input ref={searchRef} value={query} onChange={(event) => setQuery(event.target.value)} aria-label={search.label} placeholder={search.placeholder} className="h-8 w-full rounded-md border border-border bg-card pr-14 pl-9 text-[0.6875rem] text-foreground outline-none placeholder:text-muted-foreground focus:border-brand/50" />
           </form>
         ) : null}
-        <div className="ml-auto flex items-center gap-2 sm:gap-3">
+        <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-3">
           {/* Meme place que sur le site public : le selecteur de langue
               precede immediatement la cloche, dans la grappe de droite. */}
           <LanguageMenu />
+          {/* Plus de `onOpenChange={markSeen}` sur la cloche : la pastille
+              s'eteignait a la simple ouverture, donc un bouton « tout marquer
+              comme lu » a l'interieur n'aurait rien eu a eteindre. C'est
+              desormais un geste explicite (demande client). Contrepartie
+              assumee : ouvrir la cloche sans cliquer laisse la pastille
+              allumee. */}
           {showBell ? (
-          <DropdownMenu onOpenChange={markSeen}>
+          <DropdownMenu>
             <DropdownMenuTrigger
               aria-label={dict.header.bellLabel}
               className={cn(
@@ -284,6 +301,27 @@ export function SiteHeader({
                   })}
                 </ul>
               )}
+
+              {pending > 0 ? (
+                <div className="border-t border-border p-1.5">
+                  <button
+                    type="button"
+                    onClick={markSeen}
+                    title={dict.header.markAllReadHint}
+                    className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-muted-foreground transition-colors hover:bg-secondary/70 hover:text-foreground"
+                  >
+                    <CheckCheckIcon className="size-3.5" />
+                    {dict.header.markAllRead}
+                  </button>
+                  {/* Dit ce que le geste ne fait pas : la file reste pleine,
+                      seule la pastille s'eteint. Sans cette ligne, « lu » se
+                      lirait comme « traite » sur un panneau qui liste des
+                      decisions en attente. */}
+                  <p className="px-3 pb-1 text-center text-[0.625rem] leading-snug text-muted-foreground/80">
+                    {dict.header.markAllReadHint}
+                  </p>
+                </div>
+              ) : null}
 
               {permissions.includes("notifications.manage") ? (
                 <div className="border-t border-border p-1.5">

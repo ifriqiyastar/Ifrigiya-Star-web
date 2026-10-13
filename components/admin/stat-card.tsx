@@ -95,29 +95,38 @@ export async function StatCard({
           {Icon ? (
             <span
               className={cn(
-                "flex size-8 shrink-0 items-center justify-center rounded-lg",
+                "flex size-7 shrink-0 items-center justify-center rounded-lg sm:size-8",
                 CHIP[accent],
               )}
             >
               <Icon className="size-4" />
             </span>
           ) : null}
-          <span className="truncate text-sm font-semibold">{label}</span>
+          {/* Deux lignes sur telephone, une seule des `sm`. A deux tuiles par
+              rangee sur un ecran de 390 px, l'intitule ne dispose que d'une
+              petite centaine de pixels : tronque, « Joueurs valides » devenait
+              « Joueurs… » et la tuile ne disait plus ce qu'elle comptait.
+              `line-clamp` aux deux paliers plutot que `truncate` a l'un et
+              `line-clamp` a l'autre : les deux mecanismes se contredisent
+              (`white-space: nowrap` contre `display: -webkit-box`). */}
+          <span className="line-clamp-2 text-xs leading-snug font-semibold sm:line-clamp-1 sm:text-sm">
+            {label}
+          </span>
         </div>
         <ArrowUpRightIcon
           className={cn(
-            "size-4 shrink-0 text-muted-foreground transition-all",
+            "hidden size-4 shrink-0 text-muted-foreground transition-all sm:block",
             href && "group-hover:translate-x-0.5 group-hover:-translate-y-0.5",
             ARROW[accent],
           )}
         />
       </div>
 
-      <div className="relative mt-3 flex items-baseline justify-between gap-2">
+      <div className="relative mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1 sm:mt-3 sm:justify-between">
         <span className="flex items-baseline gap-1">
           <span
             className={cn(
-              "font-heading text-[1.75rem] leading-none font-bold tracking-tight tabular-nums",
+              "font-heading text-2xl leading-none font-bold tracking-tight tabular-nums sm:text-[1.75rem]",
               VALUE[accent],
             )}
           >
@@ -138,7 +147,7 @@ export async function StatCard({
       </div>
 
       {hint || footNote || footHref ? (
-        <div className="relative mt-1.5 flex items-center justify-between gap-2 text-xs text-muted-foreground">
+        <div className="relative mt-1.5 flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 text-[0.6875rem] text-muted-foreground sm:text-xs">
           <span className="min-w-0 truncate">{hint}</span>
           {footHref ? (
             <span className={cn("shrink-0 font-semibold", accent === "error" ? "text-destructive" : accent === "tertiary" ? "text-warning" : "text-brand")}>

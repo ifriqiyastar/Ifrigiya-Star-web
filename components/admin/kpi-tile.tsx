@@ -50,12 +50,16 @@ export function KpiTile({
 }) {
   return (
     <div className={cn("rounded-lg border border-border bg-card p-3", className)}>
-      <div className="flex items-center justify-between gap-2 text-muted-foreground">
-        <span className="micro-label truncate">{label}</span>
-        <Icon className={cn("size-4 shrink-0", ICON[accent])} />
+      <div className="flex items-start justify-between gap-2 text-muted-foreground">
+        {/* Deux lignes sur telephone : a deux tuiles par rangee sur 390 px,
+            « CONFORMITE IDENTITE » tronque ne disait plus ce qui etait
+            compte. `micro-label` est deja en capitales espacees, donc cher en
+            largeur. */}
+        <span className="micro-label line-clamp-2 sm:line-clamp-1">{label}</span>
+        <Icon className={cn("mt-0.5 size-4 shrink-0", ICON[accent])} />
       </div>
-      <div className="mt-1 flex flex-wrap items-baseline gap-2">
-        <span className="font-heading text-2xl leading-none font-bold tracking-tight tabular-nums">
+      <div className="mt-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+        <span className="font-heading text-xl leading-none font-bold tracking-tight tabular-nums sm:text-2xl">
           {value}
         </span>
         {qualifier ? (

@@ -1,5 +1,6 @@
 import { getAdminI18n } from "@/lib/i18n/admin";
 import { AxisScores } from "@/components/admin/axis-scores";
+import { STACKED_ON_MOBILE } from "@/components/admin/table-stack";
 import { EVALUATION_SCORE_COLUMNS } from "@/lib/evaluation-axes";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -280,7 +281,7 @@ export default async function ScoutDayDetailPage({
         />
       </div>
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <StatCard
           label={i18n.t("Inscriptions")}
           value={`${i18n.format.formatNumber(rows.length)}${scoutDay.capacity ? ` / ${scoutDay.capacity}` : ""}`}
@@ -429,15 +430,15 @@ export default async function ScoutDayDetailPage({
             description={i18n.t("Aucun joueur ne s'est encore inscrit a cet evenement.")}
           />
         ) : (
-          <Table>
+          <Table className={STACKED_ON_MOBILE}>
             <TableHeader>
               <TableRow>
                 <TableHead>{i18n.t("Joueur")}</TableHead>
                 <TableHead>{i18n.t("Statut")}</TableHead>
-                <TableHead>{i18n.t("Eligibilite")}</TableHead>
+                <TableHead className="max-lg:hidden">{i18n.t("Eligibilite")}</TableHead>
                 <TableHead>{i18n.t("Paiement")}</TableHead>
-                <TableHead>{i18n.t("Evaluation")}</TableHead>
-                <TableHead>{i18n.t("Inscrit le")}</TableHead>
+                <TableHead className="max-lg:hidden">{i18n.t("Evaluation")}</TableHead>
+                <TableHead className="max-lg:hidden">{i18n.t("Inscrit le")}</TableHead>
                 <TableHead className="text-right">{i18n.t("Actions")}</TableHead>
               </TableRow>
             </TableHeader>
@@ -469,7 +470,7 @@ export default async function ScoutDayDetailPage({
                         {i18n.labels.label(REGISTRATION_STATUS, row.status)}
                       </StatusPill>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="max-lg:hidden">
                       {row.is_eligible === null ? (
                         <span className="text-xs text-muted-foreground">{i18n.t("Non verifiee")}</span>
                       ) : (
@@ -495,7 +496,7 @@ export default async function ScoutDayDetailPage({
                         <span className="text-xs text-muted-foreground">{i18n.t("Gratuit")}</span>
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="max-lg:hidden">
                       {bestScore === null ? (
                         <span className="text-xs text-muted-foreground">—</span>
                       ) : (
@@ -507,7 +508,7 @@ export default async function ScoutDayDetailPage({
                         </span>
                       )}
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="text-muted-foreground max-lg:hidden">
                       {i18n.format.formatDate(row.registered_at)}
                     </TableCell>
                     <TableCell>
@@ -562,7 +563,7 @@ export default async function ScoutDayDetailPage({
             title={i18n.t("Rapports de scouting")}
             description={i18n.t("Le bareme du score /100 n'est pas fixe par le cahier des charges : les scores affiches sont ceux saisis par les evaluateurs, et la note globale est calculee cote serveur.")}
           />
-          <Table>
+          <Table className={STACKED_ON_MOBILE}>
             <TableHeader>
               <TableRow>
                 <TableHead>{i18n.t("Joueur")}</TableHead>

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { ActionButton } from "@/components/admin/action-button";
+import { STACKED_ON_MOBILE } from "@/components/admin/table-stack";
 import { EmptyState } from "@/components/admin/empty-state";
 import { FilterBar } from "@/components/admin/filter-bar";
 import { NoteCards } from "@/components/admin/note-cards";
@@ -58,7 +59,11 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 const EMPTY_UUID = "00000000-0000-0000-0000-000000000000";
-const PAGE_SIZE = 20;
+// Huit lignes par page (demande client) : les files du back-office se
+// lisent surtout sur telephone, ou chaque ligne est une rangee compacte de
+// deux lignes de texte — vingt d'entre elles faisaient une page qu'on ne
+// parcourt plus, on la fait defiler.
+const PAGE_SIZE = 8;
 
 export default async function ScoutDaysPage({ searchParams }: PageProps<"/[locale]/admin/scout-days">) {
   const i18n = await getAdminI18n();
@@ -230,7 +235,7 @@ export default async function ScoutDaysPage({ searchParams }: PageProps<"/[local
         actions={<ScoutDayDialog organizers={organizers ?? []} countries={countries} />}
       />
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <section className="grid grid-cols-2 gap-3 xl:grid-cols-5">
         <StatCard
           label={i18n.t("Evenements")}
           value={i18n.format.formatNumber(rows.length)}
@@ -273,14 +278,14 @@ export default async function ScoutDaysPage({ searchParams }: PageProps<"/[local
                 : i18n.t("Un evenement cree par un professionnel arrive ici automatiquement. Seul un super administrateur peut le valider ou le refuser.")
             }
           />
-          <Table>
+          <Table className={STACKED_ON_MOBILE}>
             <TableHeader>
               <TableRow>
                 <TableHead>{i18n.t("Evenement")}</TableHead>
-                <TableHead>{i18n.t("Organisateur")}</TableHead>
+                <TableHead className="max-lg:hidden">{i18n.t("Organisateur")}</TableHead>
                 <TableHead>{i18n.t("Date")}</TableHead>
-                <TableHead>{i18n.t("Soumis le")}</TableHead>
-                <TableHead>{i18n.t("Tarif")}</TableHead>
+                <TableHead className="max-lg:hidden">{i18n.t("Soumis le")}</TableHead>
+                <TableHead className="max-lg:hidden">{i18n.t("Tarif")}</TableHead>
                 <TableHead className="text-right">{i18n.t("Decision")}</TableHead>
               </TableRow>
             </TableHeader>
@@ -301,7 +306,7 @@ export default async function ScoutDaysPage({ searchParams }: PageProps<"/[local
                         {row.capacity ? i18n.t(" · {0} places", { "0": row.capacity }) : ""}
                       </span>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="max-lg:hidden">
                       <UserCell
                         name={displayName(organizer, undefined, i18n.locale)}
                         secondary={organizer?.email}
@@ -315,10 +320,10 @@ export default async function ScoutDaysPage({ searchParams }: PageProps<"/[local
                         <span className="ml-1 text-xs">{String(row.start_time).slice(0, 5)}</span>
                       ) : null}
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
+                    <TableCell className="text-xs text-muted-foreground max-lg:hidden">
                       {i18n.format.formatDateTime(row.submitted_at)}
                     </TableCell>
-                    <TableCell className="tabular-nums text-muted-foreground">
+                    <TableCell className="tabular-nums text-muted-foreground max-lg:hidden">
                       {row.is_paid
                         ? i18n.format.formatAmount(row.price_amount, row.price_currency ?? "TND")
                         : i18n.t("Gratuit")}
@@ -430,16 +435,16 @@ export default async function ScoutDaysPage({ searchParams }: PageProps<"/[local
             description={i18n.t("Aucun Scout Day ne correspond a ces criteres.")}
           />
         ) : (
-          <Table>
+          <Table className={STACKED_ON_MOBILE}>
             <TableHeader>
               <TableRow>
                 <TableHead>{i18n.t("Evenement")}</TableHead>
-                <TableHead>{i18n.t("Organisateur")}</TableHead>
+                <TableHead className="max-lg:hidden">{i18n.t("Organisateur")}</TableHead>
                 <TableHead>{i18n.t("Date")}</TableHead>
-                <TableHead>{i18n.t("Soumis le")}</TableHead>
+                <TableHead className="max-lg:hidden">{i18n.t("Soumis le")}</TableHead>
                 <TableHead>{i18n.t("Statut")}</TableHead>
                 <TableHead>{i18n.t("Inscriptions")}</TableHead>
-                <TableHead>{i18n.t("Tarif")}</TableHead>
+                <TableHead className="max-lg:hidden">{i18n.t("Tarif")}</TableHead>
                 <TableHead className="text-right">{i18n.t("Actions")}</TableHead>
               </TableRow>
             </TableHeader>
@@ -460,7 +465,7 @@ export default async function ScoutDaysPage({ searchParams }: PageProps<"/[local
                       </Link>
                       <span className="text-xs text-muted-foreground">{row.location ?? "—"}</span>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="max-lg:hidden">
                       <UserCell
                         name={displayName(organizer, undefined, i18n.locale)}
                         secondary={organizer?.email}
@@ -477,7 +482,7 @@ export default async function ScoutDaysPage({ searchParams }: PageProps<"/[local
                     {/* Date de creation de la ligne, a cotnisateur. « — » pour
                         un evenement jamais soumis : un brouillon, ou un Scout
                         Day cree directement par l'administration. */}
-                    <TableCell className="whitespace-nowrap text-muted-foreground">
+                    <TableCell className="whitespace-nowrap text-muted-foreground max-lg:hidden">
                       {submittedAtById.get(row.id)
                         ? i18n.format.formatDate(submittedAtById.get(row.id) as string)
                         : "—"}
@@ -497,7 +502,7 @@ export default async function ScoutDaysPage({ searchParams }: PageProps<"/[local
                           {i18n.t("Complet")}</StatusPill>
                       ) : null}
                     </TableCell>
-                    <TableCell className="tabular-nums text-muted-foreground">
+                    <TableCell className="tabular-nums text-muted-foreground max-lg:hidden">
                       {row.is_paid
                         ? i18n.format.formatAmount(row.price_amount, row.price_currency ?? "TND")
                         : i18n.t("Gratuit")}
@@ -544,8 +549,18 @@ export default async function ScoutDaysPage({ searchParams }: PageProps<"/[local
                             <XIcon />
                             {i18n.t("Annuler")}</ActionButton>
                         ) : null}
+                        {/* Seul bouton sans texte de la rangee, donc le seul
+                            a avoir besoin d'un nom accessible et d'une taille
+                            posee a la main : `ActionButton` vaut `size="xs"`
+                            par defaut, soit 28 px de haut autour d'une icone
+                            de 12 px — trop petit pour le geste irreversible de
+                            la ligne. Carre de 36 px, corbeille de 16 px, et le
+                            rouge de son jumeau de la fiche de l'evenement. */}
                         <ActionButton
                           variant="ghost"
+                          size="icon-sm"
+                          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          label={i18n.t("Supprimer")}
                           action={deleteScoutDay.bind(null, row.id)}
                           confirm={{
                             title: i18n.t("Supprimer cet evenement"),
@@ -554,7 +569,7 @@ export default async function ScoutDaysPage({ searchParams }: PageProps<"/[local
                             actionLabel: i18n.t("Supprimer definitivement"),
                           }}
                         >
-                          <Trash2Icon />
+                          <Trash2Icon className="size-4" />
                         </ActionButton>
                       </div>
                     </TableCell>

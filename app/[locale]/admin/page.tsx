@@ -204,8 +204,12 @@ export default async function DashboardPage({ searchParams }: PageProps<"/[local
         </p>
       ) : null}
 
-      {/* Six indicateurs, dans l'ordre de la maquette. */}
-      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      {/* Six indicateurs, dans l'ordre de la maquette. Deux par rangee des le
+          plus petit ecran : empilees une par une, elles occupaient environ 700
+          px — un ecran et demi de telephone a faire defiler avant d'atteindre
+          le moindre graphique. `StatCard` a ete rendu lisible a cette largeur
+          (intitule sur deux lignes, fleche retiree) plutot que l'inverse. */}
+      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard
           label={d.validatedPlayers}
           value={formatNumber(validatedPlayers)}
@@ -223,8 +227,8 @@ export default async function DashboardPage({ searchParams }: PageProps<"/[local
           delta={activeSubscriptions ? undefined : d.noneActive}
           deltaTone="neutral"
           hint={fill(d.transactions, { count: formatNumber(successfulTransactions) })}
-          footHref={href("/admin/finances?vue=offres")}
-          footLabel={d.pricing}
+          footHref={href("/admin/finances/abonnements")}
+          footLabel={d.plansSubscriptions}
         />
         <StatCard
           label={d.revenue}
@@ -236,7 +240,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/[local
           deltaTone="neutral"
           hint={d.revenueHint}
           footNote={fill(d.lastDays, { days: period })}
-          href={href("/admin/finances")}
+          href={href("/admin/finances/paiements")}
         />
 
         <StatCard
@@ -292,15 +296,20 @@ export default async function DashboardPage({ searchParams }: PageProps<"/[local
               </h2>
               <p className="mt-0.5 text-xs text-muted-foreground">{d.fluxDesc}</p>
             </div>
-            <div className="flex shrink-0 items-center gap-0.5 self-start rounded-lg bg-accent p-0.5 sm:self-auto">
+            <div className="-mx-1 flex shrink-0 items-center gap-0.5 self-start overflow-x-auto rounded-lg bg-accent p-0.5 px-1 sm:mx-0 sm:self-auto sm:px-0.5">
               {fluxTabs.map((tab) => (
                 <Link
                   key={tab.value}
-                  href={href(
-                    i18n.path(`/admin?periode=${period}${tab.value === "tous" ? "" : `&flux=${tab.value}`}`),
+                  // ⚠️ `i18n.path()` SEUL. `href()` est `localePath(locale, …)`
+                  // et `i18n.path()` vaut `localePath(locale, stripLocale(…))` :
+                  // les enchainer prefixait deux fois, et l'onglet menait a
+                  // `/en/en/admin?flux=…`. Invisible en francais, ou
+                  // `localePath` ne prefixe rien — cassé en anglais et en arabe.
+                  href={i18n.path(
+                    `/admin?periode=${period}${tab.value === "tous" ? "" : `&flux=${tab.value}`}`,
                   )}
                   className={cn(
-                    "micro-label inline-flex items-center gap-1 rounded px-2 py-1 transition-colors",
+                    "micro-label inline-flex min-h-9 shrink-0 items-center gap-1 rounded px-2.5 py-1 transition-colors sm:min-h-0",
                     flux === tab.value
                       ? "bg-muted font-bold text-brand"
                       : "text-muted-foreground hover:text-foreground",
@@ -317,7 +326,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/[local
 
           {/* Trois mesures avant la courbe. Elles suivent le filtre de flux :
               le « revenu brut » affiche est celui des barres visibles. */}
-          <div className="grid grid-cols-1 gap-3 rounded-lg bg-background/60 p-3 sm:grid-cols-3">
+          <div className="grid grid-cols-3 gap-2 rounded-lg bg-background/60 p-3 sm:gap-3">
             <MiniMetric
               label={d.grossRevenue}
               value={formatAmount(chartTotal)}
@@ -352,7 +361,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/[local
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2 pt-1">
             <span className="text-xs text-muted-foreground">{d.fluxFootnote}</span>
             <Link
-              href={href("/admin/finances")}
+              href={href("/admin/finances/paiements")}
               className="inline-flex items-center gap-1 text-sm font-semibold text-brand hover:underline"
             >
               {d.paymentJournal}
@@ -483,12 +492,6 @@ export default async function DashboardPage({ searchParams }: PageProps<"/[local
                 <AwardIcon className="size-4 text-warning" />
                 {d.plansTitle}
               </h3>
-              <Link
-                href={href("/admin/finances?vue=offres")}
-                className="rounded bg-muted px-2 py-1 text-xs font-semibold text-muted-foreground hover:bg-accent hover:text-foreground"
-              >
-                {d.plansManage}
-              </Link>
             </div>
             <p className="mt-1 mb-3 text-xs text-muted-foreground">{d.plansDesc}</p>
 
@@ -541,7 +544,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/[local
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2 pt-1 text-xs text-muted-foreground">
             <span>{d.plansReadOnly}</span>
             <Link
-              href={href("/admin/finances?vue=abonnements")}
+              href={href("/admin/finances/abonnements")}
               className="font-semibold text-brand hover:underline"
             >
               {d.plansSubscriptions}
@@ -552,7 +555,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/[local
 
       {/* Bandeau du prochain evenement publie. */}
       {data.nextEvent ? (
-        <Panel className="flex flex-col items-center justify-between gap-3 p-3 md:flex-row">
+        <Panel className="flex flex-col items-stretch justify-between gap-3 p-3 md:flex-row md:items-center">
           <div className="flex min-w-0 items-center gap-3">
             <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-brand">
               <BellRingIcon className="size-5" />
@@ -580,10 +583,10 @@ export default async function DashboardPage({ searchParams }: PageProps<"/[local
               </p>
             </div>
           </div>
-          <div className="flex w-full shrink-0 items-center justify-end gap-2 md:w-auto">
+          <div className="flex w-full shrink-0 items-center gap-2 md:w-auto md:justify-end">
             <Link
               href={href(`/admin/scout-days/${data.nextEvent.id}`)}
-              className="inline-flex h-8 items-center rounded-lg bg-brand px-3 text-sm font-bold text-brand-foreground transition-[filter] hover:brightness-110"
+              className="inline-flex h-10 w-full items-center justify-center rounded-lg bg-brand px-3 text-sm font-bold text-brand-foreground transition-[filter] hover:brightness-110 md:h-8 md:w-auto"
             >
               {d.manageSession}
             </Link>
@@ -627,7 +630,9 @@ function MiniMetric({
       <p className="micro-label text-muted-foreground">{name}</p>
       <p
         className={cn(
-          "mt-1 font-heading text-base leading-tight font-bold tabular-nums",
+          // Trois colonnes des le telephone : a ~100 px de case, un montant
+          // formate (« 1 234,56 TND ») depassait en 16 px.
+          "mt-1 font-heading text-sm leading-tight font-bold tabular-nums sm:text-base",
           tone === "brand" ? "text-brand" : "text-foreground",
         )}
       >

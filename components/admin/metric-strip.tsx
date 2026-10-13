@@ -46,10 +46,14 @@ export function MetricStrip({
   const body = (
     <>
       <div className="flex min-w-0 flex-col">
-        <span className="micro-label truncate text-muted-foreground">{label}</span>
+        {/* Comme `KpiTile` : deux lignes sous `sm`, ou le bandeau ne fait plus
+            que la moitie d'un ecran de telephone. */}
+        <span className="micro-label line-clamp-2 text-muted-foreground sm:line-clamp-1">
+          {label}
+        </span>
         <span
           className={cn(
-            "mt-1 font-heading text-lg leading-tight font-bold tracking-tight tabular-nums",
+            "mt-1 font-heading text-base leading-tight font-bold tracking-tight tabular-nums sm:text-lg",
             valueTone,
           )}
         >
@@ -59,8 +63,13 @@ export function MetricStrip({
           <span className="mt-0.5 truncate text-[0.6875rem] text-muted-foreground">{hint}</span>
         ) : null}
       </div>
-      <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-lg", chipTone)}>
-        <Icon className="size-5" />
+      <span
+        className={cn(
+          "flex size-8 shrink-0 items-center justify-center rounded-lg sm:size-10",
+          chipTone,
+        )}
+      >
+        <Icon className="size-4 sm:size-5" />
       </span>
     </>
   );

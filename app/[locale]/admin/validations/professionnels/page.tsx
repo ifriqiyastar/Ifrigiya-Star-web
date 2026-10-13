@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 
 import { ActionButton } from "@/components/admin/action-button";
+import { STACKED_ON_MOBILE } from "@/components/admin/table-stack";
 import { DocumentPreviewDialog } from "@/components/admin/document-preview-dialog";
 import { ComplianceList, DossierRail } from "@/components/admin/dossier-rail";
 import { EmptyState } from "@/components/admin/empty-state";
@@ -159,13 +160,13 @@ async function ProfessionalsQueue({
             }
           />
         ) : (
-          <Table>
+          <Table className={STACKED_ON_MOBILE}>
             <TableHeader>
               <TableRow>
                 <TableHead>{i18n.t("Contact")}</TableHead>
                 <TableHead>{i18n.t("Type / organisation")}</TableHead>
                 <TableHead>{i18n.t("Justificatifs")}</TableHead>
-                <TableHead>{i18n.t("Depose")}</TableHead>
+                <TableHead className="max-lg:hidden">{i18n.t("Depose")}</TableHead>
                 <TableHead className="text-right">{i18n.t("Decision rapide")}</TableHead>
               </TableRow>
             </TableHeader>
@@ -211,7 +212,7 @@ async function ProfessionalsQueue({
                         <StatusPill tone="warning">{i18n.t("Aucun document")}</StatusPill>
                       )}
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="text-muted-foreground max-lg:hidden">
                       {i18n.format.timeAgo(row.updated_at)}
                     </TableCell>
                     <TableCell>

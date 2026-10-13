@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 
 import { ActionButton } from "@/components/admin/action-button";
+import { STACKED_ON_MOBILE } from "@/components/admin/table-stack";
 import { DetailDialog } from "@/components/admin/detail-dialog";
 import { DocumentPreviewDialog } from "@/components/admin/document-preview-dialog";
 import { EmptyState } from "@/components/admin/empty-state";
@@ -138,13 +139,13 @@ async function IdentityQueue({ page, etat }: { page: number; etat: string }) {
           }
         />
       ) : (
-        <Table>
+        <Table className={STACKED_ON_MOBILE}>
           <TableHeader>
             <TableRow>
               <TableHead>{i18n.t("Joueur")}</TableHead>
               <TableHead>{i18n.t("Type de piece")}</TableHead>
               <TableHead>{i18n.t("Controle facial")}</TableHead>
-              <TableHead>{i18n.t("Depose")}</TableHead>
+              <TableHead className="max-lg:hidden">{i18n.t("Depose")}</TableHead>
               <TableHead className="text-right">{i18n.t("Actions")}</TableHead>
             </TableRow>
           </TableHeader>
@@ -176,7 +177,7 @@ async function IdentityQueue({ page, etat }: { page: number; etat: string }) {
                       <span className="text-xs text-muted-foreground">{i18n.t("Non realise")}</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="text-muted-foreground max-lg:hidden">
                     {i18n.format.formatDateTime(row.created_at)}
                   </TableCell>
                   <TableCell>

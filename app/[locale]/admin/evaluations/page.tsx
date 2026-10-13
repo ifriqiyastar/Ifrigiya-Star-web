@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { ActionButton } from "@/components/admin/action-button";
+import { STACKED_ON_MOBILE } from "@/components/admin/table-stack";
 import { EmptyState } from "@/components/admin/empty-state";
 import { NoteCards } from "@/components/admin/note-cards";
 import { HeaderMeta, PageHeader } from "@/components/admin/page-header";
@@ -47,7 +48,11 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: i18n.t("Evaluations") };
 }
 
-const PAGE_SIZE = 20;
+// Huit lignes par page (demande client) : les files du back-office se
+// lisent surtout sur telephone, ou chaque ligne est une rangee compacte de
+// deux lignes de texte — vingt d'entre elles faisaient une page qu'on ne
+// parcourt plus, on la fait defiler.
+const PAGE_SIZE = 8;
 
 export default async function EvaluationsPage({
   searchParams,
@@ -153,7 +158,7 @@ export default async function EvaluationsPage({
         description={i18n.t("Saisissez les observations terrain, mesurez les quatre dimensions du joueur et pilotez la publication des rapports depuis un espace unique.")}
       />
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <StatCard
           label={i18n.t("Rapports au total")}
           value={total}
@@ -383,17 +388,17 @@ export default async function EvaluationsPage({
             description={i18n.t("Les nouvelles fiches apparaitront ici apres leur enregistrement.")}
           />
         ) : (
-          <Table>
+          <Table className={STACKED_ON_MOBILE}>
             <TableHeader>
               <TableRow>
                 <TableHead>{i18n.t("Joueur")}</TableHead>
-                <TableHead>{i18n.t("Scout Day")}</TableHead>
-                <TableHead>{i18n.t("Observation")}</TableHead>
-                <TableHead>{i18n.t("Detail des notes")}</TableHead>
+                <TableHead className="max-lg:hidden">{i18n.t("Scout Day")}</TableHead>
+                <TableHead className="max-lg:hidden">{i18n.t("Observation")}</TableHead>
+                <TableHead className="max-lg:hidden">{i18n.t("Detail des notes")}</TableHead>
                 <TableHead>{i18n.t("Global")}</TableHead>
-                <TableHead>{i18n.t("Signataire")}</TableHead>
+                <TableHead className="max-lg:hidden">{i18n.t("Signataire")}</TableHead>
                 <TableHead>{i18n.t("Visibilite")}</TableHead>
-                <TableHead>{i18n.t("Date")}</TableHead>
+                <TableHead className="max-lg:hidden">{i18n.t("Date")}</TableHead>
                 <TableHead className="text-right">{i18n.t("Action")}</TableHead>
               </TableRow>
             </TableHeader>
@@ -416,25 +421,25 @@ export default async function EvaluationsPage({
                         href={registration ? i18n.path(`/admin/utilisateurs/${registration.player_id}`) : undefined}
                       />
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="max-lg:hidden">
                       <p className="max-w-40 truncate text-xs font-medium">
                         {registration
                           ? scoutDayById.get(registration.scout_day_id) ?? i18n.t("Scout Day")
                           : "—"}
                       </p>
                     </TableCell>
-                    <TableCell className="max-w-60 whitespace-normal">
+                    <TableCell className="max-w-60 whitespace-normal max-lg:hidden">
                       <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">
                         {row.comment || i18n.t("Aucune observation redigee.")}
                       </p>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="max-lg:hidden">
                       <AxisScores row={row} />
                     </TableCell>
                     <TableCell>
                       <OverallScore value={overall} />
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="max-lg:hidden">
                       <div className="max-w-40">
                         <p className="truncate text-xs font-medium">
                           {evaluator?.contact_full_name ?? i18n.t("Professionnel")}
@@ -452,7 +457,7 @@ export default async function EvaluationsPage({
                         {row.visible_to_player ? i18n.t("Publie") : i18n.t("Prive")}
                       </StatusPill>
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
+                    <TableCell className="text-xs text-muted-foreground max-lg:hidden">
                       {i18n.format.formatDate(row.created_at)}
                     </TableCell>
                     <TableCell>

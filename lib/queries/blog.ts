@@ -1,7 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import type { BlogPostStatus } from "@/lib/labels";
 
-export const BLOG_PAGE_SIZE = 20;
+// Huit lignes par page (demande client) : les files du back-office se
+// lisent surtout sur telephone, ou chaque ligne est une rangee compacte de
+// deux lignes de texte — vingt d'entre elles faisaient une page qu'on ne
+// parcourt plus, on la fait defiler.
+export const BLOG_PAGE_SIZE = 8;
 
 /**
  * Repli final du champ Auteur. `requireAdmin()` renvoie normalement un nom

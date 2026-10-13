@@ -2,7 +2,11 @@ import { createClient } from "@/lib/supabase/server";
 import { accountAvatarUrl, signAvatarUrls } from "@/lib/queries/profiles";
 import { PROFILE_COLUMNS, fetchProfilesByIds, type ProfileSummary } from "@/lib/queries/profiles";
 
-export const USERS_PAGE_SIZE = 25;
+// Huit lignes par page (demande client) : les files du back-office se
+// lisent surtout sur telephone, ou chaque ligne est une rangee compacte de
+// deux lignes de texte — vingt d'entre elles faisaient une page qu'on ne
+// parcourt plus, on la fait defiler.
+export const USERS_PAGE_SIZE = 8;
 
 export type UserListRow = ProfileSummary & {
   /** Statut du profil metier (player_profiles / professional_profiles). */

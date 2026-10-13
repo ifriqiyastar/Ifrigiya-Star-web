@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 
+import { LinkPendingIcon } from "@/components/admin/link-pending-icon";
 import { buttonVariants } from "@/components/ui/button";
 import { makeFormat } from "@/lib/format";
 import { fill, getAdminDict, getAdminLocale } from "@/lib/i18n/admin";
@@ -39,7 +40,10 @@ export async function Pagination({
   };
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-3 sm:px-5">
+    // Sur telephone le decompte passe au-dessus et les deux boutons se
+    // partagent la largeur : empiles a droite d'un texte qui se replie, ils
+    // se retrouvaient a cheval sur deux lignes, desalignes.
+    <div className="flex flex-col gap-2.5 border-t border-border px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3 sm:px-5">
       <p className="text-xs text-muted-foreground">
         {total === 0
           ? dict.common.noResult
@@ -49,14 +53,29 @@ export async function Pagination({
               total: formatNumber(total),
             })}
       </p>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between gap-2 sm:justify-end">
         {page > 1 ? (
-          <Link href={href(page - 1)} className={cn(buttonVariants({ variant: "outline", size: "xs" }))}>
+          // `scroll={false}` : sans lui, chaque « Precedent / Suivant » ramenait
+          // la fenetre en haut du document, et changer de page se lisait comme
+          // un rechargement complet alors que seules les lignes changent. C'est
+          // deja ce que font `FilterBar`, `AutoFilterForm` et le selecteur de
+          // periode du tableau de bord ; la pagination etait le seul controle de
+          // liste a ne pas le faire.
+          //
+          // `LinkPendingIcon` dit lequel des deux boutons travaille : une page
+          // du back-office est rendue par le serveur, donc le clic reste sans
+          // effet visible le temps de la requete.
+          <Link
+            href={href(page - 1)}
+            scroll={false}
+            className={cn(buttonVariants({ variant: "outline", size: "xs" }), "h-9 flex-1 sm:h-7 sm:flex-none")}
+          >
             <ChevronLeftIcon />
             {dict.common.previous}
+            <LinkPendingIcon />
           </Link>
         ) : (
-          <span className={cn(buttonVariants({ variant: "outline", size: "xs" }), "pointer-events-none opacity-40")}>
+          <span className={cn(buttonVariants({ variant: "outline", size: "xs" }), "h-9 flex-1 pointer-events-none opacity-40 sm:h-7 sm:flex-none")}>
             <ChevronLeftIcon />
             {dict.common.previous}
           </span>
@@ -65,12 +84,17 @@ export async function Pagination({
           {page} / {lastPage}
         </span>
         {page < lastPage ? (
-          <Link href={href(page + 1)} className={cn(buttonVariants({ variant: "outline", size: "xs" }))}>
+          <Link
+            href={href(page + 1)}
+            scroll={false}
+            className={cn(buttonVariants({ variant: "outline", size: "xs" }), "h-9 flex-1 sm:h-7 sm:flex-none")}
+          >
             {dict.common.next}
             <ChevronRightIcon />
+            <LinkPendingIcon />
           </Link>
         ) : (
-          <span className={cn(buttonVariants({ variant: "outline", size: "xs" }), "pointer-events-none opacity-40")}>
+          <span className={cn(buttonVariants({ variant: "outline", size: "xs" }), "h-9 flex-1 pointer-events-none opacity-40 sm:h-7 sm:flex-none")}>
             {dict.common.next}
             <ChevronRightIcon />
           </span>

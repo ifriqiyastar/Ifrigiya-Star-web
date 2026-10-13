@@ -13,7 +13,10 @@ export default function AdminLoading() {
         <Skeleton className="h-8 w-72" />
         <Skeleton className="h-3 w-full max-w-2xl" />
       </div>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      {/* Meme grille que les tuiles qu'il remplace (`grid-cols-2 lg:grid-cols-4`) :
+          un squelette d'une seule colonne sur telephone faisait sauter la page
+          d'une disposition a l'autre au moment ou la donnee arrivait. */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, index) => (
           <Skeleton key={index} className="h-28 rounded-2xl" />
         ))}

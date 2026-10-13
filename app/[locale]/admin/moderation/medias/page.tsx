@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 
 import { ActionButton } from "@/components/admin/action-button";
+import { STACKED_ON_MOBILE } from "@/components/admin/table-stack";
 import { EmptyState } from "@/components/admin/empty-state";
 import { PageHeader } from "@/components/admin/page-header";
 import { Pagination } from "@/components/admin/pagination";
@@ -88,13 +89,13 @@ async function MediaView({ params }: { params: Record<string, string | undefined
         {!videoRows.length ? (
           <EmptyState icon={VideoIcon} title={i18n.t("Aucune video")} />
         ) : (
-          <Table>
+          <Table className={STACKED_ON_MOBILE}>
             <TableHeader>
               <TableRow>
                 <TableHead>{i18n.t("Joueur")}</TableHead>
                 <TableHead>{i18n.t("Titre")}</TableHead>
-                <TableHead>{i18n.t("Source")}</TableHead>
-                <TableHead>{i18n.t("Ajoutee le")}</TableHead>
+                <TableHead className="max-lg:hidden">{i18n.t("Source")}</TableHead>
+                <TableHead className="max-lg:hidden">{i18n.t("Ajoutee le")}</TableHead>
                 <TableHead className="text-right">{i18n.t("Actions")}</TableHead>
               </TableRow>
             </TableHeader>
@@ -124,12 +125,12 @@ async function MediaView({ params }: { params: Record<string, string | undefined
                         (row.title ?? i18n.t("Sans titre"))
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="max-lg:hidden">
                       <StatusPill tone={row.youtube_url ? "info" : "neutral"}>
                         {row.youtube_url ? "YouTube" : i18n.t("Importee")}
                       </StatusPill>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
+                    <TableCell className="text-muted-foreground max-lg:hidden">
                       {i18n.format.formatDate(row.created_at)}
                     </TableCell>
                     <TableCell className="text-right">

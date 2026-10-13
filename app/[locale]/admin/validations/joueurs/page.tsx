@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 
 import { ActionButton } from "@/components/admin/action-button";
+import { STACKED_ON_MOBILE } from "@/components/admin/table-stack";
 import { DocumentFrame } from "@/components/admin/document-frame";
 import { DocumentPreviewDialog } from "@/components/admin/document-preview-dialog";
 import { DossierDecision } from "@/components/admin/dossier-decision";
@@ -231,7 +232,7 @@ async function PlayersQueue({
                 }
               />
             ) : (
-              <Table>
+              <Table className={STACKED_ON_MOBILE}>
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-[34%]">
@@ -245,8 +246,8 @@ async function PlayersQueue({
                         {i18n.t("Joueur / candidat")}</span>
                     </TableHead>
                     <TableHead>{i18n.t("Categorie / poste")}</TableHead>
-                    <TableHead>{i18n.t("Piece & dossier")}</TableHead>
-                    <TableHead>{i18n.t("Horodatage")}</TableHead>
+                    <TableHead className="max-lg:hidden">{i18n.t("Piece & dossier")}</TableHead>
+                    <TableHead className="max-lg:hidden">{i18n.t("Horodatage")}</TableHead>
                     <TableHead className="text-right">{i18n.t("Decision rapide")}</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -293,7 +294,7 @@ async function PlayersQueue({
                             {row.level ? ` · ${i18n.labels.label(PLAYER_LEVEL, row.level)}` : ""}
                           </span>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="max-lg:hidden">
                           <div className="flex items-center gap-1.5">
                             {kyc ? (
                               <StatusPill tone={i18n.labels.entry(IDENTITY_STATUS, kyc.status).tone}>
@@ -321,7 +322,7 @@ async function PlayersQueue({
                               {Math.round(ratio * 100)}  {i18n.t("% complet")}</span>
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="max-lg:hidden">
                           <span className="block text-xs tabular-nums">
                             {i18n.format.formatDateTime(row.updated_at)}
                           </span>

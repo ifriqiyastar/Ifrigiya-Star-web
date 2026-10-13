@@ -3,7 +3,11 @@
  * elle a ete separee en quatre routes.
  */
 /** Taille d'une page de file. */
-export const PAGE_SIZE = 20;
+// Huit lignes par page (demande client) : les files du back-office se
+// lisent surtout sur telephone, ou chaque ligne est une rangee compacte de
+// deux lignes de texte — vingt d'entre elles faisaient une page qu'on ne
+// parcourt plus, on la fait defiler.
+export const PAGE_SIZE = 8;
 
 /** Identifiant impossible : evite un `in ()` invalide quand la file est vide. */
 export const EMPTY_ID = "00000000-0000-0000-0000-000000000000";

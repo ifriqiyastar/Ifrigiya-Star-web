@@ -23,6 +23,8 @@
       "notificationsTemplate": "Modele d'e-mail",
       "blog": "Blog",
       "finances": "Abonnements & paiements",
+      "financesPayments": "Paiements",
+      "financesSubscriptions": "Abonnements",
       "settings": "Parametres"
     },
     "sections": {
@@ -44,6 +46,8 @@
     "queueHint": "Les files d'attente du back-office, limitees a vos droits.",
     "queueEmpty": "Aucune file en attente.",
     "campaigns": "Campagnes de notification",
+    "markAllRead": "Tout marquer comme lu",
+    "markAllReadHint": "Eteint la pastille. Les dossiers restent a traiter.",
     "dashboard": "Tableau de bord",
     "fallbackTitle": "Administration"
   },
@@ -1743,6 +1747,7 @@
     "Mois precedent": "Mois precedent",
     "Mois suivant": "Mois suivant",
     "autre(s)": "autre(s)",
+    "{0} evenement(s) ce jour": "{0} evenement(s) ce jour",
     "Agenda du mois": "Agenda du mois",
     "Aucun evenement programme ce mois-ci.": "Aucun evenement programme ce mois-ci.",
     "Modifier": "Modifier",

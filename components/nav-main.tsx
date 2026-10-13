@@ -120,7 +120,16 @@ const ROW_CLASS = cn(
  */
 function NavRow({ item, current }: { item: NavEntry; current: string }) {
   const { dict } = useAdminI18n()
-  const { state, isMobile } = useSidebar()
+  const { state, isMobile, setOpenMobile } = useSidebar()
+  // `AppSidebar` referme le tiroir au changement de chemin, ce qui couvre
+  // toutes les navigations. Reste le cas ou le lien vise l'ecran deja affiche :
+  // il n'y a alors aucun changement de chemin, donc rien ne refermerait, et le
+  // tiroir semblerait coince. On ferme a la main pour ce cas-la seulement — pas
+  // pour les autres, qui doivent garder l'indicateur de chargement visible le
+  // temps de la reponse du serveur.
+  const closeIfAlreadyThere = (url: string) => {
+    if (current === url) setOpenMobile(false)
+  }
   // ⚠️ RAIL REPLIE EN ICONES : `SidebarMenuSub` y est masque par la feuille de
   // style. Un parent qui ne ferait que deplier n'y produirait donc **rien du
   // tout** au clic — alors qu'avant il menait a la section. Dans cet etat il
@@ -154,6 +163,7 @@ function NavRow({ item, current }: { item: NavEntry; current: string }) {
           className={ROW_CLASS}
           tooltip={item.title}
           isActive={isActive}
+          onClick={() => closeIfAlreadyThere(item.url)}
           render={<Link href={item.url} />}
         >
           {icon}
@@ -212,6 +222,7 @@ function NavRow({ item, current }: { item: NavEntry; current: string }) {
                     "rounded-md text-[0.8125rem] text-sidebar-foreground/70",
                     "data-active:bg-brand/12 data-active:font-semibold data-active:text-brand",
                   )}
+                  onClick={() => closeIfAlreadyThere(child.url)}
                   render={<Link href={child.url} />}
                 >
                   {/* Les icones des sous-entrees sont plus discretes que

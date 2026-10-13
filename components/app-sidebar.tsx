@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import * as React from "react"
 
 import { BrandMark } from "@/components/admin/brand-mark"
@@ -19,6 +20,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
   SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar"
 import type { AdminPermission } from "@/lib/auth"
 import type { Diagnostic } from "@/lib/queries/diagnostics"
@@ -39,6 +41,30 @@ export function AppSidebar({
   // meme instantane.
   const { badges } = useAdminQueue()
   const { dict } = useAdminI18n()
+
+  // SUR TELEPHONE, LE RAIL EST UN TIROIR, et il restait ouvert par-dessus
+  // l'ecran qu'on venait de demander : il fallait le refermer a la main apres
+  // chaque navigation.
+  //
+  // La fermeture est declenchee par le **changement de chemin**, pas par le
+  // clic, et c'est delibere : les liens du rail portent un indicateur de
+  // chargement (`LinkPendingIcon`) parce qu'une page du back-office est rendue
+  // par le serveur a chaque clic. Fermer des le clic ferait disparaitre ce
+  // retour visuel et laisserait l'ecran precedent affiche pendant la requete —
+  // exactement le symptome que cet indicateur avait ete ajoute pour corriger.
+  //
+  // Ce declencheur couvre aussi, sans rien y ajouter, les liens qui ne sont
+  // pas dans `NavMain` : la marque en tete, et « Mon profil » dans le bloc du
+  // compte. Et il ne peut pas se declencher sur le depliage d'un groupe, qui
+  // ne navigue pas.
+  //
+  // `setOpenMobile` est inoffensif sur grand ecran : il ne pilote que le
+  // tiroir, jamais le rail fixe.
+  const pathname = usePathname()
+  const { setOpenMobile } = useSidebar()
+  React.useEffect(() => {
+    setOpenMobile(false)
+  }, [pathname, setOpenMobile])
   const items = NAV_ITEMS.filter((item) => permissions.includes(item.permission)).map((item) => ({
     title: navLabel(dict, item.key),
     url: item.href,

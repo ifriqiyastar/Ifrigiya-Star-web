@@ -26,6 +26,13 @@ type Props = {
   variant?: React.ComponentProps<typeof Button>["variant"];
   size?: React.ComponentProps<typeof Button>["size"];
   className?: string;
+  /**
+   * Nom accessible, **obligatoire des que `children` ne contient pas de
+   * texte** : une icone de `lucide-react` est rendue sans titre, donc un
+   * bouton qui n'affiche qu'elle n'a aucun nom et s'annonce « bouton ». Sert
+   * aussi d'infobulle a la souris.
+   */
+  label?: string;
   /** Si present, une confirmation est demandee avant d'executer l'action. */
   confirm?: { title: string; description: string; actionLabel?: string };
   /**
@@ -48,6 +55,7 @@ export function ActionButton({
   variant = "outline",
   size = "xs",
   className,
+  label,
   confirm,
   redirectTo,
 }: Props) {
@@ -85,6 +93,8 @@ export function ActionButton({
       variant={variant}
       size={size}
       className={className}
+      aria-label={label}
+      title={label}
       disabled={pending}
       onClick={() => (confirm ? setOpen(true) : run())}
     >
