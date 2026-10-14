@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { CheckIcon, ChevronDownIcon, GlobeIcon, Loader2Icon } from "lucide-react";
+import { CheckIcon, ChevronDownIcon, Loader2Icon } from "lucide-react";
 
 import {
   LOCALE_LABEL,
@@ -14,6 +14,7 @@ import {
   type Locale,
 } from "@/lib/i18n/config";
 import { useI18n } from "@/lib/i18n/client";
+import { LocaleFlag } from "@/components/locale-flag";
 import { cn } from "@/lib/utils";
 
 /**
@@ -32,9 +33,10 @@ import { cn } from "@/lib/utils";
  *   un geste qu'on fait une fois ; trois boutons permanents lui donnaient
  *   autant de place qu'a la navigation principale, et autant de poids visuel
  *   que le bouton de telechargement ;
- * - **un globe.** Rien, dans un « FR » sur fond lime, ne dit qu'il s'agit
+ * - **un drapeau.** Rien, dans un « FR » sur fond lime, ne dit qu'il s'agit
  *   d'une langue — cela pouvait aussi bien etre un filtre ou un onglet actif.
- *   Le globe est la convention que l'oeil cherche ;
+ *   Un globe l'a d'abord signale ; le drapeau de la langue courante l'a
+ *   remplace (demande du client, oct. 2026) ;
  * - **les noms dans leur propre ecriture** dans le menu. Un arabophone
  *   reconnait العربية instantanement, « ع » ne lui dit rien ;
  * - **44 px de cible tactile** sur le declencheur, contre une vingtaine de
@@ -135,10 +137,12 @@ export function LanguageSwitcher({ className }: { className?: string }) {
             : "border-[var(--site-line-strong)] hover:border-[var(--site-accent)]",
         )}
       >
+        {/* Le drapeau a remplace le globe (demande du client, oct. 2026) ; le
+            sablier prend sa place le temps du changement de langue. */}
         {pending ? (
           <Loader2Icon className="size-4 shrink-0 animate-spin" aria-hidden />
         ) : (
-          <GlobeIcon className="size-4 shrink-0" aria-hidden />
+          <LocaleFlag locale={current} />
         )}
         <span className="text-xs font-semibold tracking-wide">{LOCALE_SHORT[current]}</span>
         <ChevronDownIcon
@@ -186,12 +190,15 @@ export function LanguageSwitcher({ className }: { className?: string }) {
                   : "text-[var(--site-fg)] hover:bg-white/5",
               )}
             >
-              <span className="flex flex-col">
-                {/* Le nom de la langue dans sa propre ecriture : c'est lui
-                    qu'on reconnait, pas le code. */}
-                <span className="text-sm font-medium">{LOCALE_LABEL[locale]}</span>
-                <span className="text-[0.6875rem] tracking-wide text-[var(--site-muted)]">
-                  {LOCALE_SHORT[locale]}
+              <span className="flex items-center gap-3">
+                <LocaleFlag locale={locale} />
+                <span className="flex flex-col">
+                  {/* Le nom de la langue dans sa propre ecriture : c'est lui
+                      qu'on reconnait, pas le code. */}
+                  <span className="text-sm font-medium">{LOCALE_LABEL[locale]}</span>
+                  <span className="text-[0.6875rem] tracking-wide text-[var(--site-muted)]">
+                    {LOCALE_SHORT[locale]}
+                  </span>
                 </span>
               </span>
               {active ? <CheckIcon className="size-4 shrink-0" aria-hidden /> : null}

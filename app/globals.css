@@ -917,8 +917,12 @@ body:has(.admin-dashboard-shell) {
 
 /* 4b. Les cartes d'etapes des Scout Days entrent **au rythme du
        defilement** (demande du client, oct. 2026) : chaque carte se redresse
-       depuis une inclinaison en 3D en montant, puis un trait lime se trace en
-       haut de la carte. L'animation suit le doigt — remonter la page la
+       depuis une inclinaison en 3D en montant, puis un halo lime s'allume
+       dans son coin haut — a la place d'un trait lime trace en haut de la
+       carte, que le client n'a pas retenu (oct. 2026). Le halo passe sous le
+       texte : `isolation` fait de la carte un contexte d'empilement, et le
+       `z-index: -1` le glisse entre son fond et son contenu. L'animation
+       suit le doigt — remonter la page la
        rejoue a l'envers — au lieu de se declencher une fois.
 
        Meme mecanique que la parallaxe : `animation-timeline: view()`, sans
@@ -940,21 +944,31 @@ body:has(.admin-dashboard-shell) {
       animation-timeline: view();
       animation-range: entry 0% cover 32%;
     }
+    .site-scroll-card {
+      isolation: isolate;
+    }
     .site-scroll-card::before {
       content: "";
       position: absolute;
-      inset-inline: 1.25rem;
-      top: 0;
-      height: 2px;
-      border-radius: 2px;
-      background: var(--site-accent);
-      transform-origin: left;
-      animation: site-scroll-line linear both;
+      inset: 0;
+      z-index: -1;
+      border-radius: inherit;
+      pointer-events: none;
+      background: radial-gradient(
+        circle at 0 0,
+        color-mix(in srgb, var(--site-accent) 16%, transparent),
+        transparent 60%
+      );
+      animation: site-scroll-glow linear both;
       animation-timeline: view();
       animation-range: cover 22% cover 42%;
     }
     [dir="rtl"] .site-scroll-card::before {
-      transform-origin: right;
+      background: radial-gradient(
+        circle at 100% 0,
+        color-mix(in srgb, var(--site-accent) 16%, transparent),
+        transparent 60%
+      );
     }
     @media (min-width: 40rem) {
       .site-scroll-card.site-reveal:nth-child(even) {
@@ -979,12 +993,12 @@ body:has(.admin-dashboard-shell) {
     transform: none;
   }
 }
-@keyframes site-scroll-line {
+@keyframes site-scroll-glow {
   from {
-    transform: scaleX(0);
+    opacity: 0;
   }
   to {
-    transform: scaleX(1);
+    opacity: 1;
   }
 }
 

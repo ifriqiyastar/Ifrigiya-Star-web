@@ -2,8 +2,9 @@
 
 import { useTransition } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { CheckIcon, ChevronDownIcon, GlobeIcon, Loader2Icon } from "lucide-react";
+import { CheckIcon, ChevronDownIcon, Loader2Icon } from "lucide-react";
 
+import { LocaleFlag } from "@/components/locale-flag";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,9 +30,10 @@ import { cn } from "@/lib/utils";
  *
  * C'est le pendant de celui de l'entete publique
  * (`components/language-switcher.tsx`) et il en reprend les partis pris :
- * **un seul declencheur** plutot qu'une rangee de pastilles, **un globe**
- * parce que rien dans un « FR » ne dit qu'il s'agit d'une langue, et les noms
- * **dans leur propre ecriture** dans le menu.
+ * **un seul declencheur** plutot qu'une rangee de pastilles, **le drapeau**
+ * de la langue courante (a la place du globe d'abord, demande du client,
+ * oct. 2026) parce que rien dans un « FR » ne dit qu'il s'agit d'une langue,
+ * et les noms **dans leur propre ecriture** dans le menu.
  *
  * Deux differences, toutes deux dictees par l'endroit :
  *
@@ -88,10 +90,12 @@ export function LanguageMenu() {
           "disabled:pointer-events-none disabled:opacity-60",
         )}
       >
+        {/* Le drapeau a remplace le globe (demande du client, oct. 2026) ; le
+            sablier prend sa place le temps du changement de langue. */}
         {pending ? (
           <Loader2Icon className="size-3.5 shrink-0 animate-spin" aria-hidden />
         ) : (
-          <GlobeIcon className="size-3.5 shrink-0" aria-hidden />
+          <LocaleFlag locale={locale} className="h-3 w-[1.125rem]" />
         )}
         <span className="text-[0.6875rem] font-semibold tracking-wide">
           {LOCALE_SHORT[locale]}
@@ -116,6 +120,7 @@ export function LanguageMenu() {
                 onClick={() => choose(value)}
                 className={cn("cursor-pointer gap-3", active && "text-brand")}
               >
+                <LocaleFlag locale={value} />
                 <span className="flex min-w-0 flex-col">
                   {/* Le nom de la langue dans sa propre ecriture : c'est lui
                       qu'on reconnait, pas le code. */}
