@@ -164,3 +164,133 @@ export async function listUsers(params: {
 }
 
 export { fetchProfilesByIds };
+
+/**
+ * Les six tuiles de l'ecran des comptes.
+ *
+ * ⚠️ **Elles ne dependent pas de la page affichee** — et c'est tout le sujet :
+ * elles etaient recomptees a chaque clic sur « Suivant », en six requetes
+ * separees posees depuis la page elle-meme. Un clic de pagination demandait
+ * une quinzaine d'allers-retours au projet Supabase, pour six nombres qui
+ * n'avaient pas bouge.
+ *
+ * En un seul appel quand la base connait `admin_user_stats`
+ * (`202610140001_admin_fast_reads.sql`), en six requetes sinon : meme regle de
+ * repli que `countQueues()` dans `lib/queries/admin-queue.ts`.
+ */
+export type UserStats = {
+  /** Tous les comptes. */
+  all: number;
+  active: number;
+  players: number;
+  professionals: number;
+  /** Lignes de `player_profiles` — le denominateur de la tuile de conformite. */
+  playerProfiles: number;
+  identityValidated: number;
+};
+
+const STAT_KEYS = [
+  "all",
+  "active",
+  "players",
+  "professionals",
+  "playerProfiles",
+  "identityValidated",
+] as const;
+
+export async function fetchUserStats(): Promise<UserStats> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("admin_user_stats");
+
+  if (!error && data && typeof data === "object") {
+    const row = data as Record<string, unknown>;
+    return Object.fromEntries(
+      STAT_KEYS.map((key) => [key, Number(row[key] ?? 0)]),
+    ) as unknown as UserStats;
+  }
+
+  return fetchUserStatsOneByOne();
+}
+
+/** Le comptage d'origine, conserve pour les projets sans la fonction. */
+async function fetchUserStatsOneByOne(): Promise<UserStats> {
+  const supabase = await createClient();
+  const head = { count: "exact" as const, head: true };
+  const [all, active, players, professionals, playerProfiles, identityValidated] =
+    await Promise.all([
+      supabase.from("profiles").select("id", head),
+      supabase.from("profiles").select("id", head).eq("is_active", true),
+      supabase.from("profiles").select("id", head).eq("role", "player"),
+      supabase.from("profiles").select("id", head).eq("role", "professional"),
+      supabase.from("player_profiles").select("id", head),
+      // Conformite d'identite : nombre de pieces au statut « valide ». Une
+      // ligne par joueur au plus dans les faits, et le libelle dit le
+      // denominateur — pas un pourcentage flottant sans base.
+      supabase.from("identity_verifications").select("id", head).eq("status", "valide"),
+    ]);
+
+  return {
+    all: all.count ?? 0,
+    active: active.count ?? 0,
+    players: players.count ?? 0,
+    professionals: professionals.count ?? 0,
+    playerProfiles: playerProfiles.count ?? 0,
+    identityValidated: identityValidated.count ?? 0,
+  };
+}
+
+/**
+ * Le role RBAC des administrateurs d'une page de liste, **en une requete**.
+ *
+ * L'ecran posait deux lectures enchainees — les attributions, puis les roles
+ * cites par ces attributions — soit deux allers-retours de plus a chaque clic
+ * de pagination des qu'un administrateur figurait dans la page. L'embed
+ * PostgREST les reunit : la relation `admin_user_roles` → `admin_roles` passe
+ * par la seule cle etrangere `role_id`, donc elle n'est pas ambigue
+ * (verifie en interrogeant PostgREST : une relation introuvable repond
+ * `PGRST200`, une relation ambigue `PGRST201` — celle-ci ne repond ni l'un ni
+ * l'autre).
+ *
+ * Rend le code et le libelle bruts : la traduction du nom de role appartient
+ * a l'ecran, qui a le dictionnaire.
+ */
+export async function fetchAdminRoleLabels(
+  adminIds: string[],
+): Promise<Map<string, { code: string | null; label: string | null }>> {
+  const byAdmin = new Map<string, { code: string | null; label: string | null }>();
+  if (!adminIds.length) return byAdmin;
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("admin_user_roles")
+    .select("admin_id, admin_roles(code, label)")
+    .in("admin_id", adminIds);
+
+  // Erreur avalee pour l'utilisateur (l'ecran retombe sur le libelle
+  // generique), mais pas pour les logs serveur : un `42501` ici signale un
+  // GRANT manquant (cf. 202609230005), pas une absence de migration, et se
+  // confondrait sinon avec le cas « role non attribue ».
+  if (error) {
+    console.error("admin_user_roles read:", error);
+    return byAdmin;
+  }
+
+  for (const row of data ?? []) {
+    const record = row as Record<string, unknown>;
+    // PostgREST rend un objet pour un embed « plusieurs vers un » ; on accepte
+    // aussi le tableau, la cardinalite etant deduite du schema et non promise
+    // par le contrat.
+    const embedded = record.admin_roles;
+    const role = (Array.isArray(embedded) ? embedded[0] : embedded) as
+      | { code?: string | null; label?: string | null }
+      | null
+      | undefined;
+    if (!role) continue;
+    byAdmin.set(record.admin_id as string, {
+      code: role.code ?? null,
+      label: role.label ?? null,
+    });
+  }
+
+  return byAdmin;
+}

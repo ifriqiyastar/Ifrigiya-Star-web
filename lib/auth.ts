@@ -58,6 +58,47 @@ async function unseededPermissions(
   return ALL_ADMIN_PERMISSIONS.filter((code) => !known.has(code));
 }
 
+/** La ligne rendue par `public.admin_access()`. */
+type AccessRow = {
+  assigned?: boolean;
+  role_code?: string | null;
+  role_label?: string | null;
+  granted?: string[] | null;
+  /** Tous les codes semes au referentiel, pour la regle de repli ci-dessous. */
+  known?: string[] | null;
+};
+
+/**
+ * La meme reponse que le chemin d'origine, lue sur une ligne au lieu de
+ * quatre tables. Les trois cas sont ceux de `getAdminAccess()` et doivent le
+ * rester mot pour mot : deux facons de repondre a la question des droits
+ * finissent toujours par diverger, et c'est exactement le defaut qui avait
+ * fait disparaitre « Valider / Publier » d'un Scout Day.
+ */
+function accessFromRow(
+  row: AccessRow,
+  fallbackLabel: string,
+  unassignedLabel: string,
+  dict?: AdminDictionary,
+): { roleLabel: string; permissions: AdminPermission[] } {
+  const known = new Set(row.known ?? []);
+  // Referentiel vide : « RBAC pas deploye », ou tout administrateur garde
+  // l'acces complet.
+  if (!known.size) return { roleLabel: fallbackLabel, permissions: ALL_ADMIN_PERMISSIONS };
+
+  const unseeded = ALL_ADMIN_PERMISSIONS.filter((code) => !known.has(code));
+  if (!row.assigned) return { roleLabel: unassignedLabel, permissions: unseeded };
+
+  const granted = (row.granted ?? []) as AdminPermission[];
+  const named = dict && row.role_code
+    ? dict.roles.names[row.role_code as keyof typeof dict.roles.names]
+    : undefined;
+  return {
+    roleLabel: named ?? row.role_label ?? fallbackLabel,
+    permissions: [...new Set([...granted, ...unseeded])],
+  };
+}
+
 /**
  * `dict` n'est requis que pour les deux libelles de repli : le nom du role
  * vient sinon de `admin_roles.label`, ecrit en base et donc dans une seule
@@ -77,6 +118,17 @@ export const getAdminAccess = cache(async function getAdminAccess(adminId: strin
   const fallbackLabel = dict?.roles.fallback ?? "Administrateur";
   const unassignedLabel = dict?.roles.unassigned ?? "Role non attribue";
   const supabase = await createClient();
+
+  // Chemin rapide : tout ce qui suit, en un seul aller-retour
+  // (`202610140001_admin_fast_reads.sql`). Le chemin d'origine, juste en
+  // dessous, reste la reference et prend le relais des que la fonction est
+  // absente — la regle du depot : degrader a l'ouverture, jamais echouer
+  // parce qu'une migration n'a pas ete passee.
+  const fast = await supabase.rpc("admin_access", { p_admin_id: adminId });
+  if (!fast.error && fast.data) {
+    return accessFromRow(fast.data as AccessRow, fallbackLabel, unassignedLabel, dict);
+  }
+
   // Les deux premieres lectures ne dependent pas l'une de l'autre : seule la
   // seconde a besoin d'un `role_id`, que ni l'une ni l'autre ne fournit.
   const [assignment, unseeded] = await Promise.all([
@@ -129,9 +181,22 @@ export const getAdminAccess = cache(async function getAdminAccess(adminId: strin
  */
 export const requireAdmin = cache(async function requireAdmin(): Promise<AdminSession> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // `getClaims()` et non `getUser()` : le jeton est **verifie en local**
+  // contre la cle publique du projet (ES256, JWKS mise en cache dix minutes
+  // pour tout le processus), la ou `getUser()` appelle `/auth/v1/user` a
+  // chaque rendu. C'est le meme controle cryptographique que fait Postgres
+  // ensuite ; ce qu'il ne fait pas, c'est un aller-retour reseau — mesure
+  // entre 290 ms et 1 s depuis un poste de developpement, paye deux fois par
+  // requete puisque `proxy.ts` interroge deja la session avant le rendu.
+  //
+  // Rien n'est relache au passage : `profiles` est relu juste en dessous a
+  // chaque requete, donc un compte desactive ou supprime est refuse comme
+  // avant. Et si le projet signe encore ses jetons avec un secret partage
+  // (HS256), `getClaims()` retombe tout seul sur `getUser()`.
+  const { data: verified } = await supabase.auth.getClaims();
+  const user = verified?.claims
+    ? { id: verified.claims.sub, email: verified.claims.email ?? null }
+    : null;
 
   // Redirections volontairement **sans prefixe de langue**. `proxy.ts` resout
   // la langue sur ce saut (cookie, puis `Accept-Language`) et renvoie vers

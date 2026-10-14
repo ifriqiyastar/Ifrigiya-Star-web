@@ -173,6 +173,16 @@ everywhere.
   answers exactly like the one that guards the action** — when the two
   disagreed, "Valider / Publier" vanished from the screen while the Server
   Action would have accepted the call.
+- ⚠️ **What a screen costs is round trips, not queries.** The database is
+  remote and the link is slow: measured 2.2 s of pure network for one admin
+  screen on warm connections, 12.5 s on cold ones, for work Postgres does in
+  milliseconds. Nothing reaches the browser until the last wave returns, so a
+  new `await` on a Supabase call in a layout or a guard is paid by every page.
+  Group reads into one RPC rather than adding a wave — `admin_queue_counts()`
+  and `admin_access()` did that for 18 round trips — and **do not restore
+  `auth.getUser()` in `requireAdmin()` or `proxy.ts`**: `getClaims()` verifies
+  the same token locally instead of calling the auth server twice per request.
+  See [`database.md`](docs/ai-reference/database.md).
 - **Every list and every queue is newest-first** (client request, Oct 2026).
   The one exception is a comment thread, which stays chronological — it is read
   like a conversation.

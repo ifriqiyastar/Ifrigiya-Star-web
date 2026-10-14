@@ -49,6 +49,20 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ["127.0.0.1"],
 
   experimental: {
+    // Duree de vie, dans le cache client du routeur, d'une page prefetchee.
+    //
+    // `static` couvre les pages prerendues **et** tout lien marque
+    // `prefetch` (cf. `components/admin/pagination.tsx`, qui s'en sert pour
+    // que « Suivant » n'attende pas le serveur). Sa valeur par defaut est de
+    // cinq minutes : un clic sur « Suivant » aurait pu afficher une file
+    // vieille d'autant, alors que le back-office se rafraichit tout seul
+    // toutes les trente secondes. On aligne donc les deux — une page voisine
+    // ne peut pas etre plus perimee que l'ecran depuis lequel on la demande.
+    //
+    // `dynamic` reste a zero, la valeur par defaut depuis Next 15 : une page
+    // qui n'a pas ete prefetchee est toujours redemandee au serveur.
+    staleTimes: { dynamic: 0, static: 30 },
+
     // Sert `app/global-not-found.tsx` pour toute adresse qui ne correspond a
     // aucune route. Sans ce drapeau le fichier est ignore, et la racine de ce
     // depot etant un segment dynamique (`app/[locale]/layout.tsx`), Next n'a

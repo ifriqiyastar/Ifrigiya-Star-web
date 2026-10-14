@@ -157,8 +157,21 @@ async function withSupabaseSession(request: NextRequest, initial: NextResponse) 
     },
   });
 
-  // Appel volontaire : c'est lui qui declenche le refresh du token expire.
-  await supabase.auth.getUser();
+  // Appel volontaire : c'est lui qui declenche le refresh du token expire,
+  // et le `setAll` ci-dessus reporte alors les nouveaux cookies.
+  //
+  // `getClaims()` plutot que `getUser()` : les deux recuperent la session et
+  // la renouvellent si elle a expire, mais `getUser()` appelle en plus
+  // `/auth/v1/user` **a chaque requete** — un aller-retour vers le projet
+  // Supabase avant que le rendu n'ait commence, mesure entre 290 ms et 1,5 s
+  // depuis un poste de developpement. `getClaims()` verifie la signature en
+  // local contre la cle publique du projet et ne sort sur le reseau que pour
+  // renouveler un jeton reellement expire (une fois par heure).
+  //
+  // Ce fichier n'autorise toujours rien : la seule chose qui compte ici est
+  // que la session soit rafraichie et les cookies reecrits. L'autorisation
+  // reste dans `requireAdmin()` puis dans le RLS.
+  await supabase.auth.getClaims();
 
   return response;
 }

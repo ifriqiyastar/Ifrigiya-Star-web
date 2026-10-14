@@ -140,18 +140,48 @@ export function hasQueueAccess(permissions: AdminPermission[]): boolean {
 }
 
 /**
- * Compte les files d'attente une seule fois pour le layout : la cloche et les
- * pastilles de la navigation lisent le meme resultat, donc ne peuvent pas se
- * contredire.
+ * Les dix comptages, **en un seul aller-retour** quand la base connait
+ * `admin_queue_counts` (`202610140001_admin_fast_reads.sql`).
  *
- * Les taches sont filtrees par permission — pointer un moderateur vers un ecran
- * que `requirePermission()` lui refusera n'est pas une notification, c'est une
- * impasse.
+ * POURQUOI. C'est la lecture la plus souvent rejouee du back-office : une fois
+ * par rendu du layout — donc a chaque chargement d'ecran et a chaque
+ * `router.refresh()` d'`AutoRefresh` — plus une fois toutes les dix secondes
+ * pour le sondage de la cloche (`/admin/file-attente`). En dix requetes
+ * separees vers un projet Supabase distant, la rafale a ete mesuree entre
+ * 0,6 s (connexions chaudes) et 6,8 s (connexions froides), pour dix
+ * `count(*)` que Postgres execute en quelques millisecondes. Le cout etait le
+ * reseau, pas la base.
+ *
+ * ⚠️ **Le chemin d'origine reste la reference.** La fonction est absente d'un
+ * projet ou la migration n'a pas ete appliquee, et l'ecran doit continuer de
+ * compter : on retombe alors sur les dix requetes. Un echec pour une autre
+ * raison y retombe aussi — au pire on paye ce qu'on payait hier.
  */
-export async function fetchAdminQueue(
-  permissions: AdminPermission[],
-  dict: AdminDictionary,
-) {
+async function countQueues(): Promise<Record<string, number>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("admin_queue_counts");
+
+  if (!error && data && typeof data === "object") {
+    const row = data as Record<string, unknown>;
+    // Une cle que la fonction ne rend pas vaut zero, comme une file dont la
+    // colonne n'existe pas encore : la file disparait, elle ne casse rien.
+    return Object.fromEntries(
+      QUEUES.map((queue) => [queue.key, Number(row[queue.key] ?? 0)]),
+    );
+  }
+
+  return countQueuesOneByOne();
+}
+
+/**
+ * Le comptage d'origine, une requete par file.
+ *
+ * Conserve tel quel : c'est lui qui tourne sur un projet dont la base ignore
+ * `admin_queue_counts`, et c'est lui qui porte la tolerance aux migrations
+ * mobiles absentes — une colonne inconnue rend `42703`, donc `count` null,
+ * donc zero.
+ */
+async function countQueuesOneByOne(): Promise<Record<string, number>> {
   const supabase = await createClient();
   const head = { count: "exact" as const, head: true };
 
@@ -196,7 +226,7 @@ export async function fetchAdminQueue(
       supabase.from("profiles").select("id", head).not("deletion_requested_at", "is", null),
     ]);
 
-  const counts: Record<string, number> = {
+  return {
     players: players.count ?? 0,
     professionals: professionals.count ?? 0,
     documents: documents.count ?? 0,
@@ -208,6 +238,22 @@ export async function fetchAdminQueue(
     scoutDays: scoutDays.count ?? 0,
     deletions: deletions.count ?? 0,
   };
+}
+
+/**
+ * Compte les files d'attente une seule fois pour le layout : la cloche et les
+ * pastilles de la navigation lisent le meme resultat, donc ne peuvent pas se
+ * contredire.
+ *
+ * Les taches sont filtrees par permission — pointer un moderateur vers un ecran
+ * que `requirePermission()` lui refusera n'est pas une notification, c'est une
+ * impasse.
+ */
+export async function fetchAdminQueue(
+  permissions: AdminPermission[],
+  dict: AdminDictionary,
+) {
+  const counts = await countQueues();
 
   const granted = new Set(permissions);
   const tasks: AdminTask[] = QUEUES.filter(

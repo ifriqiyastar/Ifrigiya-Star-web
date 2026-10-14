@@ -41,8 +41,12 @@ import { suspendUser } from "@/lib/actions/moderation";
 import { fill, getAdminDict, getAdminLocale } from "@/lib/i18n/admin";
 import { localePath } from "@/lib/i18n/config";
 import { ACCOUNT_STATUS, ROLE, makeLabels } from "@/lib/labels";
-import { listUsers, USERS_PAGE_SIZE } from "@/lib/queries/users";
-import { createClient } from "@/lib/supabase/server";
+import {
+  fetchAdminRoleLabels,
+  fetchUserStats,
+  listUsers,
+  USERS_PAGE_SIZE,
+} from "@/lib/queries/users";
 import { isSuperAdmin, requirePermission } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
@@ -74,16 +78,14 @@ export default async function UsersPage({ searchParams }: PageProps<"/[locale]/a
     page: str(resolved.page),
   };
 
-  const supabase = await createClient();
-  const head = { count: "exact" as const, head: true };
-  // La liste et les six compteurs des tuiles partent ENSEMBLE. Les compteurs
-  // portent sur toute la base, pas sur la page affichee : rien ne les obligeait
-  // a attendre la liste, ce qu'ils faisaient — un aller-retour de plus a
-  // chaque chargement et a chaque rafraichissement automatique.
-  const [
-    { rows, total, page, error },
-    [allAccounts, activeAccounts, playerAccounts, proAccounts, playersTotal, kycValidated],
-  ] = await Promise.all([
+  // La liste et les tuiles partent ENSEMBLE. Les tuiles portent sur toute la
+  // base, pas sur la page affichee : rien ne les obligeait a attendre la
+  // liste, ce qu'elles faisaient — un aller-retour de plus a chaque
+  // chargement et a chaque rafraichissement automatique. Elles tiennent
+  // desormais en un seul appel (`fetchUserStats`) au lieu de six requetes,
+  // ce qui se voit surtout en paginant : un clic sur « Suivant » les
+  // recompte, puisqu'elles sont rendues par la meme page.
+  const [{ rows, total, page, error }, stats] = await Promise.all([
     listUsers({
       q: params.q,
       role: params.role,
@@ -92,52 +94,24 @@ export default async function UsersPage({ searchParams }: PageProps<"/[locale]/a
       suppression: params.suppression,
       page: Number(params.page ?? 1) || 1,
     }),
-    Promise.all([
-      supabase.from("profiles").select("id", head),
-      supabase.from("profiles").select("id", head).eq("is_active", true),
-      supabase.from("profiles").select("id", head).eq("role", "player"),
-      supabase.from("profiles").select("id", head).eq("role", "professional"),
-      supabase.from("player_profiles").select("id", head),
-      // Conformite d'identite : nombre de pieces au statut « valide ». Une
-      // ligne par joueur au plus dans les faits, et le libelle dit le
-      // denominateur — pas un pourcentage flottant sans base.
-      supabase.from("identity_verifications").select("id", head).eq("status", "valide"),
-    ]),
+    fetchUserStats(),
   ]);
 
-  const allCount = allAccounts.count ?? 0;
-  const playerCount = playerAccounts.count ?? 0;
-  const proCount = proAccounts.count ?? 0;
-  const playersWithProfile = playersTotal.count ?? 0;
-  const kycCount = kycValidated.count ?? 0;
+  const allCount = stats.all;
+  const playerCount = stats.players;
+  const proCount = stats.professionals;
+  const playersWithProfile = stats.playerProfiles;
+  const kycCount = stats.identityValidated;
 
   // Role RBAC des administrateurs listes. Degrade en silence si la migration
   // RBAC n'est pas appliquee : la colonne affiche alors « Administrateur ».
   const adminIds = rows.filter((row) => row.role === "admin").map((row) => row.id);
   const adminRoleById = new Map<string, string>();
-  if (adminIds.length) {
-    const { data: assignments, error: assignmentsError } = await supabase
-      .from("admin_user_roles")
-      .select("admin_id, role_id")
-      .in("admin_id", adminIds);
-    // Erreur avalee volontairement pour l'utilisateur (repli sur le libelle
-    // generique), mais pas pour les logs serveur : un `42501` ici signale un
-    // GRANT manquant, pas une absence de migration, et se confond sinon avec
-    // le cas « role non attribue ».
-    if (assignmentsError) console.error("admin_user_roles read:", assignmentsError);
-    const roleIds = [...new Set((assignments ?? []).map((row) => row.role_id))];
-    if (roleIds.length) {
-      const { data: roles, error: rolesError } = await supabase
-        .from("admin_roles")
-        .select("id, code, label")
-        .in("id", roleIds);
-      if (rolesError) console.error("admin_roles read:", rolesError);
-      const labelById = new Map((roles ?? []).map((row) => [row.id, dict.roles.names[row.code as keyof typeof dict.roles.names] ?? row.label as string]));
-      for (const assignment of assignments ?? []) {
-        const roleLabel = labelById.get(assignment.role_id);
-        if (roleLabel) adminRoleById.set(assignment.admin_id as string, roleLabel);
-      }
-    }
+  for (const [adminId, role] of await fetchAdminRoleLabels(adminIds)) {
+    const label =
+      (role.code ? dict.roles.names[role.code as keyof typeof dict.roles.names] : undefined) ??
+      role.label;
+    if (label) adminRoleById.set(adminId, label);
   }
 
   // L'export reprend les filtres de l'ecran : exporter autre chose que ce qui
@@ -191,11 +165,11 @@ export default async function UsersPage({ searchParams }: PageProps<"/[locale]/a
           qualifier={
             allCount
               ? fill(d.kpiActiveShare, {
-                  percent: Math.round(((activeAccounts.count ?? 0) / allCount) * 100),
+                  percent: Math.round((stats.active / allCount) * 100),
                 })
               : undefined
           }
-          share={allCount ? (activeAccounts.count ?? 0) / allCount : undefined}
+          share={allCount ? stats.active / allCount : undefined}
           icon={UsersIcon}
         />
         <KpiTile

@@ -205,6 +205,114 @@
   `publicStorageUrl()` for public buckets.
 
 
+## What a screen costs is round trips, not queries (Oct 2026)
+
+Reported as "every page takes a long time to load". Measured from a development
+machine against the live project — `ping` 45/288/453 ms min/avg/max, one request
+on a fresh TLS connection 0.9–1.5 s, on a warm one 90–150 ms. Replaying the exact
+await-chain of one `/admin/utilisateurs` load:
+
+| wave | cold | warm |
+|---|---|---|
+| `proxy.ts` session | 1484 ms | 328 ms |
+| `requireAdmin()` session | 1016 ms | 287 ms |
+| `requireAdmin()` `profiles` | 526 ms | 101 ms |
+| `getAdminAccess()` × 3 waves | 2039 ms | 512 ms |
+| layout queue + diagnostics (13 requests) | 6806 ms | 639 ms |
+| the page's own queries | 675 ms | 351 ms |
+| **total, before the first byte** | **12.5 s** | **2.2 s** |
+
+Postgres was never the problem: those thirteen `count(*)` take milliseconds. The
+cost is that **nothing can be sent until the last wave returns**, and each wave
+is a full RTT on a link whose RTT swings by a factor of ten.
+
+Three changes, each of which keeps its original path as a fallback:
+
+- **`202610140001_admin_fast_reads.sql`** adds `admin_queue_counts()` (the ten
+  queue counts in one row) and `admin_access(uuid)` (the RBAC role, its
+  permissions, and the seeded code list in one row). Both are `security definer`
+  and ask `public.is_admin()` themselves — the same question the RLS of the
+  counted tables asks, asked once. 18 round trips become 2.
+- The counts are built with **dynamic SQL inside a per-queue exception block**
+  (`undefined_table`, `undefined_column`, `invalid_text_representation`) rather
+  than one statement with ten sub-selects: a project that has not applied mobile
+  `0089` has no `posts.moderation_status`, and one missing column must cost its
+  own queue, not the whole count. Same rule as `selectWithModeration`.
+  Verified on a throwaway Postgres: with `posts` absent the queue reads 0 and the
+  nine others still count; add the column and the count follows.
+- ⚠️ **`requireAdmin()` and `proxy.ts` call `getClaims()`, not `getUser()` — do
+  not "fix" this back.** `getUser()` is an HTTP call to `/auth/v1/user` on *every*
+  request, and it was being made twice per page (the proxy, then the guard).
+  `getClaims()` verifies the token's signature locally against the project's
+  public key (ES256; the JWKS is cached 10 minutes per process) and goes to the
+  network only to refresh a genuinely expired token. It is the same cryptographic
+  check Postgres makes next. Nothing is loosened: `profiles` is still read on
+  every request, so a deactivated or deleted account is refused exactly as before,
+  and on a project still signing with a shared secret (HS256) `getClaims()` falls
+  back to `getUser()` on its own.
+
+The fallbacks matter more than the speed-up: if the migration is not applied, both
+callers return to their original queries and the back-office only loses the
+speed-up. **Nothing here is load-bearing.**
+
+What is *not* fixed: `AutoRefresh` (30 s) and `AdminQueueProvider` (10 s) still
+re-run the chain on a timer. After these two RPCs the poll costs 2 round trips
+instead of 16, which is why the intervals were left alone — raise them if the
+client ever reports the back-office feeling busy rather than slow.
+### Clicking "Suivant" (Oct 2026)
+
+Reported separately: pagination feels slow on every list. Two causes, and the
+second is the one that matters.
+
+**The layout is not the problem.** Next reuses a shared layout across a
+search-param change — *"shared layouts won't automatically be refetched on every
+navigation, only the page segment that changes"* (`staleTimes` reference). The
+bell counters, the diagnostics and the Scout Day alert do **not** re-run on a
+page click. What re-runs is the page.
+
+**`/admin/utilisateurs` re-ran far more than its page of rows.** Per click:
+`requireAdmin` → `requirePermission` → `isSuperAdmin` → then, in one wave, the
+list query *and the six KPI tile counts* — which are counts over the whole base
+and do not depend on the page at all — then the business-table lookup, then the
+avatar signing, then two chained reads for the RBAC role labels. Around fifteen
+HTTP requests for a click that changes eight rows. `admin_user_stats()` makes the
+six tiles one call, and the two RBAC reads became one PostgREST embed
+(`admin_user_roles → admin_roles`, unambiguous: the probe answers neither
+`PGRST200` nor `PGRST201`). The other list screens were already light — one
+count each — which is why only this one was rewritten.
+
+**A dynamic route is not prefetched, so the whole cost lands after the click.**
+Default `prefetch="auto"` fetches a dynamic route only down to the nearest
+`loading.js` boundary — the skeleton, never the data. `components/admin/pagination.tsx`
+now passes `prefetch` on both links, which fetches the full payload including
+data, so the neighbouring page is already in the client cache when the button is
+pressed.
+
+Two things that go with it, and neither is optional:
+
+- **Prefetching only happens in production.** In `next dev` the click is exactly
+  as slow as before. Judging this change from the dev server will show nothing.
+- **`staleTimes.static` is lowered to 30 s in `next.config.ts`.** A link marked
+  `prefetch` is cached under the *static* budget — five minutes by default. A
+  queue five minutes out of date, sitting under a bell badge that refreshes every
+  ten seconds, is the exact contradiction `AutoRefresh` exists to prevent. Thirty
+  seconds matches `AutoRefresh`, so a prefetched page can never be staler than the
+  screen it was requested from.
+
+⚠️ Prefetching renders the neighbouring page on the server ahead of the click —
+up to two extra renders per list view. That is the price of an instant click, and
+it is only worth paying because these screens have few simultaneous users. If a
+list ever becomes expensive, drop `prefetch` on that screen rather than raising
+the stale time.
+
+**Measured, and not measured.** The round-trip figures above come from replaying
+the await-chains against the live project; the SQL was verified on a throwaway
+Postgres (counts, the `is_admin()` gate, and degradation when a table or column is
+missing, checked by mutation). The prefetch behaviour is read from the Next 16
+documentation in `node_modules/next/dist/docs`, not measured — it cannot be, from
+a dev server.
+
+
 ## Route handlers
 
 - `app/admin/documents/route.ts` — mints a 5-minute signed URL for the private

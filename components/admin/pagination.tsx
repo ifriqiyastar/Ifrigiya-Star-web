@@ -7,7 +7,29 @@ import { makeFormat } from "@/lib/format";
 import { fill, getAdminDict, getAdminLocale } from "@/lib/i18n/admin";
 import { cn } from "@/lib/utils";
 
-/** Pagination par liens (pas d'etat client) : `?page=n` sur la route courante. */
+/**
+ * Pagination par liens (pas d'etat client) : `?page=n` sur la route courante.
+ *
+ * ⚠️ **`prefetch` est explicite, et il faut qu'il le reste.** Un ecran du
+ * back-office est une route dynamique : par defaut (`auto`), Next ne
+ * prefetche d'une route dynamique que le squelette jusqu'a la premiere
+ * frontiere `loading.js` — donc la page voisine etait **toujours** entierement
+ * calculee apres le clic, serveur compris. `prefetch` a `true` demande la
+ * charge complete, donnees incluses : la page suivante est deja la quand on
+ * clique.
+ *
+ * Deux choses a savoir avant de toucher a ceci :
+ *
+ *  * **le prefetch n'existe qu'en production** (regle de Next) — en
+ *    `next dev`, « Suivant » reste aussi lent qu'avant, et s'y fier pour
+ *    juger la vitesse est trompeur ;
+ *  * une page prefetchee est servie depuis le cache client pendant
+ *    `staleTimes.static`, **ramene a 30 s dans `next.config.ts`** pour cette
+ *    raison precise : la valeur par defaut (5 min) aurait pu montrer une file
+ *    vieille de cinq minutes au clic, et une file qui contredit la pastille
+ *    de la cloche est exactement le defaut qu'`AutoRefresh` a ete ecrit pour
+ *    corriger.
+ */
 export async function Pagination({
   basePath,
   params,
@@ -67,6 +89,7 @@ export async function Pagination({
           // effet visible le temps de la requete.
           <Link
             href={href(page - 1)}
+            prefetch
             scroll={false}
             className={cn(buttonVariants({ variant: "outline", size: "xs" }), "h-9 flex-1 sm:h-7 sm:flex-none")}
           >
@@ -86,6 +109,7 @@ export async function Pagination({
         {page < lastPage ? (
           <Link
             href={href(page + 1)}
+            prefetch
             scroll={false}
             className={cn(buttonVariants({ variant: "outline", size: "xs" }), "h-9 flex-1 sm:h-7 sm:flex-none")}
           >
