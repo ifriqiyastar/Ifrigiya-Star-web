@@ -198,27 +198,6 @@ export function SiteNav() {
           </Link>
 
           <div className="ms-auto flex items-center gap-2 sm:gap-4">
-            {/* Les comptes sociaux, a la place du lien Scout Days que
-                l'entete portait jusqu'ici (demande client, oct. 2026). Memes
-                pastilles qu'en pied de page — `components/site/social.tsx` —
-                mais d'un cran plus petites : l'entete ne fait que 64 px de
-                haut et deux cercles de 40 px y pesent trop a cote du bouton
-                de telechargement. Comme le lien qu'elles remplacent, elles
-                n'apparaissent qu'a partir de `lg` ; sous cette largeur, elles
-                sont au bas du tiroir. La section Scout Days, elle, reste
-                atteignable depuis le tiroir et le pied de page. */}
-            <ul className="hidden items-center gap-2 lg:flex">
-              <li>
-                <SocialLink href={YOUTUBE_URL} label={foot.youtube} className="size-9">
-                  <YoutubeMark className="size-[18px]" />
-                </SocialLink>
-              </li>
-              <li>
-                <SocialLink href={INSTAGRAM_URL} label={foot.instagram} className="size-9">
-                  <InstagramMark className="size-4" />
-                </SocialLink>
-              </li>
-            </ul>
             {os === "ios" || os === "android" ? (
               <Link
                 href={`${prefix}/#telecharger`}
@@ -249,6 +228,32 @@ export function SiteNav() {
                 ordinateur, il vient apres le bouton Contact (autre demande
                 client), et reste visible des `sm` comme avant. */}
             <LanguageSwitcher className="hidden sm:block" />
+
+            {/* Les comptes sociaux, a la place du lien Scout Days que
+                l'entete portait jusqu'ici (demande client, oct. 2026). Ils
+                ferment la grappe d'actions, apres le selecteur de langue
+                (demande client) : les trois gestes — telecharger, contacter,
+                changer de langue — restent groupes et ne sont plus coupes en
+                deux. Memes pastilles qu'en pied de page —
+                `components/site/social.tsx` — mais d'un cran plus petites :
+                l'entete ne fait que 64 px de haut et deux cercles de 40 px y
+                pesent trop a cote du bouton de telechargement. Comme le lien
+                qu'elles remplacent, elles n'apparaissent qu'a partir de `lg` ;
+                sous cette largeur, elles sont au bas du tiroir. La section
+                Scout Days, elle, reste atteignable depuis le tiroir et le pied
+                de page. */}
+            <ul className="hidden items-center gap-2 lg:flex">
+              <li>
+                <SocialLink href={YOUTUBE_URL} label={foot.youtube} className="size-9">
+                  <YoutubeMark className="size-[18px]" />
+                </SocialLink>
+              </li>
+              <li>
+                <SocialLink href={INSTAGRAM_URL} label={foot.instagram} className="size-9">
+                  <InstagramMark className="size-4" />
+                </SocialLink>
+              </li>
+            </ul>
 
             <button
               ref={burgerRef}
