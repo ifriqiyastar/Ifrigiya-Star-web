@@ -1,4 +1,5 @@
 import isoCountries from "i18n-iso-countries";
+import isoCountriesEn from "i18n-iso-countries/langs/en.json";
 import isoCountriesFr from "i18n-iso-countries/langs/fr.json";
 
 /**
@@ -26,6 +27,11 @@ import isoCountriesFr from "i18n-iso-countries/langs/fr.json";
  */
 
 isoCountries.registerLocale(isoCountriesFr);
+// L'anglais aussi : la colonne stocke le nom **francais**, mais une saisie
+// libre (le repli quand le service tiers est muet) ou une ligne ecrite par une
+// version anterieure de l'application mobile peut porter le nom anglais. Le
+// jeu de donnees est local, l'enregistrer ne coute aucune requete.
+isoCountries.registerLocale(isoCountriesEn);
 
 const BASE_URL = "https://countriesnow.space/api/v0.1";
 
@@ -62,6 +68,65 @@ export function getFlagEmoji(iso2: string): string {
 /** Nom francais d'un code ISO 3166-1 alpha-2, depuis le jeu de donnees local. */
 const frenchName = (iso2: string, fallback: string) =>
   isoCountries.getName(iso2, "fr") ?? fallback;
+
+/**
+ * Forme comparable d'un nom de pays : sans accents, sans casse, sans
+ * ponctuation ni espaces.
+ *
+ * ⚠️ C'EST CE QUI FAIT LA DIFFERENCE ENTRE UN DRAPEAU ET RIEN.
+ * `getAlpha2Code()` compare les chaines a l'identique : mesure faite,
+ * « Algérie » rend `DZ` et « Algerie » rend `undefined`. Or ce depot ecrit le
+ * francais **sans accents** dans tout son code, et une saisie libre en porte
+ * rarement. Normaliser des deux cotes rattrape « cote d ivoire »,
+ * « Côte-d'Ivoire » et « COTE D'IVOIRE » sur la meme entree.
+ */
+const comparableName = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "");
+
+let flagByName: Map<string, string> | null = null;
+
+/**
+ * Le drapeau d'un pays designe par son **nom** — ce que la base stocke.
+ *
+ * `player_profiles.country` et `professional_profiles.country` sont du texte,
+ * pas un code ISO (voir l'en-tete de ce module) : il faut donc remonter au
+ * code pour deriver l'embleme. L'index est bati une fois par process a partir
+ * du jeu de donnees **local** des deux langues — aucune requete, aucun appel
+ * au service tiers, contrairement a `fetchCountries()`.
+ *
+ * Rend `null` pour un pays non reconnu plutot qu'un drapeau blanc : l'appelant
+ * affiche alors le nom seul, ce qui vaut mieux qu'un embleme faux.
+ *
+ * ⚠️ L'embleme reste un **emoji**, comme dans le selecteur de pays
+ * (`CountryCitySelect`), et non un SVG comme `LocaleFlag` : celui-la ne dessine
+ * que trois drapeaux de langues, ici il en faudrait deux cent cinquante. Sur un
+ * systeme sans glyphes de drapeaux (Windows), les deux lettres regionales
+ * s'affichent a la place — degradation acceptable, le nom du pays est juste a
+ * cote.
+ */
+export function countryFlag(name: string | null | undefined): string | null {
+  const needle = name?.trim();
+  if (!needle) return null;
+
+  if (!flagByName) {
+    flagByName = new Map();
+    for (const locale of ["fr", "en"] as const) {
+      for (const [iso2, value] of Object.entries(isoCountries.getNames(locale))) {
+        // Le jeu de donnees rend parfois plusieurs libelles pour un meme pays.
+        for (const label of Array.isArray(value) ? value : [value]) {
+          const key = comparableName(label);
+          if (key && !flagByName.has(key)) flagByName.set(key, getFlagEmoji(iso2));
+        }
+      }
+    }
+  }
+
+  return flagByName.get(comparableName(needle)) ?? null;
+}
 
 let countriesCache: Country[] | null = null;
 

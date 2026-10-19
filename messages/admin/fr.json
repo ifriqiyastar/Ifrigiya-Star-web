@@ -65,7 +65,8 @@
       "validations": "Validations",
       "moderation": "Moderation",
       "scoutDays": "Scout Days",
-      "accounts": "Comptes"
+      "accounts": "Comptes",
+      "finances": "Paiements et revenus"
     },
     "players": {
       "one": "{count} dossier joueur a valider",
@@ -94,6 +95,14 @@
     "scoutDays": {
       "one": "{count} Scout Day a valider",
       "other": "{count} Scout Days a valider"
+    },
+    "collect": {
+      "one": "{count} inscription a encaisser",
+      "other": "{count} inscriptions a encaisser"
+    },
+    "paymentsPending": {
+      "one": "{count} paiement a confirmer",
+      "other": "{count} paiements a confirmer"
     },
     "deletions": {
       "one": "{count} demande de suppression de compte",
@@ -186,6 +195,14 @@
     "scoutDays": "Scout Days",
     "updatedOn": "Mis a jour le",
     "actionFailed": "L'action n'a pas pu aboutir.",
+    "previewOf": "Apercu du compte de {name}",
+    "previewHint": "Ce que le compte declare. La fiche complete porte le reste : profil metier, justificatifs, historique.",
+    "openAccountOf": "Ouvrir la fiche de {name}",
+    "active": "Actif",
+    "deactivated": "Desactive",
+    "minor": "Mineur",
+    "deletionRequested": "Suppression demandee",
+    "deletionRequestedOn": "Suppression demandee le",
     "noName": "Sans nom"
   },
   "dashboard": {
@@ -536,6 +553,7 @@
     "Un abonnement actif n'est pas un paiement": "Un abonnement actif n'est pas un paiement",
     "Le compteur d'abonnements lit le statut des souscriptions, pas les transactions. Les deux peuvent diverger le temps qu'un paiement soit confirme — c'est normal, et c'est pourquoi ils sont affiches separement.": "Le compteur d'abonnements lit le statut des souscriptions, pas les transactions. Les deux peuvent diverger le temps qu'un paiement soit confirme — c'est normal, et c'est pourquoi ils sont affiches separement.",
     "« Activer manuellement » sert aux encaissements hors ligne et laisse une trace de l'administrateur qui a valide.": "« Activer manuellement » sert aux encaissements hors ligne et laisse une trace de l'administrateur qui a valide.",
+    "Nom, email…": "Nom, email…",
     "Reference, nom, email…": "Reference, nom, email…",
     "Statut": "Statut",
     "Objet": "Objet",
@@ -547,6 +565,10 @@
     "Montant": "Montant",
     "Reference": "Reference",
     "Encaisse le": "Encaisse le",
+    "Evenement sans titre": "Evenement sans titre",
+    "Ouvrir la fiche de l'evenement": "Ouvrir la fiche de l'evenement",
+    "A encaisser sur cette liste": "A encaisser sur cette liste",
+    "La fiche courte de l'evenement : de quoi reconnaitre ce qui est encaisse, sans quitter le releve.": "La fiche courte de l'evenement : de quoi reconnaitre ce qui est encaisse, sans quitter le releve.",
     "Actions": "Actions",
     "Copier la reference": "Copier la reference",
     "Activer manuellement": "Activer manuellement",
@@ -1166,6 +1188,15 @@
     "Present": "Present",
     "Absent": "Absent",
     "Activer le paiement": "Activer le paiement",
+    "Cette inscription n'a pas pu etre modifiee.": "Cette inscription n'a pas pu etre modifiee.",
+    "Inscriptions a encaisser": "Inscriptions a encaisser",
+    "Evenements payants dont le reglement n'est pas saisi.": "Evenements payants dont le reglement n'est pas saisi.",
+    "Evenements payants dont le reglement n'est pas saisi. Les {0} plus recentes ; la fiche de l'evenement porte la liste complete.": "Evenements payants dont le reglement n'est pas saisi. Les {0} plus recentes ; la fiche de l'evenement porte la liste complete.",
+    "Marquer comme paye": "Marquer comme paye",
+    "Annuler l'encaissement": "Annuler l'encaissement",
+    "Encaissement enregistre.": "Encaissement enregistre.",
+    "Encaissement annule.": "Encaissement annule.",
+    "Ce paiement n'a pas pu etre active.": "Ce paiement n'a pas pu etre active.",
     "Rapports de scouting": "Rapports de scouting",
     "Le bareme du score /100 n'est pas fixe par le cahier des charges : les scores affiches sont ceux saisis par les evaluateurs, et la note globale est calculee cote serveur.": "Le bareme du score /100 n'est pas fixe par le cahier des charges : les scores affiches sont ceux saisis par les evaluateurs, et la note globale est calculee cote serveur.",
     "Visible au joueur": "Visible au joueur",

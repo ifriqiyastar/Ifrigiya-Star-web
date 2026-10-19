@@ -30,6 +30,11 @@ const BUSINESS_RULE_EN: Record<string, string> = {
     "A reason is required to send a Scout Day back to the organiser.",
   scout_day_min_notice:
     "This Scout Day is too close: it must be submitted a minimum number of days before its date.",
+  // Migration mobile 0128 : pas de presence sans reglement sur un evenement
+  // payant. Pose par le trigger `trg_enforce_paid_attendance`, donc atteint
+  // AUSSI l'ecriture directe de ce depot dans `scout_day_registrations`.
+  unpaid_registration:
+    "This player has not settled their registration: attendance cannot be marked.",
 };
 
 /**

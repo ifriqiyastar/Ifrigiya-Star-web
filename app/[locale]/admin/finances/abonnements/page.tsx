@@ -153,7 +153,11 @@ async function SubscriptionsQueue({
             <TableRow>
               <TableHead>{i18n.t("Abonne")}</TableHead>
               <TableHead>{i18n.t("Offre")}</TableHead>
-              <TableHead>{i18n.t("Statut")}</TableHead>
+              {/* Centree comme celle des paiements : les deux ecrans sont
+                  deux onglets du meme ensemble, et une colonne « Statut »
+                  alignee differemment de l'un a l'autre se lit comme un
+                  defaut d'affichage au moment de basculer. */}
+              <TableHead className="text-center">{i18n.t("Statut")}</TableHead>
               <TableHead className="max-lg:hidden">{i18n.t("Debut")}</TableHead>
               <TableHead className="max-lg:hidden">{i18n.t("Fin")}</TableHead>
               <TableHead className="max-lg:hidden">{i18n.t("Renouvellement")}</TableHead>
@@ -171,6 +175,7 @@ async function SubscriptionsQueue({
                       name={displayName(profile, undefined, i18n.locale)}
                       secondary={profile?.email}
                       avatarUrl={profile?.avatar_url}
+                      preview={profile}
                       href={i18n.path(`/admin/utilisateurs/${row.profile_id}?vue=finances`)}
                     />
                   </TableCell>
@@ -186,7 +191,7 @@ async function SubscriptionsQueue({
                       i18n.t("Offre inconnue")
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-center">
                     <StatusPill tone={i18n.labels.entry(SUBSCRIPTION_STATUS, row.status).tone}>
                       {i18n.labels.label(SUBSCRIPTION_STATUS, row.status)}
                     </StatusPill>

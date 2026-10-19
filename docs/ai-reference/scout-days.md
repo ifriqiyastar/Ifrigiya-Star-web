@@ -163,3 +163,146 @@ Consequences worth knowing before touching this:
   changes nothing, `axesOf` being order-insensitive by requiring a complete set.
   The test file says so rather than claiming coverage it does not have.
 
+
+## Encaisser une inscription depuis l'ecran des paiements (Oct 2026)
+
+`/admin/finances/paiements` liste la table des **paiements**. Une inscription a
+un evenement payant dont personne n'a saisi l'encaissement — l'etat *normal*
+d'un reglement en especes — n'y a aucune ligne, donc aucun bouton : le releve
+paraissait a jour alors qu'il restait de l'argent a encaisser. Le panneau
+« Inscriptions a encaisser » (`fetchUnsettledScoutDayRegistrations`,
+`lib/queries/scout-day-payments.ts`) est cette moitie manquante, pas un doublon
+de la fiche de l'evenement.
+
+- ⚠️⚠️ **Le geste passe par la RPC `record_scout_day_payment`, jamais par un
+  `insert` dans `payments`.** Elle refuse un evenement gratuit, refuse une
+  inscription deja reglee, prend le montant dans le **tarif** de l'evenement
+  plutot que d'une saisie, et pose `active_manuellement` — le statut qui
+  distingue les especes d'un encaissement prestataire. L'application mobile de
+  l'organisateur appelle exactement la meme fonction. Elle autorise deja
+  l'administrateur (`… or public.is_admin()`), donc aucune migration n'est
+  necessaire.
+- ⚠️ **Annuler, c'est `refund_scout_day_payment`, pas un `delete`.** Un releve
+  comptable ne se reecrit pas, il s'annule ; la RPC permet ensuite de
+  reencaisser sans buter sur le garde « deja reglee ».
+- ⚠️ **Le filtre « deja regle » est dans la requete**, pas sur la page deja
+  paginee : les inscriptions portant un paiement vivant (`reussi`,
+  `active_manuellement`, `en_attente`) sont lues d'abord, puis exclues. La
+  lecture demande `limit + 1` pour **savoir** qu'il en reste et le dire, plutot
+  que de couper en silence.
+
+### Quel Scout Day ? — le popup (Oct 2026)
+
+⚠️⚠️ **Le nom de l'evenement vivait dans une cellule `max-lg:hidden`.** Sur
+telephone — la facon dont ce back-office est reellement consulte — il restait
+« Adam Mansouri · 25,000 TND · Marquer comme paye » : un geste qui porte sur de
+l'argent, sans dire sur quoi. Et sur grand ecran, le titre seul ne tranche pas
+entre deux editions d'un meme evenement. `ScoutDayPopup`
+(`components/admin/finances/scout-day-popup.tsx`) remplace le lien par un
+**bouton portant le nom de l'evenement, visible a toutes les largeurs**, qui
+ouvre sa fiche courte — date, horaires, lieu, tarif, capacite, organisateur,
+situation de l'inscription — et mene a `/admin/scout-days/{id}`. Les deux
+tableaux de l'ecran l'utilisent.
+
+- **Rien n'est requete par ligne.** `DetailDialog` rend ses enfants cote
+  serveur, donc la fiche arrive deja rendue ; l'evenement voyage dans le meme
+  embed PostgREST que l'inscription (`SCOUT_DAY_COLUMNS`), et l'organisateur
+  est charge dans la **meme** demande d'identites que les joueurs.
+- **L'organisateur n'est affiche que s'il a ete charge.** Le tableau des
+  paiements lit ses identites en parallele de l'evenement : l'organisateur y
+  couterait une vague de plus sur chaque affichage. Le champ est donc **absent**
+  plutot que vide — un « — » laisserait croire a un evenement sans organisateur.
+- ⚠️ **`icon={<CalendarDaysIcon />}` et non `icon={CalendarDaysIcon}`.**
+  `DetailDialog` est un Client Component : une **fonction** passee depuis un
+  Server Component n'est pas serialisable (« Functions cannot be passed directly
+  to Client Components »), et les icones de `lucide-react` en sont — seul leur
+  `Icon` interne porte `use client`. Un element, lui, est rendu par le serveur
+  avant de traverser, comme `children`. Un composant *serveur* (`EmptyState`,
+  `PanelHeader`, `DefinitionList`) accepte au contraire le composant lui-meme :
+  c'est lui qui l'appelle.
+- ⚠️ **Trois retours client ont faconne ce declencheur, et le dernier tranche
+  le premier.** (1) « *test* doit etre juste sous *EVENEMENT* » — toutes les
+  autres colonnes alignent leur valeur sur leur en-tete, celle-ci ne le faisait
+  pas : la bordure partait du bon endroit, mais la marge interne et l'icone de
+  tete repoussaient le mot d'une trentaine de pixels, et c'est le mot que l'oeil
+  suit. (2) « on doit comprendre que c'est un bouton » — la version sans bordure
+  se lisait comme du texte, d'ou le retour a `outline`. (3) « mets-le au centre
+  sous l'en-tete » — ce qui **repond a (1) autrement** : la colonne entiere est
+  centree, en-tete compris, donc plus rien n'est a compenser. La marge negative
+  (`-ms-3`, qui annulait la marge interne du bouton pour faire coincider son
+  texte avec un en-tete aligne a gauche) a donc ete retiree : **l'alignement est
+  pose par la cellule** (`text-center`), jamais par `ScoutDayPopup`, qui ne sait
+  pas dans quelle colonne il sera rendu. L'icone reste apres le libelle — c'est
+  le nom qu'on lit en parcourant la colonne.
+- **Les colonnes a pastille ou a bouton sont centrees, en-tete compris** sur les
+  deux panneaux de l'ecran et sur les abonnements : « Objet », « Scout Day » /
+  « Evenement » et « Statut ». Une etiquette n'est pas un texte qu'on lit de
+  gauche a droite. Le reste de l'ecran (compte, montant, dates) garde son
+  alignement a gauche, et le reste du back-office n'a **pas** ete touche — ce
+  serait une passe a decider en bloc, pas un effet de bord.
+- **Le total du panneau ne melange pas les devises.** Chaque evenement porte la
+  sienne ; une pastille par devise, et le libelle dit « sur cette liste » —
+  quand la liste est tronquee, le total ne vaut que pour ce qui est montre.
+- **Colonnes verifiees contre la base reelle** (sonde du 2026-10-19, avec son
+  temoin negatif) : `start_time`, `end_time`, `location`, `location_address`,
+  `capacity`, `status`, `organizer_id` repondent `42501` ; une colonne inventee
+  repond `42703`. Aucune ne vient d'une migration optionnelle, donc elles
+  tiennent dans un seul embed sans exposer la lecture a un `42703`.
+
+### La cloche annonce l'argent qui attend (Oct 2026)
+
+Demande client : **prevenir le super administrateur quand quelqu'un veut
+payer**. Le declencheur vient de l'application mobile — un joueur s'inscrit a un
+evenement payant — donc aucune action du back-office n'est jouee et rien ne
+revalide l'ecran. Deux files s'ajoutent a la cloche du bandeau :
+
+| Cle | Ce qu'elle compte | Destination |
+|---|---|---|
+| `collect` | inscription a un evenement payant **sans aucun paiement vivant** | `/admin/finances/paiements` |
+| `paymentsPending` | paiement au statut « en attente » | `…/paiements?statut=en_attente` |
+
+- ⚠️⚠️ **La « notification » du back-office, c'est la cloche, pas
+  `public.notifications`.** Cette table est la boite de reception des
+  *utilisateurs* ; `notifications_select_own` porte bien `or public.is_admin()`,
+  mais le droit technique n'est pas l'usage (meme regle que `messages_readable`).
+  La cloche compte ce qui attend une decision dans les tables metier.
+- ⚠️ **Reservees a `finance.manage`** — `super_admin` et `finance_admin`. Comme
+  les retraits et les publications, une file n'est montree qu'a qui peut la
+  traiter : pointer un moderateur vers un ecran dont tous les boutons lui seront
+  refuses n'est pas une notification, c'est une impasse.
+- ⚠️⚠️ **`202610190001_queue_payments_to_collect.sql` remplace
+  `admin_queue_counts()` en entier**, liste des files comprise — la seule facon
+  d'en ajouter une a un `create or replace`. Rejouer `202610140001` apres lui
+  **perd les deux nouvelles files**, et silencieusement. Toute file ajoutee
+  demain doit l'etre dans la derniere version de la fonction.
+- ⚠️⚠️ **Une cle manquante n'est plus lue comme zero.** `countQueues()`
+  verifiait seulement que la RPC avait repondu, et lisait `?? 0` pour chaque
+  cle : contre une base portant la version *precedente* de la fonction, « de
+  l'argent attend » se serait annonce « rien n'attend » — exactement le defaut
+  que ces files corrigent. Le code verifie desormais que la reponse porte
+  **toutes** les cles declarees et repasse sinon par les comptages requete par
+  requete. C'est la regle « degrader a l'ouverture, et degrader *de facon
+  coherente* ».
+- ⚠️ **`collect` ne se compte pas en une requete PostgREST** : « aucune ligne
+  liee ne satisfait ce predicat » n'est pas exprimable, donc le repli
+  (`countUnsettledScoutDayRegistrations()`) lit les inscriptions deja reglees
+  puis les exclut — deux allers-retours. C'est pour cela que la RPC existe ;
+  le repli n'est la que pour qu'une file d'argent ne s'annonce jamais vide.
+- ⚠️ **Le temps reel demande la publication.** `scout_day_registrations` et
+  `payments` sont ajoutees a `supabase_realtime` avec `replica identity full`,
+  et a `QUEUE_TABLES` cote client. Un abonnement `postgres_changes` sur une
+  table non publiee **reussit et ne livre rien** — il n'y a pas d'erreur a
+  observer, et la file garderait la latence du sondage (10 s). Meme mecanisme
+  et meme preuve que `202609090001_realtime_admin_queue.sql`.
+- **Ce que le rail montre** : `finances` sur le groupe et `paiements` sur
+  l'ecran portent le meme total (`collect + paymentsPending`) — l'ecran est
+  unique, et `NavMain` retire celui du parent quand le groupe est deplie.
+
+**Verifie sur un Postgres jetable** (fixture : 2 evenements dont un gratuit,
+7 inscriptions, 8 paiements), migration appliquee puis la fonction appelee :
+`collect = 2`, `paymentsPending = 2`, et **toutes** les autres files a 0 par le
+bloc d'exception — les tables qu'elles comptent n'existent pas dans la fixture,
+ce qui est aussi le temoin que la tolerance aux migrations absentes fonctionne.
+**Verifie par mutation** : la jointure naive rend 4 au lieu de 2 (la meme
+inscription comptee une fois par paiement mort), et compter `rembourse`/`echoue`
+comme vivants fait tomber la file a 0.

@@ -26,6 +26,18 @@ export type ProfileSummary = {
    * chaque appelant, c'est en oublier un.
    */
   avatar_url: string | null;
+  /**
+   * Pays declare. **Il ne vient pas de `profiles` non plus** — la table n'a pas
+   * de colonne `country` (sonde du 2026-10-19 : `42703`). Il vit sur les tables
+   * metier, `player_profiles.country` et `professional_profiles.country`, et il
+   * est reconstitue ici par les deux memes requetes que la photo : **aucun
+   * aller-retour de plus**. C'est la condition a laquelle l'apercu d'un compte
+   * peut l'afficher sur chaque ligne de chaque liste.
+   *
+   * C'est du **texte**, le nom du pays, pas un code ISO (voir
+   * `lib/countries-api.ts`) : le drapeau s'en deduit par `countryFlag()`.
+   */
+  country: string | null;
   is_active: boolean;
   is_minor: boolean;
   last_login_at: string | null;
@@ -57,24 +69,37 @@ export async function fetchProfilesByIds(
   if (!unique.length) return new Map<string, ProfileSummary>();
 
   const supabase = await createClient();
-  // Les deux requetes photo sont volontairement separees de celle des profils :
+  // Les deux requetes metier sont volontairement separees de celle des profils :
   // si la migration mobile `0039` n'est pas appliquee, `photo_url` repond en
   // 42703 et seule cette requete-la retourne vide — les identites restent
   // affichees, sans vignette.
-  const [profiles, playerPhotos, proPhotos] = await Promise.all([
+  //
+  // ⚠️ `country` voyage dans CES MEMES requetes, pas dans une troisieme vague.
+  // C'est ce qui permet a l'apercu d'un compte de montrer le pays sans rien
+  // couter : la colonne existe sur les deux tables depuis le schema d'origine
+  // (sonde du 2026-10-19 — une colonne absente repond `42703` avant la RLS,
+  // une colonne presente `42501`), donc elle n'elargit pas le risque que
+  // `profile_photo_url` / `photo_url` portent deja.
+  const [profiles, playerRows, proRows] = await Promise.all([
     supabase.from("profiles").select(PROFILE_COLUMNS).in("id", unique),
-    supabase.from("player_profiles").select("id, profile_photo_url").in("id", unique),
-    supabase.from("professional_profiles").select("id, photo_url").in("id", unique),
+    supabase.from("player_profiles").select("id, profile_photo_url, country").in("id", unique),
+    supabase.from("professional_profiles").select("id, photo_url, country").in("id", unique),
   ]);
 
   const photoById = new Map<string, string | null>([
-    ...(playerPhotos.data ?? []).map(
+    ...(playerRows.data ?? []).map(
       (row) => [row.id as string, row.profile_photo_url as string | null] as const,
     ),
-    ...(proPhotos.data ?? []).map(
+    ...(proRows.data ?? []).map(
       (row) => [row.id as string, row.photo_url as string | null] as const,
     ),
   ]);
+
+  const countryById = new Map<string, string | null>(
+    [...(playerRows.data ?? []), ...(proRows.data ?? [])].map(
+      (row) => [row.id as string, (row.country as string | null) ?? null] as const,
+    ),
+  );
 
   const signed = options.signAvatars
     ? await signAvatarUrls(supabase, [...photoById.values()])
@@ -88,6 +113,7 @@ export async function fetchProfilesByIds(
         {
           ...row,
           avatar_url: (photo && signed.get(photo)) || accountAvatarUrl(photo),
+          country: countryById.get(row.id as string) ?? null,
         } as ProfileSummary,
       ];
     }),

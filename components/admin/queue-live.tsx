@@ -40,6 +40,14 @@ const QUEUE_TABLES = [
   "post_comments",
   "scout_days",
   "profiles",
+  // ⚠️ Les deux files de finances (oct. 2026) : « inscription a encaisser » et
+  // « paiement a confirmer ». L'evenement vient de l'application mobile — un
+  // joueur s'inscrit, aucune action du back-office n'est jouee, donc rien ne
+  // revalide l'ecran. `202610190001_queue_payments_to_collect.sql` les publie
+  // dans `supabase_realtime` ; sans elle l'abonnement reussit et ne livre
+  // rien, et la file garde la latence du sondage.
+  "scout_day_registrations",
+  "payments",
 ] as const;
 
 export type QueueSnapshot = { tasks: AdminTask[]; badges: NavBadges };

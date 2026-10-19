@@ -418,6 +418,7 @@ export default async function EvaluationsPage({
                         name={profile?.full_name ?? registration?.player_id ?? i18n.t("Joueur inconnu")}
                         secondary={profile?.email}
                         avatarUrl={profile?.avatar_url}
+                        preview={profile}
                         href={registration ? i18n.path(`/admin/utilisateurs/${registration.player_id}`) : undefined}
                       />
                     </TableCell>

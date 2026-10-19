@@ -380,11 +380,17 @@ export async function setRegistrationStatus(
   await requirePermission("events.manage");
   const supabase = await createClient();
 
-  const { error } = await supabase
+  // ⚠️ `.select("id")` : PostgREST ne LÈVE PAS quand la RLS ecarte la ligne —
+  // zero ligne touchee, reponse « succes », et l'ecran annoncait « Inscription :
+  // present » sans que rien n'ait change. Premiere regle du depot, elle
+  // manquait ici comme elle manquait dans `activatePaymentManually`.
+  const { data: updated, error } = await supabase
     .from("scout_day_registrations")
     .update({ status, updated_at: new Date().toISOString() })
-    .eq("id", registrationId);
+    .eq("id", registrationId)
+    .select("id");
   if (error) return fail(makeErrors(i18n.locale).describeError(error));
+  if (!updated?.length) return fail(i18n.t("Cette inscription n'a pas pu etre modifiee."));
 
   await logAdminAction(`registration_${status}`, "scout_day_registration", registrationId, {
     status,

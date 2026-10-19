@@ -335,6 +335,7 @@ async function CommentsView({
                       name={displayName(author, undefined, i18n.locale)}
                       secondary={i18n.format.formatDateTime(row.created_at)}
                       avatarUrl={author?.avatar_url}
+                      preview={author}
                       href={i18n.path(`/admin/utilisateurs/${row.author_id}`)}
                     />
                     <div className="flex flex-wrap items-center gap-2">
@@ -380,6 +381,7 @@ async function CommentsView({
                     name={displayName(author, undefined, i18n.locale)}
                     secondary={i18n.format.formatDateTime(row.created_at)}
                     avatarUrl={author?.avatar_url}
+                    preview={author}
                     href={i18n.path(`/admin/utilisateurs/${row.author_id}`)}
                   />
                   <div className="flex flex-wrap items-center gap-2">

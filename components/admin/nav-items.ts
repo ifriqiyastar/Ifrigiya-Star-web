@@ -160,17 +160,26 @@ export const NAV_ITEMS = [
     href: "/admin/finances",
     key: "finances",
     icon: WalletIcon,
-    badge: null,
+    badge: "finances" as const,
     permission: "finance.manage" as AdminPermission,
     section: "pilotage",
     /**
      * Deux vues, deux routes, donc deux entrees — meme traitement que la
-     * moderation et les validations. Aucun compteur : il n'y a pas de file
-     * d'attente ici, un paiement en attente est un etat, pas un dossier qui
-     * reclame une decision.
+     * moderation et les validations.
+     *
+     * ⚠️ IL Y AVAIT « aucun compteur : un paiement en attente est un etat, pas
+     * un dossier qui reclame une decision ». Demande client (oct. 2026) :
+     * prevenir le super administrateur quand quelqu'un veut payer. C'est
+     * l'inscription a un evenement payant **sans aucun paiement saisi** qui a
+     * tranche — elle n'a pas de ligne dans la table des paiements, donc elle
+     * n'etait visible nulle part, et le releve s'annoncait a jour alors qu'il
+     * restait de l'argent a encaisser. Celle-la est bien un dossier : elle
+     * attend que quelqu'un enregistre l'encaissement. Et le paiement en
+     * attente l'est aussi, en fin de compte — l'ecran lui propose « activer
+     * manuellement », « marquer reussi » et « echoue ».
      */
     children: [
-      { href: "/admin/finances/paiements", key: "financesPayments", badge: null, icon: ReceiptTextIcon },
+      { href: "/admin/finances/paiements", key: "financesPayments", badge: "paiements" as const, icon: ReceiptTextIcon },
       { href: "/admin/finances/abonnements", key: "financesSubscriptions", badge: null, icon: CreditCardIcon },
     ],
   },
@@ -255,7 +264,9 @@ export type NavBadgeKey =
   | "signalements"
   | "publications"
   | "commentaires"
-  | "scoutDays";
+  | "scoutDays"
+  | "finances"
+  | "paiements";
 
 export type NavBadges = Record<NavBadgeKey, number>;
 

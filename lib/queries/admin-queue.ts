@@ -1,5 +1,6 @@
 import type { AdminPermission } from "@/lib/auth";
 import { plural, type AdminDictionary } from "@/lib/i18n/admin-shared";
+import { countUnsettledScoutDayRegistrations } from "@/lib/queries/scout-day-payments";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -119,6 +120,31 @@ const QUEUES: QueueSpec[] = [
     permission: "events.manage",
   },
   {
+    // ⚠️⚠️ L'ARGENT QUI ATTEND, demande client (oct. 2026). Un joueur
+    // s'inscrit a un evenement payant depuis l'application mobile et
+    // l'administration n'en savait rien : l'inscription n'a aucune ligne dans
+    // `payments` tant que l'encaissement n'est pas saisi — l'etat normal d'un
+    // reglement en especes — donc le releve paraissait a jour. Il fallait
+    // penser a aller voir.
+    //
+    // ⚠️ Reservee a `finance.manage`, c'est-a-dire au super administrateur et
+    // au role « finance ». Comme les retraits et les publications, une file
+    // n'est montree qu'a qui peut la traiter.
+    key: "collect",
+    section: "finances",
+    href: "/admin/finances/paiements",
+    permission: "finance.manage",
+  },
+  {
+    // L'autre moitie : un paiement deja enregistre mais pas confirme attend
+    // lui aussi un geste. Deux lignes plutot qu'un total, parce que les deux
+    // gestes ne sont pas le meme et ne se font pas au meme endroit de l'ecran.
+    key: "paymentsPending",
+    section: "finances",
+    href: "/admin/finances/paiements?statut=en_attente",
+    permission: "finance.manage",
+  },
+  {
     key: "deletions",
     section: "accounts",
     href: "/admin/utilisateurs?suppression=oui",
@@ -163,11 +189,21 @@ async function countQueues(): Promise<Record<string, number>> {
 
   if (!error && data && typeof data === "object") {
     const row = data as Record<string, unknown>;
-    // Une cle que la fonction ne rend pas vaut zero, comme une file dont la
-    // colonne n'existe pas encore : la file disparait, elle ne casse rien.
-    return Object.fromEntries(
-      QUEUES.map((queue) => [queue.key, Number(row[queue.key] ?? 0)]),
-    );
+    // ⚠️⚠️ UNE CLE MANQUANTE N'EST PLUS LUE COMME ZERO. Elle l'etait, et
+    // c'etait tenable tant que la fonction et ce tableau avaient toujours ete
+    // ecrits ensemble. Les deux files de finances
+    // (`202610190001_queue_payments_to_collect.sql`) ont change cela : contre
+    // une base qui porte la version PRECEDENTE de la fonction, « de l'argent
+    // attend » se serait annonce « rien n'attend » — une file silencieusement
+    // vide, c'est-a-dire exactement le defaut qu'elle vient corriger. On
+    // repasse donc par le chemin d'origine, qui compte tout, plutot que de
+    // faire confiance a une reponse incomplete.
+    const complete = QUEUES.every((queue) => row[queue.key] !== undefined);
+    if (complete) {
+      return Object.fromEntries(
+        QUEUES.map((queue) => [queue.key, Number(row[queue.key] ?? 0)]),
+      );
+    }
   }
 
   return countQueuesOneByOne();
@@ -196,6 +232,8 @@ async function countQueuesOneByOne(): Promise<Record<string, number>> {
     comments,
     scoutDays,
     deletions,
+    paymentsPending,
+    collect,
   ] = await Promise.all([
       supabase
         .from("player_profiles")
@@ -224,6 +262,12 @@ async function countQueuesOneByOne(): Promise<Record<string, number>> {
         .eq("is_deleted", false),
       supabase.from("scout_days").select("id", head).eq("status", "en_attente_validation"),
       supabase.from("profiles").select("id", head).not("deletion_requested_at", "is", null),
+      supabase.from("payments").select("id", head).eq("status", "en_attente"),
+      // ⚠️ La seule file qui ne se compte pas en une requete : « aucune ligne
+      // liee ne satisfait ce predicat » n'est pas exprimable en PostgREST, donc
+      // l'exclusion se fait en deux temps. Elle est donc deliberement **a la
+      // fin** de cette rafale, qui n'est deja que le chemin de repli.
+      countUnsettledScoutDayRegistrations(),
     ]);
 
   return {
@@ -237,6 +281,8 @@ async function countQueuesOneByOne(): Promise<Record<string, number>> {
     comments: comments.count ?? 0,
     scoutDays: scoutDays.count ?? 0,
     deletions: deletions.count ?? 0,
+    paymentsPending: paymentsPending.count ?? 0,
+    collect,
   };
 }
 
@@ -302,6 +348,11 @@ export async function fetchAdminQueue(
       publications: counts.posts,
       commentaires: counts.comments,
       scoutDays: counts.scoutDays,
+      // Le groupe « Paiements et revenus » et l'ecran qui porte reellement les
+      // deux gestes — le meme chiffre, puisque l'ecran est unique : `NavMain`
+      // retire celui du parent quand le groupe est deplie.
+      finances: counts.collect + counts.paymentsPending,
+      paiements: counts.collect + counts.paymentsPending,
     },
   };
 }

@@ -65,7 +65,8 @@
       "validations": "Validations",
       "moderation": "Moderation",
       "scoutDays": "Scout Days",
-      "accounts": "Accounts"
+      "accounts": "Accounts",
+      "finances": "Payments and revenue"
     },
     "players": {
       "one": "{count} player file to review",
@@ -94,6 +95,14 @@
     "scoutDays": {
       "one": "{count} Scout Day to approve",
       "other": "{count} Scout Days to approve"
+    },
+    "collect": {
+      "one": "{count} registration to collect",
+      "other": "{count} registrations to collect"
+    },
+    "paymentsPending": {
+      "one": "{count} payment to confirm",
+      "other": "{count} payments to confirm"
     },
     "deletions": {
       "one": "{count} account deletion request",
@@ -186,6 +195,14 @@
     "scoutDays": "Scout Days",
     "updatedOn": "Updated on",
     "actionFailed": "The action could not be completed.",
+    "previewOf": "Preview of {name}'s account",
+    "previewHint": "What the account declares. The full record holds the rest: profile, documents, history.",
+    "openAccountOf": "Open {name}'s record",
+    "active": "Active",
+    "deactivated": "Deactivated",
+    "minor": "Minor",
+    "deletionRequested": "Deletion requested",
+    "deletionRequestedOn": "Deletion requested on",
     "noName": "Unnamed"
   },
   "dashboard": {
@@ -536,6 +553,7 @@
     "Un abonnement actif n'est pas un paiement": "An active subscription is not a payment",
     "Le compteur d'abonnements lit le statut des souscriptions, pas les transactions. Les deux peuvent diverger le temps qu'un paiement soit confirme — c'est normal, et c'est pourquoi ils sont affiches separement.": "The subscription counter reads subscription statuses, not transactions. They may differ while a payment awaits confirmation, which is why they are shown separately.",
     "« Activer manuellement » sert aux encaissements hors ligne et laisse une trace de l'administrateur qui a valide.": "Use “Activate manually” for offline receipts. The approving administrator is recorded.",
+    "Nom, email…": "Name, email…",
     "Reference, nom, email…": "Reference, name, email…",
     "Statut": "Status",
     "Objet": "Purpose",
@@ -547,6 +565,10 @@
     "Montant": "Amount",
     "Reference": "Reference",
     "Encaisse le": "Received on",
+    "Evenement sans titre": "Untitled event",
+    "Ouvrir la fiche de l'evenement": "Open the event page",
+    "A encaisser sur cette liste": "To collect on this list",
+    "La fiche courte de l'evenement : de quoi reconnaitre ce qui est encaisse, sans quitter le releve.": "The event at a glance: enough to recognise what is being collected, without leaving the statement.",
     "Actions": "Actions",
     "Copier la reference": "Copy reference",
     "Activer manuellement": "Activate manually",
@@ -1166,6 +1188,15 @@
     "Present": "Attended",
     "Absent": "Absent",
     "Activer le paiement": "Activate payment",
+    "Cette inscription n'a pas pu etre modifiee.": "This registration could not be updated.",
+    "Inscriptions a encaisser": "Registrations to collect",
+    "Evenements payants dont le reglement n'est pas saisi.": "Paid events whose settlement has not been recorded.",
+    "Evenements payants dont le reglement n'est pas saisi. Les {0} plus recentes ; la fiche de l'evenement porte la liste complete.": "Paid events whose settlement has not been recorded. The {0} most recent; the event page has the full list.",
+    "Marquer comme paye": "Mark as paid",
+    "Annuler l'encaissement": "Cancel the payment",
+    "Encaissement enregistre.": "Payment recorded.",
+    "Encaissement annule.": "Payment cancelled.",
+    "Ce paiement n'a pas pu etre active.": "This payment could not be activated.",
     "Rapports de scouting": "Scouting reports",
     "Le bareme du score /100 n'est pas fixe par le cahier des charges : les scores affiches sont ceux saisis par les evaluateurs, et la note globale est calculee cote serveur.": "Scores out of 100 are entered by evaluators; the overall score is calculated on the server.",
     "Visible au joueur": "Visible to player",

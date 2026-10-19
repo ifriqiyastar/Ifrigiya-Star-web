@@ -113,6 +113,7 @@ async function MediaView({ params }: { params: Record<string, string | undefined
                         name={displayName(player, undefined, i18n.locale)}
                         secondary={player?.email}
                         avatarUrl={player?.avatar_url}
+                        preview={player}
                         href={i18n.path(`/admin/utilisateurs/${row.player_id}`)}
                       />
                     </TableCell>

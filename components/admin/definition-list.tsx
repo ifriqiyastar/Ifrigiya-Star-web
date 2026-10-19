@@ -9,6 +9,12 @@ export type DefinitionItem = {
    * signalement n'ont pas eu a bouger.
    */
   icon?: React.ComponentType<{ className?: string }>;
+  /**
+   * Classes posees sur la ligne elle-meme. Sert surtout a lui faire prendre les
+   * deux colonnes (`sm:col-span-2`) : une adresse e-mail doit tenir **sur une
+   * seule ligne**, et une demi-largeur la coupait en deux.
+   */
+  className?: string;
 };
 
 /**
@@ -30,7 +36,7 @@ export function DefinitionList({
   return (
     <dl className={cn("grid gap-x-6 gap-y-4 sm:grid-cols-2", className)}>
       {items.map((item) => (
-        <div key={item.label} className="flex min-w-0 items-start gap-3">
+        <div key={item.label} className={cn("flex min-w-0 items-start gap-3", item.className)}>
           {item.icon ? (
             <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary">
               <item.icon className="size-4 text-foreground/70" />

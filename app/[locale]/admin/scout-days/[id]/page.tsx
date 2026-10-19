@@ -45,7 +45,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { activatePaymentManually } from "@/lib/actions/finances";
+import { activatePaymentManually, cancelScoutDayPayment, recordScoutDayPayment } from "@/lib/actions/finances";
 import {
   deleteScoutDay,
   refuseScoutDay,
@@ -462,6 +462,7 @@ export default async function ScoutDayDetailPage({
                         name={displayName(player, undefined, i18n.locale)}
                         secondary={player?.email}
                         avatarUrl={player?.avatar_url}
+                        preview={player}
                         href={i18n.path(`/admin/utilisateurs/${row.player_id}`)}
                       />
                     </TableCell>
@@ -540,12 +541,35 @@ export default async function ScoutDayDetailPage({
                           >
                             {i18n.t("Refuser")}</ActionButton>
                         ) : null}
+                        {/* ⚠️ Trois etats, trois gestes. Jusqu'ici seul le
+                            paiement DEJA EN ATTENTE avait un bouton : une
+                            inscription sans aucune ligne de paiement — le cas
+                            NORMAL d'un encaissement en especes, tant que
+                            personne ne l'a saisi — affichait « Aucun
+                            paiement » sans rien proposer, et un encaissement
+                            enregistre par erreur ne pouvait plus etre annule.
+                            L'organisateur disposait des deux gestes dans
+                            l'application mobile, l'administrateur non. */}
+                        {scoutDay.is_paid && !payment ? (
+                          <ActionButton
+                            action={recordScoutDayPayment.bind(null, row.id)}
+                            variant="default"
+                          >
+                            {i18n.t("Marquer comme paye")}</ActionButton>
+                        ) : null}
                         {payment?.status === "en_attente" ? (
                           <ActionButton
                             action={activatePaymentManually.bind(null, payment.id)}
                             variant="default"
                           >
                             {i18n.t("Activer le paiement")}</ActionButton>
+                        ) : null}
+                        {payment && ["reussi", "active_manuellement"].includes(payment.status) ? (
+                          <ActionButton
+                            action={cancelScoutDayPayment.bind(null, payment.id)}
+                            variant="ghost"
+                          >
+                            {i18n.t("Annuler l'encaissement")}</ActionButton>
                         ) : null}
                       </div>
                     </TableCell>

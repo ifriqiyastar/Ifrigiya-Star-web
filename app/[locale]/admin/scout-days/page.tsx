@@ -311,6 +311,7 @@ export default async function ScoutDaysPage({ searchParams }: PageProps<"/[local
                         name={displayName(organizer, undefined, i18n.locale)}
                         secondary={organizer?.email}
                         avatarUrl={organizer?.avatar_url}
+                        preview={organizer}
                         href={i18n.path(`/admin/utilisateurs/${row.organizer_id}`)}
                       />
                     </TableCell>
@@ -470,6 +471,7 @@ export default async function ScoutDaysPage({ searchParams }: PageProps<"/[local
                         name={displayName(organizer, undefined, i18n.locale)}
                         secondary={organizer?.email}
                         avatarUrl={organizer?.avatar_url}
+                        preview={organizer}
                         href={i18n.path(`/admin/utilisateurs/${row.organizer_id}`)}
                       />
                     </TableCell>

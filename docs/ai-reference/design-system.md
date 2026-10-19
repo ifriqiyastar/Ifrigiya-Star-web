@@ -273,3 +273,78 @@ The recipe, which also documents two traps paid for here:
    `sm:max-w-md sm:max-w-2xl` in a harness measures whichever the stylesheet
    orders last, not what the component renders.
 
+
+## L'apercu d'un compte, a cote de son nom (Oct 2026)
+
+Question posee : « pour une meilleure UI/UX, faut-il montrer le profil dans une
+popup quand on clique dessus ? » Reponse livree : **oui a l'apercu, non au
+remplacement du lien**.
+
+`ProfilePreviewDialog` (`components/admin/profile-preview-dialog.tsx`) est la
+coquille ; `UserCell` la monte quand on lui passe `preview={profile}`.
+
+- ⚠️⚠️ **Le declencheur s'ajoute au lien, il ne le remplace pas.**
+  `/admin/utilisateurs/{id}` n'est pas un fait, c'est une destination : onglets
+  (`?vue=`), suspension, reactivation, suppression, justificatifs, historique.
+  Detourner le clic du nom aurait coute le clic du milieu, l'ouverture dans un
+  onglet et le bouton Precedent — que l'administration utilise en traitant une
+  file — et aurait fait dire au nom deux choses differentes selon l'ecran, le
+  lien etant pose a dix-neuf endroits. Dans une liste, la question est « qui
+  est-ce, le compte est-il sain ? », pas « ouvre-moi ce compte ».
+- ⚠️ **Frere du lien, jamais enfant.** Un bouton dans un lien n'est pas du HTML
+  valide et le clic navigue au lieu d'ouvrir. Les deux branches de `UserCell`
+  sans apercu sont laissees telles quelles, pour que les dix-huit appelants
+  existants ne bougent pas d'un pixel.
+- **Ce qu'il montre** (retours client, oct. 2026) : la **photo en grand**, les
+  pastilles role / actif / mineur / suppression demandee, puis l'e-mail **sur
+  une seule ligne et en entier**, le telephone, le **pays avec son drapeau**, et
+  l'inscription. La derniere connexion en a ete retiree — elle disait l'activite
+  du compte, pas qui il est. L'e-mail prend les deux colonnes
+  (`DefinitionItem.className`) et ne se replie plus : une adresse se recopie
+  d'un bloc, et une adresse tres longue defile dans sa propre boite plutot que
+  d'elargir la modale.
+- **Le drapeau est un emoji** (`countryFlag()`, `lib/countries-api.ts`), comme
+  dans `CountryCitySelect` et non en SVG comme `LocaleFlag` : celui-la ne dessine
+  que trois drapeaux de langues, ici il en faudrait deux cent cinquante. Sur un
+  systeme sans glyphes de drapeaux (Windows), les deux lettres regionales
+  s'affichent — le nom du pays est juste a cote. ⚠️ **La correspondance nom ->
+  code ISO est normalisee** (accents, casse, ponctuation) : mesure faite,
+  `getAlpha2Code()` rend `DZ` pour « Algérie » et **rien** pour « Algerie », or
+  ce depot ecrit le francais sans accents. Sans la normalisation, le drapeau
+  manquait sur une partie des comptes. Verifie sur le vrai module : « Tunisie »,
+  « Tunisia », « Algerie », « cote d ivoire » et « COTE-D IVOIRE » rendent tous
+  leur embleme, un pays inconnu rend `null` — et l'appelant affiche alors le nom
+  seul, jamais un embleme faux.
+- ⚠️⚠️ **L'apercu n'affiche QUE `ProfileSummary`** — role, e-mail, telephone,
+  pays, actif/desactive, mineur, inscription, demande de suppression. C'est la condition a laquelle il est acceptable sur chaque ligne
+  de chaque liste : ces champs sont **deja charges** par `fetchProfilesByIds()`
+  pour rendre le nom et la vignette, donc l'apercu coute **zero aller-retour**.
+  Y ajouter le statut du profil metier, les justificatifs ou l'historique des
+  paiements demanderait une lecture de plus par liste, payee sur tous les ecrans
+  pour une modale ouverte une fois sur cinquante. ⚠️ **Le pays a tenu dans cette
+  regle**, et c'est pourquoi il a pu etre ajoute : `profiles` n'a pas de colonne
+  `country` (sonde : `42703`), mais `player_profiles` et `professional_profiles`
+  en ont une — et `fetchProfilesByIds()` interroge **deja** ces deux tables pour
+  la photo. Le pays voyage dans ces memes requetes ; s'il avait fallu une
+  troisieme vague, il serait reste sur la fiche. Ces questions ont leur ecran,
+  et le dernier bouton de l'apercu y mene.
+- **Opt-in, par ecran.** Il est pose la ou le compte est le *contexte* d'une
+  ligne qu'on traite sans quitter la liste : les deux tables de
+  `/admin/finances/paiements`, les abonnements, les evaluations, les trois
+  ecrans de moderation (publications, commentaires, medias), les Scout Days et
+  leurs inscrits. Il est **deliberement absent** des quatre files de validation
+  — leur bouton « Dossier » montre deja cette identite, et un second
+  declencheur a cote serait la meme donnee a deux endroits — et de l'annuaire
+  des comptes, ou ouvrir la fiche est le travail de l'ecran.
+- ⚠️ **Le declencheur porte une bordure, il n'est pas `ghost`** (retour client :
+  « on doit comprendre que c'est un bouton »). Une icone sourde posee a cote
+  d'un nom se lit comme une decoration, et rien n'annoncait qu'on pouvait
+  cliquer. `outline` est la variante de tous les autres declencheurs de modale
+  du back-office — « Dossier », l'apercu d'un Scout Day — donc le geste se
+  reconnait d'un ecran a l'autre. Pas de libelle a cote de l'icone pour autant :
+  il s'ajouterait a chaque ligne de chaque liste, et la colonne du compte porte
+  deja un nom, un e-mail et une vignette. Le nom accessible passe par
+  `aria-label`, double par `title` en infobulle.
+- **Les libelles vivent dans `common`**, pas dans `screens` : `UserCell` est
+  partage par dix-huit ecrans, prendre le vocabulaire de l'un d'eux
+  (`dict.users.*`) l'aurait lie a l'annuaire des comptes.
