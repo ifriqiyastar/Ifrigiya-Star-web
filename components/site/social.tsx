@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
  * visiteur et attribue a ce partage chaque arrivee depuis le site. Retire.
  */
 export const YOUTUBE_URL = "https://www.youtube.com/@ifriqiyastar";
-export const INSTAGRAM_URL = "https://www.instagram.com/ifrystar_/";
+export const INSTAGRAM_URL = "https://www.instagram.com/ifriqiya_soccer_star/";
 
 /**
  * Un compte social : une pastille ronde qui ne porte qu'un pictogramme.
