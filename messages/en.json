@@ -576,6 +576,12 @@
       "correct or clear the information in your profile;",
       "make your profile invisible in professionals' searches, without deleting anything."
     ],
+    "partialStepsIntro": "To have a piece of data deleted that the app does not let you erase yourself, the request is made by email:",
+    "partialSteps": [
+      "Write to us from the email address of your account, with “Data deletion” as the subject.",
+      "Tell us which data is concerned: a photo, a video, a post, a field of your profile, your messages, your supporting documents.",
+      "We check that the request really comes from the account holder, then we delete that data and confirm it to you by email. Your account itself stays open."
+    ],
     "partialNote": "A deleted post or comment is no longer displayed anywhere. A trace is kept for as long as a possible report needs to be handled, then removed along with your account if you delete it.",
     "retentionTitle": "Retention after erasure",
     "retentionBody": "Beyond the erasure, we keep only what a legal obligation, a dispute or an ongoing moderation procedure requires us to keep, and only for the required period.",

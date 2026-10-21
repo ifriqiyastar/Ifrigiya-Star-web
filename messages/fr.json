@@ -576,6 +576,12 @@
       "corriger ou vider les informations de votre profil ;",
       "rendre votre profil invisible dans les recherches des professionnels, sans rien supprimer."
     ],
+    "partialStepsIntro": "Pour faire supprimer une donnée que l'application ne vous laisse pas effacer vous-même, la demande se fait par e-mail :",
+    "partialSteps": [
+      "Écrivez-nous depuis l'adresse e-mail de votre compte, avec « Suppression de données » en objet.",
+      "Indiquez les données concernées : une photo, une vidéo, une publication, un champ de votre profil, vos messages, vos justificatifs.",
+      "Nous vérifions que la demande provient bien du titulaire du compte, puis nous supprimons ces données et vous le confirmons par e-mail. Votre compte, lui, reste ouvert."
+    ],
     "partialNote": "Une publication ou un commentaire supprimé n'est plus affiché nulle part. Sa trace est conservée le temps qu'un signalement éventuel soit instruit, puis emportée par la suppression de votre compte.",
     "retentionTitle": "Conservation après l'effacement",
     "retentionBody": "Au-delà de l'effacement, nous ne gardons que ce qu'une obligation légale, un litige ou une procédure de modération en cours impose de garder, et pour la seule durée requise.",

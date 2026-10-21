@@ -113,9 +113,27 @@ export default async function AccountDeletionPage() {
         <p>{t.keptNote}</p>
       </LegalSection>
 
+      {/* ⚠️ Cette section est ce qui autorise la MEME URL a servir aussi
+          d'« URL de suppression des donnees » dans la Play Console — le
+          second lien que Google reclame des qu'on declare proposer une
+          suppression partielle. D'ou une procedure numerotee ici aussi, et
+          pas seulement l'inventaire de ce qui s'efface depuis l'app : la
+          console exige d'afficher « de maniere bien distincte la procedure a
+          suivre », et une donnee que l'ecran ne sait pas effacer n'aurait
+          autrement aucun chemin. */}
       <LegalSection title={t.partialTitle}>
         <p>{t.partialIntro}</p>
         <LegalList items={t.partialItems} />
+        <p>{t.partialStepsIntro}</p>
+        <LegalSteps items={t.partialSteps} />
+        <p>
+          <a
+            href={`mailto:${CONTACT_EMAIL}`}
+            className="font-semibold break-all text-(--site-accent) hover:underline"
+          >
+            {CONTACT_EMAIL}
+          </a>
+        </p>
         <p>{t.partialNote}</p>
       </LegalSection>
 
