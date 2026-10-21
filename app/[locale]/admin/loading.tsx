@@ -1,27 +1,40 @@
+import { HeaderSkeleton, TileRowSkeleton } from "@/components/admin/skeletons";
 import { Skeleton } from "@/components/ui/skeleton";
 
 /**
- * Etat de chargement des pages admin. Toutes sont rendues a la demande (elles
- * lisent des cookies de session), donc ce squelette est ce que voit
- * l'utilisateur pendant la requete Supabase.
+ * Squelette du **tableau de bord** (`/admin`), et de lui seul.
+ *
+ * Il servait auparavant a tous les ecrans du back-office : un titre, quatre
+ * tuiles, un grand bloc. Les ecrans sans rangee de tuiles — files de
+ * moderation, dossiers, reglages — annoncaient donc quatre tuiles qui
+ * disparaissaient a l'arrivee de la donnee, en decalant la page entiere.
+ * Chaque section porte maintenant son propre `loading.tsx`, et celui-ci
+ * reprend exactement l'anatomie du tableau de bord : six tuiles sur quatre
+ * colonnes, puis la rangee 8 + 4 du graphe et de son resume, puis les deux
+ * panneaux de pied.
+ *
+ * Il reste aussi le repli des rares routes qui n'en ont pas — elles ne
+ * redirigent (`/admin/validations`, `/admin/moderation`, `/admin/finances`)
+ * et n'affichent jamais rien.
  */
-export default function AdminLoading() {
+export default function AdminDashboardLoading() {
   return (
-    <div className="space-y-6">
-      <div className="space-y-3">
-        <Skeleton className="h-3 w-32" />
-        <Skeleton className="h-8 w-72" />
-        <Skeleton className="h-3 w-full max-w-2xl" />
+    <div className="space-y-4">
+      <HeaderSkeleton actions />
+
+      {/* Six tuiles, `grid-cols-2 gap-3 lg:grid-cols-4` : la grille de la
+          page, sans quoi la mise en page saute au moment du remplacement. */}
+      <TileRowSkeleton count={6} radius="rounded-xl" bar />
+
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
+        <Skeleton className="h-80 rounded-lg lg:col-span-8" />
+        <Skeleton className="h-80 rounded-lg lg:col-span-4" />
       </div>
-      {/* Meme grille que les tuiles qu'il remplace (`grid-cols-2 lg:grid-cols-4`) :
-          un squelette d'une seule colonne sur telephone faisait sauter la page
-          d'une disposition a l'autre au moment ou la donnee arrivait. */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, index) => (
-          <Skeleton key={index} className="h-28 rounded-2xl" />
-        ))}
+
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+        <Skeleton className="h-56 rounded-lg" />
+        <Skeleton className="h-56 rounded-lg" />
       </div>
-      <Skeleton className="h-80 rounded-2xl" />
     </div>
   );
 }

@@ -313,6 +313,138 @@ documentation in `node_modules/next/dist/docs`, not measured — it cannot be, f
 a dev server.
 
 
+### One round trip for all of authorization (Oct 21, 2026)
+
+The October 14 work above collapsed the **layout's** reads. What it left behind
+was the preamble of every **page**, paid before a single row of the screen is
+requested:
+
+| | round trip |
+|---|---|
+| `requireAdmin()` | `profiles` — role, is_active |
+| `requirePermission(code)` | `admin_has_permission(code)` |
+| `getAdminAccess(id)` | `admin_access(id)` |
+
+Three *sequential* round trips answering one question: who is this account and
+what may it do. `app/[locale]/admin/moderation/publications/page.tsx` makes all
+three, then chains eight more waves of its own — roughly eleven serial round
+trips for one screen.
+
+Re-measured on Oct 21 against the live project: **1.01 s on a cold connection**
+(DNS 74 ms / TCP 500 ms / TLS 41 ms / query 395 ms) and **0.09–0.51 s on a warm
+reused one**, three consecutive samples. The swing is the point: a wave is never
+reliably cheap.
+
+**`202610210001_admin_guard.sql`** adds `public.admin_guard()`, which returns the
+profile *and* the RBAC access on one row. `lib/auth.ts` memoizes it with React
+`cache()`, so `requireAdmin()`, `requirePermission()` and `getAdminAccess()` share
+one call per request — **3 round trips become 1**, and the two later callers go to
+the network not at all.
+
+Two design points that are not optional:
+
+- ⚠️ **It does not open on `is_admin()`**, unlike `admin_access()` beside it.
+  `requireAdmin()` has to tell three refusals apart — account not found, not an
+  admin, deactivated — and an `is_admin()` gate collapses all three into one
+  `42501`, sending a deactivated admin back to `/connexion` with no reason shown.
+  So it reads **only the calling account's own row** (`auth.uid()`), which the RLS
+  of `profiles` shows it anyway, and joins the RBAC referential only when that
+  account is an active admin. `security definer` is still required: mobile `0025`
+  and `0050` revoked `profiles` columns from `authenticated`, and `0059` closed the
+  RBAC tables — a column privilege is checked *before* RLS, so the admin session
+  would be refused too.
+- **`requirePermission()` now resolves the permission from the same list
+  `getAdminAccess()` hands the nav**, instead of asking `admin_has_permission`.
+  That is a correctness fix as much as a speed one: the repo's standing rule is
+  that a gate which hides a button is only safe if it answers exactly like the one
+  that guards the action, and the two are now literally one computation. The
+  unseeded-permission rule lives in `accessFromRow()` and is not re-implemented.
+
+`getClaims()` stays in `requireAdmin()` and is still not a round trip — it is a
+local signature check, and it is what distinguishes "no session" from "orphaned
+session" before the guard is asked.
+
+**Verified on a throwaway `postgres:16`**, seven branches by mutation: no session
+and orphaned session both return `profile: null`; a non-admin and a deactivated
+admin return the profile and nothing of the RBAC; an admin with a seeded role
+returns `granted` + `known` + `role_label`; an admin with no role returns
+`assigned: false` with `known` still seeded (so the unseeded rule applies); and
+with `admin_permissions` dropped the exception block returns `known: []`, which
+`accessFromRow()` reads as "RBAC not deployed" and degrades open — exactly the
+behaviour the app had before the function existed.
+
+⚠️ **Nothing here is load-bearing.** `loadAdminGuard()` returns `null` on
+`PGRST202` (function absent) *or* `42501` (execute revoked), and all three callers
+return to their original queries. The project loses the speed-up and nothing else.
+
+### Streaming: the screen no longer waits for its slowest wave (Oct 21, 2026)
+
+Trimming round trips shortens the wait; it does not change the fact that **the
+whole screen waits for the last one**. A page's `loading.tsx` covers everything
+below the layout until the page function returns, so the sequence was: full-screen
+skeleton → nothing → the entire screen at once. On `/admin/utilisateurs` the page
+header, the tabs and the filter bar need no data at all beyond the dictionary, yet
+they sat behind `listUsers()` + `fetchUserStats()` + `fetchAdminRoleLabels()`.
+
+Eight list screens now return their shell immediately and stream the rest:
+
+- **The four validation queues** were already decomposed into `ValidationMetrics`
+  / `ValidationFilter` / `<X>Queue` / `ValidationNotes`, so they only needed
+  `<Suspense>` around the three that query.
+- **Publications and Commentaires** additionally awaited `hasModerationColumns()`
+  in the page body. That probe moved into `ModerationFilters`, whose `available`
+  prop is now optional — omit it and the component probes for itself, under the
+  boundary. `hasModerationColumns()` is memoized with React `cache()` so the
+  filter bar and the view do not probe twice.
+- **Signalements** computed two `count(*)` for the header pill. That is now
+  `<OpenReportsMeta />` passed as the `meta` prop inside its own `<Suspense>`: the
+  title, description and export button no longer wait on a counter.
+- **`/admin/utilisateurs` was decomposed**, since it awaited everything inline. The
+  page function now performs **no business read at all** — guard, dictionary, URL
+  params, then it renders. `AccountsMeta`, `UserTiles`, `CreateEditorAction` and
+  `UsersTable` each fetch their own. `fetchUserStats()` is memoized with `cache()`
+  because the pill and the tiles both want the same six numbers; without that, two
+  boundaries would mean two round trips.
+
+What a navigation looks like now: section skeleton → header, tabs and filters real
+with tile/table skeletons under them → data. The inner fallbacks are the same
+components the section's `loading.tsx` uses, so the two stages agree.
+
+⚠️ **An async Server Component with no `<Suspense>` above it blocks its nearest
+boundary** — which, inside a page, is `loading.tsx`, i.e. the whole screen. That is
+why `PageHeader` and `ValidationFilter` are left unwrapped on purpose: they await
+only `getAdminDict()` / `getAdminI18n()`, which are local and memoized, so they
+settle on the first tick. Anything that touches Supabase needs its own boundary.
+
+**Measured, and not measured.** The await-chains were read from the code and the
+round-trip costs re-measured against the live project (above). The perceived
+effect of streaming was not measured: it needs a logged-in session on a production
+build, and prefetching — which interacts with it — does not exist in `next dev`.
+
+### The sidebar prefetches on hover, not on viewport (Oct 21, 2026)
+
+Pagination got `prefetch` in October; the nav never did. `components/nav-main.tsx`
+rendered plain `<Link href>`, so the default `auto` fetched only the skeleton down
+to `loading.tsx` and the whole server render landed after the click.
+
+`prefetch={true}` would have been the wrong fix. The rail holds around fourteen
+entries, all in the viewport on every screen, and each is a dynamic route — that is
+fourteen full server renders, fourteen guards and fourteen queue reads, fired on
+the same saturated link the change exists to relieve. The rail would have made the
+back-office slower.
+
+`components/admin/nav-prefetch-link.tsx` therefore arms `prefetch` on the first
+mouse-enter or focus, the pattern Next documents for exactly this trade-off
+(`node_modules/next/dist/docs/01-app/01-getting-started/04-linking-and-navigating.md`,
+"To reduce resource usage without fully disabling prefetch"). `prefetch={false}`
+alone would also have been wrong: in the App Router it disables hover prefetching
+too, unlike the Pages Router behaviour the older docs describe.
+
+Two limits, both deliberate: prefetching **only exists in production**, so
+`next dev` shows nothing; and there is **no hover on a phone**, where the rail is a
+drawer — navigation there costs what it cost before.
+
+
 ## Route handlers
 
 - `app/admin/documents/route.ts` — mints a 5-minute signed URL for the private

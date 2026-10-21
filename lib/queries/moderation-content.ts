@@ -1,3 +1,5 @@
+import { cache } from "react";
+
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -242,14 +244,14 @@ export async function fetchContentReports(
  * pas repond `42703` : proposer « En attente de validation » dans un filtre
  * qui ne peut rien ramener est pire que ne pas le proposer du tout.
  */
-export async function hasModerationColumns(): Promise<boolean> {
+export const hasModerationColumns = cache(async function hasModerationColumns(): Promise<boolean> {
   const supabase = await createClient();
   const { error } = await supabase
     .from("posts")
     .select("moderation_status", { head: true, count: "exact" })
     .limit(1);
   return error?.code !== "42703";
-}
+});
 
 
 /**

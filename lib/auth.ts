@@ -58,6 +58,54 @@ async function unseededPermissions(
   return ALL_ADMIN_PERMISSIONS.filter((code) => !known.has(code));
 }
 
+/**
+ * La ligne rendue par `public.admin_guard()` : le profil du compte connecte
+ * **et** son acces RBAC, en une seule reponse.
+ */
+type AdminGuardRow = AccessRow & {
+  profile?: {
+    id: string;
+    role: string | null;
+    email: string | null;
+    full_name: string | null;
+    is_active: boolean | null;
+  } | null;
+};
+
+/**
+ * Toute l'autorisation d'une requete, en **un** aller-retour
+ * (`202610210001_admin_guard.sql`).
+ *
+ * POURQUOI. Le preambule de chaque page admin posait trois fois la meme
+ * question, en trois allers-retours successifs : `requireAdmin()` lisait
+ * `profiles`, puis `requirePermission()` appelait `admin_has_permission`,
+ * puis la page appelait `getAdminAccess()`. Mesure du 21 oct. 2026 vers le
+ * projet : 0,09 a 0,51 s par aller-retour a chaud, 1,01 s a froid — environ
+ * une seconde de reseau avant la premiere requete metier de l'ecran.
+ *
+ * `cache()` (React) : les trois appelants ci-dessous la partagent pour la
+ * duree d'une requete serveur, et plus rien ne sort sur le reseau apres le
+ * premier. Memoisation **par requete**, donc un changement de role pris entre
+ * deux navigations reste vu au chargement suivant.
+ *
+ * ⚠️ `null` signifie « la fonction n'a pas repondu », jamais « droit refuse ».
+ * Chaque appelant retombe alors sur ses lectures d'origine — la regle du
+ * depot : degrader a l'ouverture quand une migration n'est pas appliquee,
+ * jamais echouer.
+ */
+const loadAdminGuard = cache(async function loadAdminGuard(): Promise<AdminGuardRow | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("admin_guard");
+  if (error) {
+    // Fonction absente (migration pas passee) ou execution revoquee : on se
+    // tait et les appelants reprennent le chemin long.
+    if (isMissingRpc(error) || error.code === "42501") return null;
+    console.error("admin_guard:", error.message);
+    return null;
+  }
+  return (data ?? null) as AdminGuardRow | null;
+});
+
 /** La ligne rendue par `public.admin_access()`. */
 type AccessRow = {
   assigned?: boolean;
@@ -117,6 +165,17 @@ function accessFromRow(
 export const getAdminAccess = cache(async function getAdminAccess(adminId: string, dict?: AdminDictionary) {
   const fallbackLabel = dict?.roles.fallback ?? "Administrateur";
   const unassignedLabel = dict?.roles.unassigned ?? "Role non attribue";
+
+  // Chemin le plus rapide : la garde a deja tout rendu, sur l'aller-retour
+  // que `requireAdmin()` a paye de toute facon. Elle ne connait que le compte
+  // connecte ; tous les appelants lui passent le sien, mais la signature
+  // accepte un identifiant, donc on verifie que c'est bien le meme avant de
+  // repondre a sa place.
+  const guard = await loadAdminGuard();
+  if (guard?.profile?.id === adminId) {
+    return accessFromRow(guard, fallbackLabel, unassignedLabel, dict);
+  }
+
   const supabase = await createClient();
 
   // Chemin rapide : tout ce qui suit, en un seul aller-retour
@@ -206,6 +265,23 @@ export const requireAdmin = cache(async function requireAdmin(): Promise<AdminSe
   // fournir la langue courante.
   if (!user) redirect("/connexion");
 
+  // Chemin rapide : le profil **et** l'acces RBAC en un aller-retour. Les
+  // trois refus ci-dessous sont distingues exactement comme par la lecture
+  // d'origine — c'est pour cela que `admin_guard()` ne s'ouvre pas sur
+  // `is_admin()`, qui les aurait confondus en un seul refus.
+  const guard = await loadAdminGuard();
+  if (guard) {
+    const row = guard.profile;
+    if (!row) redirect("/connexion?erreur=compte-introuvable");
+    if (row.role !== "admin") redirect("/connexion?erreur=acces-refuse");
+    if (!row.is_active) redirect("/connexion?erreur=compte-desactive");
+    return {
+      userId: row.id,
+      email: row.email ?? user.email ?? null,
+      fullName: row.full_name,
+    };
+  }
+
   const { data: profile, error } = await supabase
     .from("profiles")
     .select("id, role, email, full_name, is_active")
@@ -228,6 +304,24 @@ export const requireAdmin = cache(async function requireAdmin(): Promise<AdminSe
 /** Controle fin des droits. Le RLS/RPC reste la source d'autorite. */
 export async function requirePermission(permission: AdminPermission): Promise<AdminSession> {
   const admin = await requireAdmin();
+
+  // Chemin rapide, et **pas seulement** pour la vitesse : la garde a deja
+  // rendu la liste des droits sur l'aller-retour de `requireAdmin()`, et
+  // c'est la meme liste, resolue par la meme fonction (`accessFromRow`), que
+  // celle dont `getAdminAccess()` deduit les boutons affiches. Les deux
+  // controles ne peuvent donc plus se contredire — le defaut qui avait fait
+  // disparaitre « Valider / Publier » d'un Scout Day pendant que le Server
+  // Action, lui, aurait accepte l'appel.
+  //
+  // La regle de repli des permissions non semees est portee par
+  // `accessFromRow` : elle les ajoute a la liste. Inutile de la rejouer ici.
+  const guard = await loadAdminGuard();
+  if (guard?.profile?.id === admin.userId) {
+    const { permissions } = await getAdminAccess(admin.userId);
+    if (permissions.includes(permission)) return admin;
+    redirect(`/admin/acces-refuse?droit=${encodeURIComponent(permission)}`);
+  }
+
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("admin_has_permission", {
     p_permission: permission,

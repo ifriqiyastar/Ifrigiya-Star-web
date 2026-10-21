@@ -90,8 +90,11 @@ Every one of them matters; don't collapse them.
    passing through the UI, so the layout guard alone is not enough. It also
    handles the orphaned-session case (a valid JWT whose `profiles` row was
    deleted by hand) and the deactivated-admin case.
-3. `requirePermission(perm)` — fine-grained RBAC on top, backed by the
-   `admin_has_permission` RPC. `AdminPermission` in `lib/auth.ts` is the
+3. `requirePermission(perm)` — fine-grained RBAC on top. It resolves the
+   permission from the very list `getAdminAccess()` hands the nav, so the gate
+   that hides a button and the gate that guards the action are one computation;
+   the `admin_has_permission` RPC remains the fallback when `admin_guard()` is
+   absent. `AdminPermission` in `lib/auth.ts` is the
    canonical list — note `events.validate`, held by `super_admin` alone,
    sitting beside the broader `events.manage`, and `content.validate`, which
    does the same for feed posts and comments beside the broader
@@ -179,7 +182,9 @@ everywhere.
   milliseconds. Nothing reaches the browser until the last wave returns, so a
   new `await` on a Supabase call in a layout or a guard is paid by every page.
   Group reads into one RPC rather than adding a wave — `admin_queue_counts()`
-  and `admin_access()` did that for 18 round trips — and **do not restore
+  and `admin_access()` did that for 18 round trips, and `admin_guard()`
+  (`202610210001`) folded `requireAdmin()` + `requirePermission()` +
+  `getAdminAccess()` into one — and **do not restore
   `auth.getUser()` in `requireAdmin()` or `proxy.ts`**: `getClaims()` verifies
   the same token locally instead of calling the auth server twice per request.
   See [`database.md`](docs/ai-reference/database.md).

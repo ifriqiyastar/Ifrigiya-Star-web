@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { EyeIcon, MessageSquareIcon, ShieldCheckIcon } from "lucide-react";
 
 import { EmptyState } from "@/components/admin/empty-state";
 import { ContentWhy, ModerationFilters, commentPreviewOf, mediaUrlOf, previewOf, whyLines } from "@/components/admin/moderation/pieces";
 import { PageHeader } from "@/components/admin/page-header";
+import { FilterSkeleton, TableSkeleton } from "@/components/admin/skeletons";
 import { Pagination } from "@/components/admin/pagination";
 import { Panel, PanelHeader } from "@/components/admin/panel";
 import { PostPreviewDialog } from "@/components/admin/post-preview-dialog";
@@ -14,7 +16,7 @@ import { approveComment, refuseComment } from "@/lib/actions/content-validation"
 import { setCommentDeleted, setCommentHidden } from "@/lib/actions/moderation";
 import { getAdminAccess, requirePermission } from "@/lib/auth";
 import { CONTENT_MODERATION_STATUS } from "@/lib/labels";
-import { COMMENT_COLUMNS, PAGE_SIZE, POST_COLUMNS, THREAD_COLUMNS, fetchContentReports, fetchPendingContent, hasModerationColumns, likeTerm, selectWithModeration, str } from "@/lib/queries/moderation-content";
+import { COMMENT_COLUMNS, PAGE_SIZE, POST_COLUMNS, THREAD_COLUMNS, fetchContentReports, fetchPendingContent, likeTerm, selectWithModeration, str } from "@/lib/queries/moderation-content";
 import { displayName, fetchProfilesByIds } from "@/lib/queries/profiles";
 import { createClient } from "@/lib/supabase/server";
 import type { ThreadEntry } from "@/components/admin/post-preview-dialog";
@@ -44,7 +46,6 @@ export default async function ModerationCommentsPage({
     etat: str(resolved.etat),
     page: str(resolved.page),
   };
-  const available = await hasModerationColumns();
 
   return (
     <>
@@ -54,9 +55,19 @@ export default async function ModerationCommentsPage({
         description={i18n.t("Un commentaire se juge sur la publication qu'il vise : elle s'ouvre en popup, avec son fil, sans quitter cette liste. Le bandeau sous un commentaire dit ce qui le met en cause.")}
       />
 
-      <ModerationFilters vue="commentaires" params={params} available={available} />
+      {/* STREAMING. Les deux blocs ci-dessous interrogent la base — la barre de
+          filtres pour savoir si les etats de 0089 existent, la vue pour ses
+          lignes. Sans frontiere, la page attendait les deux avant d'envoyer
+          quoi que ce soit, et le `loading.tsx` de la section couvrait tout
+          l'ecran jusqu'au dernier aller-retour. La tete de page part
+          maintenant tout de suite. */}
+      <Suspense fallback={<FilterSkeleton selects={3} />}>
+        <ModerationFilters vue="commentaires" params={params} />
+      </Suspense>
 
-      <CommentsView params={params} canValidate={canValidate} />
+      <Suspense fallback={<TableSkeleton rows={PAGE_SIZE} header />}>
+        <CommentsView params={params} canValidate={canValidate} />
+      </Suspense>
     </>
   );
 }

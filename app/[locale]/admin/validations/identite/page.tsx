@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import {
   CheckIcon,
   ShieldCheckIcon,
@@ -10,6 +11,11 @@ import { STACKED_ON_MOBILE } from "@/components/admin/table-stack";
 import { DetailDialog } from "@/components/admin/detail-dialog";
 import { DocumentPreviewDialog } from "@/components/admin/document-preview-dialog";
 import { EmptyState } from "@/components/admin/empty-state";
+import {
+  TableSkeleton,
+  ValidationMetricsSkeleton,
+  ValidationNotesSkeleton,
+} from "@/components/admin/skeletons";
 import { PageHeader } from "@/components/admin/page-header";
 import { Pagination } from "@/components/admin/pagination";
 import { Panel, PanelHeader } from "@/components/admin/panel";
@@ -62,13 +68,27 @@ export default async function ValidationsIdentityPage({
         description={i18n.t("Le controle KYC, distinct de la validation du compte. Accepter une piece ne donne pas l'acces a l'application, et la refuser demande un motif transmis a l'interesse.")}
       />
 
-      <ValidationMetrics />
+      {/* STREAMING. Les trois blocs ci-dessous interrogent chacun la base. Sans
+          frontiere, la page entiere attendait le plus lent d'entre eux : le
+          `loading.tsx` de la section couvrait tout l'ecran jusqu'au dernier
+          aller-retour, puis tout apparaissait d'un coup. Sous `<Suspense>`, la
+          tete de page et la barre de filtres partent immediatement et chaque
+          bloc se remplace quand sa requete rentre. Les replis sont ceux du
+          `loading.tsx`, nommes dans `components/admin/skeletons.tsx` pour que
+          les deux ne puissent pas diverger. */}
+      <Suspense fallback={<ValidationMetricsSkeleton />}>
+        <ValidationMetrics />
+      </Suspense>
 
       <ValidationFilter search={search} path={path} scope="document" etat={etat} />
 
-      <IdentityQueue page={page} etat={etat} />
+      <Suspense fallback={<TableSkeleton rows={PAGE_SIZE} />}>
+        <IdentityQueue page={page} etat={etat} />
+      </Suspense>
 
-      <ValidationNotes />
+      <Suspense fallback={<ValidationNotesSkeleton />}>
+        <ValidationNotes />
+      </Suspense>
     </>
   );
 }

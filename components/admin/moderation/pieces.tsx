@@ -7,6 +7,7 @@ import type { PreviewComment, PreviewPost } from "@/components/admin/post-previe
 import { getAdminI18n } from "@/lib/i18n/admin";
 import { WHY_ICON, WHY_TONE, type WhyLine } from "@/lib/moderation-why";
 import { REPORTABLE_TYPE, REPORT_STATUS } from "@/lib/labels";
+import { hasModerationColumns } from "@/lib/queries/moderation-content";
 import type { CommentRow, ContentReport, PostRow } from "@/lib/queries/moderation-content";
 import { storageUrl } from "@/lib/supabase/config";
 import { cn } from "@/lib/utils";
@@ -320,9 +321,21 @@ export async function ModerationFilters({
 }: {
   vue: Vue;
   params: Record<string, string | undefined>;
-  available: boolean;
+  /**
+   * Les colonnes de moderation de 0089 sont-elles posees ? **Omettre cette
+   * propriete laisse le composant la sonder lui-meme**, et c'est ce que font
+   * les ecrans Publications et Commentaires : la sonde etait auparavant
+   * attendue dans la page, donc avant que quoi que ce soit ne soit envoye au
+   * navigateur. Ici elle est sous une frontiere `<Suspense>`, et seule la
+   * barre de filtres attend. `hasModerationColumns()` est memoisee par
+   * requete, donc la sonder ici ne coute pas un aller-retour de plus.
+   */
+  available?: boolean;
 }) {
-  const i18n = await getAdminI18n();
+  const [i18n, columns] = await Promise.all([
+    getAdminI18n(),
+    available === undefined ? hasModerationColumns() : Promise.resolve(available),
+  ]);
 
   // Les etats de moderation de 0089 ne sont proposes que si la migration est
   // posee — sinon le filtre existerait sans pouvoir rien ramener.
@@ -332,7 +345,7 @@ export async function ModerationFilters({
     all: i18n.t("Tous les etats"),
     options: [
       { value: "en_ligne", label: i18n.t("En ligne") },
-      ...(available
+      ...(columns
         ? [
             { value: "attente", label: i18n.t("En attente de validation") },
             // Ce qui a ete valide se retrouvait par aucun filtre : « En ligne »

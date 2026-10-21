@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import Link from "next/link";
 import {
   ImageIcon,
@@ -9,6 +10,7 @@ import { ActionButton } from "@/components/admin/action-button";
 import { STACKED_ON_MOBILE } from "@/components/admin/table-stack";
 import { EmptyState } from "@/components/admin/empty-state";
 import { PageHeader } from "@/components/admin/page-header";
+import { TableSkeleton } from "@/components/admin/skeletons";
 import { Pagination } from "@/components/admin/pagination";
 import { Panel, PanelHeader } from "@/components/admin/panel";
 import { StatusPill } from "@/components/admin/status-pill";
@@ -47,7 +49,10 @@ export default async function ModerationMediaPage({
         description={i18n.t("Videos et photos deposees par les joueurs. Contrairement aux publications et aux commentaires, il n'y a pas d'indicateur reversible ici : supprimer retire la ligne et le fichier du stockage ensemble, definitivement.")}
       />
 
-      <MediaView params={params} />
+      {/* STREAMING : la tete de page part sans attendre la requete des medias. */}
+      <Suspense fallback={<TableSkeleton rows={PAGE_SIZE} header />}>
+        <MediaView params={params} />
+      </Suspense>
     </>
   );
 }

@@ -1,3 +1,5 @@
+import { cache } from "react";
+
 import { createClient } from "@/lib/supabase/server";
 import { accountAvatarUrl, signAvatarUrls } from "@/lib/queries/profiles";
 import { PROFILE_COLUMNS, fetchProfilesByIds, type ProfileSummary } from "@/lib/queries/profiles";
@@ -198,7 +200,15 @@ const STAT_KEYS = [
   "identityValidated",
 ] as const;
 
-export async function fetchUserStats(): Promise<UserStats> {
+/**
+ * `cache()` (React) : les tuiles de l'annuaire et la pastille de sa tete de
+ * page lisent les memes six chiffres. Depuis qu'elles sont rendues sous deux
+ * frontieres `<Suspense>` distinctes, elles appellent cette fonction chacune
+ * de leur cote — sans memoisation, ce serait deux fois le meme aller-retour
+ * par chargement. Memoisation **par requete**, donc rien n'est garde entre
+ * deux navigations.
+ */
+export const fetchUserStats = cache(async function fetchUserStats(): Promise<UserStats> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("admin_user_stats");
 
@@ -210,7 +220,7 @@ export async function fetchUserStats(): Promise<UserStats> {
   }
 
   return fetchUserStatsOneByOne();
-}
+});
 
 /** Le comptage d'origine, conserve pour les projets sans la fonction. */
 async function fetchUserStatsOneByOne(): Promise<UserStats> {

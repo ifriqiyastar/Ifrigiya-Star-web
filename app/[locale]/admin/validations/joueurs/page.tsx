@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import Link from "next/link";
 import {
   CheckIcon,
@@ -14,6 +15,11 @@ import { DocumentPreviewDialog } from "@/components/admin/document-preview-dialo
 import { DossierDecision } from "@/components/admin/dossier-decision";
 import { ComplianceList, DossierRail } from "@/components/admin/dossier-rail";
 import { EmptyState } from "@/components/admin/empty-state";
+import {
+  TableSkeleton,
+  ValidationMetricsSkeleton,
+  ValidationNotesSkeleton,
+} from "@/components/admin/skeletons";
 import { PageHeader } from "@/components/admin/page-header";
 import { Pagination } from "@/components/admin/pagination";
 import { Panel } from "@/components/admin/panel";
@@ -69,13 +75,27 @@ export default async function ValidationsPlayersPage({
         description={i18n.t("Les comptes joueurs, du plus recent au plus ancien — en attente par defaut, les dossiers deja tranches se demandent dans le bandeau. Valider debloque l'acces a l'application : c'est le statut du profil qui l'ouvre, pas celui du document d'identite.")}
       />
 
-      <ValidationMetrics />
+      {/* STREAMING. Les trois blocs ci-dessous interrogent chacun la base. Sans
+          frontiere, la page entiere attendait le plus lent d'entre eux : le
+          `loading.tsx` de la section couvrait tout l'ecran jusqu'au dernier
+          aller-retour, puis tout apparaissait d'un coup. Sous `<Suspense>`, la
+          tete de page et la barre de filtres partent immediatement et chaque
+          bloc se remplace quand sa requete rentre. Les replis sont ceux du
+          `loading.tsx`, nommes dans `components/admin/skeletons.tsx` pour que
+          les deux ne puissent pas diverger. */}
+      <Suspense fallback={<ValidationMetricsSkeleton />}>
+        <ValidationMetrics />
+      </Suspense>
 
       <ValidationFilter search={search} path={path} scope="profile" etat={etat} />
 
-      <PlayersQueue page={page} selected={selected} search={search} etat={etat} />
+      <Suspense fallback={<TableSkeleton rows={PAGE_SIZE} />}>
+        <PlayersQueue page={page} selected={selected} search={search} etat={etat} />
+      </Suspense>
 
-      <ValidationNotes />
+      <Suspense fallback={<ValidationNotesSkeleton />}>
+        <ValidationNotes />
+      </Suspense>
     </>
   );
 }

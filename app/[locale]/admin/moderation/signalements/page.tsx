@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import Link from "next/link";
 import {
   BanIcon,
@@ -23,6 +24,8 @@ import { EmptyState } from "@/components/admin/empty-state";
 import { ModerationFilters } from "@/components/admin/moderation/pieces";
 import { NoteCards } from "@/components/admin/note-cards";
 import { HeaderMeta, PageHeader } from "@/components/admin/page-header";
+import { TableSkeleton } from "@/components/admin/skeletons";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Pagination } from "@/components/admin/pagination";
 import { Panel, PanelHeader } from "@/components/admin/panel";
 import { ReasonDialog } from "@/components/admin/reason-dialog";
@@ -74,13 +77,6 @@ export default async function ModerationReportsPage({
     page: str(resolved.page),
   };
 
-  const supabase = await createClient();
-  const [pending, toValidate] = await Promise.all([
-    supabase.from("reports").select("id", { count: "exact", head: true }).eq("status", "en_attente"),
-    supabase.from("reports").select("id", { count: "exact", head: true }).eq("status", "a_valider"),
-  ]);
-  const openReports = (pending.count ?? 0) + (toValidate.count ?? 0);
-
   const exportQuery =
     params.statut || params.cible
       ? `?${new URLSearchParams(
@@ -96,12 +92,13 @@ export default async function ModerationReportsPage({
         breadcrumb={[{ label: i18n.t("Moderation") }, { label: i18n.t("Signalements") }]}
         title={i18n.t("Signalements & securite des contenus")}
         meta={
-          openReports > 0 ? (
-            <HeaderMeta tone="danger" dot>
-              {openReports}  {i18n.t("signalement")}{openReports > 1 ? "s" : ""}  {i18n.t("a instruire")}</HeaderMeta>
-          ) : (
-            <HeaderMeta>{i18n.t("File vide")}</HeaderMeta>
-          )
+          /* Le compte des signalements ouverts est le seul element de cette
+             tete de page qui coute une requete. Sous sa propre frontiere, il
+             n'empeche plus le titre, la description et le bouton d'export de
+             partir : la pastille se remplit quand le comptage rentre. */
+          <Suspense fallback={<Skeleton className="h-6 w-32 rounded-full" />}>
+            <OpenReportsMeta />
+          </Suspense>
         }
         description={i18n.t("Ce que les membres signalent, et la decision qui est prise dessus. Masquer retire le contenu du flux public sans l'effacer : l'administration continue de le voir, ce qui est necessaire pour instruire.")}
         actions={
@@ -116,7 +113,9 @@ export default async function ModerationReportsPage({
 
       <ModerationFilters vue="signalements" params={params} available />
 
-      <ReportsView params={params} canValidate={canValidate} />
+      <Suspense fallback={<TableSkeleton rows={PAGE_SIZE} header />}>
+        <ReportsView params={params} canValidate={canValidate} />
+      </Suspense>
 
       <NoteCards
         notes={[
@@ -147,6 +146,27 @@ export default async function ModerationReportsPage({
 }
 
 /* -------------------------------------------------------------- signalements */
+
+/**
+ * Combien de signalements restent a instruire, pour la pastille de la tete de
+ * page. Isole en composant parce qu'il est le seul de cet en-tete a couter un
+ * aller-retour : rendu sous `<Suspense>`, il ne retient plus le reste.
+ */
+async function OpenReportsMeta() {
+  const i18n = await getAdminI18n();
+  const supabase = await createClient();
+  const [pending, toValidate] = await Promise.all([
+    supabase.from("reports").select("id", { count: "exact", head: true }).eq("status", "en_attente"),
+    supabase.from("reports").select("id", { count: "exact", head: true }).eq("status", "a_valider"),
+  ]);
+  const openReports = (pending.count ?? 0) + (toValidate.count ?? 0);
+
+  if (openReports === 0) return <HeaderMeta>{i18n.t("File vide")}</HeaderMeta>;
+  return (
+    <HeaderMeta tone="danger" dot>
+      {openReports}  {i18n.t("signalement")}{openReports > 1 ? "s" : ""}  {i18n.t("a instruire")}</HeaderMeta>
+  );
+}
 
 async function ReportsView({
   params,

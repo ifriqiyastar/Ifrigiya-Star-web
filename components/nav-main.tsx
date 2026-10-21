@@ -1,10 +1,10 @@
 "use client"
 
-import Link from "next/link"
 import { usePathname } from "next/navigation"
 import * as React from "react"
 import { ChevronRightIcon } from "lucide-react"
 import { LinkPendingIcon } from "@/components/admin/link-pending-icon"
+import { NavPrefetchLink } from "@/components/admin/nav-prefetch-link"
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -164,13 +164,13 @@ function NavRow({ item, current }: { item: NavEntry; current: string }) {
           tooltip={item.title}
           isActive={isActive}
           onClick={() => closeIfAlreadyThere(item.url)}
-          render={<Link href={item.url} />}
+          render={<NavPrefetchLink href={item.url} />}
         >
           {icon}
           <span className="min-w-0 flex-1 truncate">{item.title}</span>
           {badge}
-          {/* `render={<Link />}` plus haut fait de ce composant un enfant React
-              du lien malgre le passage par le slot `useRender` de
+          {/* `render={<NavPrefetchLink />}` plus haut fait de ce composant un
+              enfant React du lien malgre le passage par le slot `useRender` de
               `SidebarMenuButton` — c'est ce qui rend `useLinkStatus()`
               utilisable ici. */}
           <LinkPendingIcon className="ml-auto text-brand group-data-[collapsible=icon]:hidden" />
@@ -223,7 +223,7 @@ function NavRow({ item, current }: { item: NavEntry; current: string }) {
                     "data-active:bg-brand/12 data-active:font-semibold data-active:text-brand",
                   )}
                   onClick={() => closeIfAlreadyThere(child.url)}
-                  render={<Link href={child.url} />}
+                  render={<NavPrefetchLink href={child.url} />}
                 >
                   {/* Les icones des sous-entrees sont plus discretes que
                       celles des sections : elles reperent la ligne, elles ne

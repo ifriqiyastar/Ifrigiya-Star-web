@@ -1,6 +1,7 @@
 import { getAdminI18n } from "@/lib/i18n/admin";
 import Link from "next/link";
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import {
   BadgeCheckIcon,
   BanIcon,
@@ -25,9 +26,11 @@ import { HeaderMeta, PageHeader } from "@/components/admin/page-header";
 import { Pagination } from "@/components/admin/pagination";
 import { Panel } from "@/components/admin/panel";
 import { ReasonDialog } from "@/components/admin/reason-dialog";
+import { TableSkeleton, TileRowSkeleton } from "@/components/admin/skeletons";
 import { StatusPill } from "@/components/admin/status-pill";
 import { UserCell } from "@/components/admin/user-cell";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -59,14 +62,9 @@ export default async function UsersPage({ searchParams }: PageProps<"/[locale]/a
   const i18n = await getAdminI18n();
 
   const admin = await requirePermission("users.read");
-  const [locale, dict, canCreateEditor] = await Promise.all([
-    getAdminLocale(),
-    getAdminDict(),
-    isSuperAdmin(),
-  ]);
+  const [locale, dict] = await Promise.all([getAdminLocale(), getAdminDict()]);
   const d = dict.users;
-  const { formatDate, formatNumber } = makeFormat(locale);
-  const { entry, label, options } = makeLabels(locale);
+  const { options } = makeLabels(locale);
   const href = (path: string) => localePath(locale, path);
   const resolved = await searchParams;
   const params = {
@@ -78,42 +76,6 @@ export default async function UsersPage({ searchParams }: PageProps<"/[locale]/a
     page: str(resolved.page),
   };
 
-  // La liste et les tuiles partent ENSEMBLE. Les tuiles portent sur toute la
-  // base, pas sur la page affichee : rien ne les obligeait a attendre la
-  // liste, ce qu'elles faisaient — un aller-retour de plus a chaque
-  // chargement et a chaque rafraichissement automatique. Elles tiennent
-  // desormais en un seul appel (`fetchUserStats`) au lieu de six requetes,
-  // ce qui se voit surtout en paginant : un clic sur « Suivant » les
-  // recompte, puisqu'elles sont rendues par la meme page.
-  const [{ rows, total, page, error }, stats] = await Promise.all([
-    listUsers({
-      q: params.q,
-      role: params.role,
-      statut: params.statut,
-      actif: params.actif,
-      suppression: params.suppression,
-      page: Number(params.page ?? 1) || 1,
-    }),
-    fetchUserStats(),
-  ]);
-
-  const allCount = stats.all;
-  const playerCount = stats.players;
-  const proCount = stats.professionals;
-  const playersWithProfile = stats.playerProfiles;
-  const kycCount = stats.identityValidated;
-
-  // Role RBAC des administrateurs listes. Degrade en silence si la migration
-  // RBAC n'est pas appliquee : la colonne affiche alors « Administrateur ».
-  const adminIds = rows.filter((row) => row.role === "admin").map((row) => row.id);
-  const adminRoleById = new Map<string, string>();
-  for (const [adminId, role] of await fetchAdminRoleLabels(adminIds)) {
-    const label =
-      (role.code ? dict.roles.names[role.code as keyof typeof dict.roles.names] : undefined) ??
-      role.label;
-    if (label) adminRoleById.set(adminId, label);
-  }
-
   // L'export reprend les filtres de l'ecran : exporter autre chose que ce qui
   // est affiche serait un piege.
   const exportQuery = new URLSearchParams();
@@ -121,15 +83,26 @@ export default async function UsersPage({ searchParams }: PageProps<"/[locale]/a
     if (value && key !== "page") exportQuery.set(key, value);
   }
 
+  // STREAMING. Cette fonction ne fait plus **aucune** lecture metier : la
+  // garde d'acces, le dictionnaire et les parametres d'URL, puis elle rend.
+  // Les tuiles et la liste sont descendues dans leurs propres composants, sous
+  // `<Suspense>`, et c'est tout l'interet — la tete de page et la barre de
+  // filtres partent au premier octet, pendant que les requetes tournent. Avant
+  // cela, `listUsers()`, `fetchUserStats()` et `fetchAdminRoleLabels()` etaient
+  // attendues ici : le squelette de la section couvrait l'ecran entier jusqu'a
+  // la derniere, puis tout apparaissait d'un coup.
   return (
     <>
       <PageHeader
         breadcrumb={[{ label: d.breadcrumbSection }, { label: d.breadcrumbCurrent }]}
         title={d.title}
         meta={
-          <HeaderMeta tone="brand" dot>
-            {fill(d.registeredAccounts, { count: formatNumber(allCount) })}
-          </HeaderMeta>
+          /* Le nombre de comptes inscrits coute un aller-retour ; le titre, la
+             description et le bouton d'export n'en coutent aucun. Sous sa
+             propre frontiere, la pastille ne les retient plus. */
+          <Suspense fallback={<Skeleton className="h-6 w-40 rounded-full" />}>
+            <AccountsMeta />
+          </Suspense>
         }
         description={d.description}
         actions={
@@ -141,7 +114,9 @@ export default async function UsersPage({ searchParams }: PageProps<"/[locale]/a
                 `createEditorAccount()`. Un seul role attribuable ici,
                 `editeur` : ce n'est pas un ecran general de gestion des roles
                 RBAC, qui reste par l'editeur SQL (202608240006). */}
-            {canCreateEditor ? <CreateEditorDialog /> : null}
+            <Suspense fallback={null}>
+              <CreateEditorAction />
+            </Suspense>
             <Link
               // Meme defaut que les onglets du tableau de bord : `href()` et
               // `i18n.path()` prefixent chacun la langue, donc l'export menait
@@ -158,60 +133,13 @@ export default async function UsersPage({ searchParams }: PageProps<"/[locale]/a
         }
       />
 
-      <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <KpiTile
-          label={d.kpiTotal}
-          value={formatNumber(allCount)}
-          qualifier={
-            allCount
-              ? fill(d.kpiActiveShare, {
-                  percent: Math.round((stats.active / allCount) * 100),
-                })
-              : undefined
-          }
-          share={allCount ? stats.active / allCount : undefined}
-          icon={UsersIcon}
-        />
-        <KpiTile
-          label={d.kpiPlayers}
-          value={formatNumber(playerCount)}
-          qualifier={
-            allCount
-              ? fill(d.kpiShareOfBase, { percent: Math.round((playerCount / allCount) * 100) })
-              : undefined
-          }
-          share={allCount ? playerCount / allCount : undefined}
-          icon={UserRoundIcon}
-          accent="secondary"
-        />
-        <KpiTile
-          label={d.kpiPros}
-          value={formatNumber(proCount)}
-          qualifier={
-            allCount
-              ? fill(d.kpiShareOfBase, { percent: Math.round((proCount / allCount) * 100) })
-              : undefined
-          }
-          share={allCount ? proCount / allCount : undefined}
-          icon={ShieldCheckIcon}
-          accent="secondary"
-        />
-        <KpiTile
-          label={d.kpiIdentity}
-          value={
-            playersWithProfile
-              ? `${Math.round((Math.min(kycCount, playersWithProfile) / playersWithProfile) * 100)} %`
-              : "—"
-          }
-          qualifier={fill(d.kpiIdentityQualifier, {
-            done: formatNumber(kycCount),
-            total: formatNumber(playersWithProfile),
-          })}
-          share={playersWithProfile ? Math.min(kycCount, playersWithProfile) / playersWithProfile : undefined}
-          icon={BadgeCheckIcon}
-          accent="tertiary"
-        />
-      </section>
+      <Suspense
+        fallback={
+          <TileRowSkeleton count={4} grid="grid-cols-2 gap-3 md:grid-cols-4" bar />
+        }
+      >
+        <UserTiles />
+      </Suspense>
 
       {/* Barre de recherche et de filtres : l'etat vit dans l'URL et la page
           reste un Server Component qui refait sa requete. `AutoFilterForm`
@@ -279,6 +207,175 @@ export default async function UsersPage({ searchParams }: PageProps<"/[locale]/a
         </div>
       </AutoFilterForm>
 
+      <Suspense fallback={<TableSkeleton rows={USERS_PAGE_SIZE} />}>
+        <UsersTable params={params} account={admin.userId} />
+      </Suspense>
+
+      <NoteCards
+        notes={[
+          {
+            icon: ShieldCheckIcon,
+            title: d.noteSuspendTitle,
+            body: d.noteSuspendBody,
+          },
+          {
+            icon: BanIcon,
+            title: d.noteReactivateTitle,
+            body: d.noteReactivateBody,
+          },
+          {
+            icon: Trash2Icon,
+            title: d.noteDeletionTitle,
+            body: d.noteDeletionBody,
+          },
+        ]}
+      />
+    </>
+  );
+}
+
+/** Le nombre de comptes inscrits, pour la pastille de la tete de page. */
+async function AccountsMeta() {
+  const [locale, dict, stats] = await Promise.all([
+    getAdminLocale(),
+    getAdminDict(),
+    fetchUserStats(),
+  ]);
+  const { formatNumber } = makeFormat(locale);
+  return (
+    <HeaderMeta tone="brand" dot>
+      {fill(dict.users.registeredAccounts, { count: formatNumber(stats.all) })}
+    </HeaderMeta>
+  );
+}
+
+/**
+ * Le bouton « creer un compte », reserve au super administrateur : creer un
+ * compte donne acces au back-office, un cran au-dessus de `users.write`. Le
+ * geste touche l'API Auth Admin et `admin_user_roles` (aucune policy
+ * d'ecriture, meme pour un admin authentifie) — voir `createEditorAccount()`.
+ * Un seul role attribuable ici, `editeur` : ce n'est pas un ecran general de
+ * gestion des roles RBAC, qui reste par l'editeur SQL (202608240006).
+ *
+ * Isole parce que `isSuperAdmin()` est un aller-retour, et qu'il retenait
+ * toute la tete de page. Son repli est `null` : un bouton fantome a la place
+ * d'un bouton que l'on n'a peut-etre pas le droit de voir serait pire que son
+ * arrivee differee.
+ */
+async function CreateEditorAction() {
+  return (await isSuperAdmin()) ? <CreateEditorDialog /> : null;
+}
+
+/** Les quatre tuiles de volumetrie. Elles portent sur toute la base, pas sur
+ *  la page affichee : rien ne les oblige a attendre la liste. */
+async function UserTiles() {
+  const [locale, dict, stats] = await Promise.all([
+    getAdminLocale(),
+    getAdminDict(),
+    fetchUserStats(),
+  ]);
+  const d = dict.users;
+  const { formatNumber } = makeFormat(locale);
+  const allCount = stats.all;
+  const playerCount = stats.players;
+  const proCount = stats.professionals;
+  const playersWithProfile = stats.playerProfiles;
+  const kycCount = stats.identityValidated;
+
+  return (
+      <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <KpiTile
+          label={d.kpiTotal}
+          value={formatNumber(allCount)}
+          qualifier={
+            allCount
+              ? fill(d.kpiActiveShare, {
+                  percent: Math.round((stats.active / allCount) * 100),
+                })
+              : undefined
+          }
+          share={allCount ? stats.active / allCount : undefined}
+          icon={UsersIcon}
+        />
+        <KpiTile
+          label={d.kpiPlayers}
+          value={formatNumber(playerCount)}
+          qualifier={
+            allCount
+              ? fill(d.kpiShareOfBase, { percent: Math.round((playerCount / allCount) * 100) })
+              : undefined
+          }
+          share={allCount ? playerCount / allCount : undefined}
+          icon={UserRoundIcon}
+          accent="secondary"
+        />
+        <KpiTile
+          label={d.kpiPros}
+          value={formatNumber(proCount)}
+          qualifier={
+            allCount
+              ? fill(d.kpiShareOfBase, { percent: Math.round((proCount / allCount) * 100) })
+              : undefined
+          }
+          share={allCount ? proCount / allCount : undefined}
+          icon={ShieldCheckIcon}
+          accent="secondary"
+        />
+        <KpiTile
+          label={d.kpiIdentity}
+          value={
+            playersWithProfile
+              ? `${Math.round((Math.min(kycCount, playersWithProfile) / playersWithProfile) * 100)} %`
+              : "—"
+          }
+          qualifier={fill(d.kpiIdentityQualifier, {
+            done: formatNumber(kycCount),
+            total: formatNumber(playersWithProfile),
+          })}
+          share={playersWithProfile ? Math.min(kycCount, playersWithProfile) / playersWithProfile : undefined}
+          icon={BadgeCheckIcon}
+          accent="tertiary"
+        />
+      </section>
+  );
+}
+
+/** La page de comptes et son pied de pagination. */
+async function UsersTable({
+  params,
+  /** Le compte connecte : une ligne ne propose pas de se suspendre soi-meme. */
+  account,
+}: {
+  params: Record<string, string | undefined>;
+  account: string;
+}) {
+  const [locale, dict] = await Promise.all([getAdminLocale(), getAdminDict()]);
+  const d = dict.users;
+  const { formatDate } = makeFormat(locale);
+  const { entry, label } = makeLabels(locale);
+  const href = (path: string) => localePath(locale, path);
+
+  const { rows, total, page, error } = await listUsers({
+    q: params.q,
+    role: params.role,
+    statut: params.statut,
+    actif: params.actif,
+    suppression: params.suppression,
+    page: Number(params.page ?? 1) || 1,
+  });
+
+  // Role RBAC des administrateurs listes. Degrade en silence si la migration
+  // RBAC n'est pas appliquee : la colonne affiche alors « Administrateur ».
+  const adminIds = rows.filter((row) => row.role === "admin").map((row) => row.id);
+  const adminRoleById = new Map<string, string>();
+  for (const [adminId, role] of await fetchAdminRoleLabels(adminIds)) {
+    const roleLabel =
+      (role.code ? dict.roles.names[role.code as keyof typeof dict.roles.names] : undefined) ??
+      role.label;
+    if (roleLabel) adminRoleById.set(adminId, roleLabel);
+  }
+
+  return (
       <Panel>
         {error ? (
           <p className="border-b border-destructive/30 bg-destructive/10 px-4 py-3 text-xs text-destructive sm:px-5">
@@ -320,7 +417,7 @@ export default async function UsersPage({ searchParams }: PageProps<"/[locale]/a
             </TableHeader>
             <TableBody>
               {rows.map((row) => {
-                const isSelf = row.id === admin.userId;
+                const isSelf = row.id === account;
 
                 // Definies une fois, rendues deux fois : dans leur colonne a
                 // partir de `md`, et repliees dans la cellule d'identite en
@@ -499,27 +596,6 @@ export default async function UsersPage({ searchParams }: PageProps<"/[locale]/a
           total={total}
         />
       </Panel>
-
-      <NoteCards
-        notes={[
-          {
-            icon: ShieldCheckIcon,
-            title: d.noteSuspendTitle,
-            body: d.noteSuspendBody,
-          },
-          {
-            icon: BanIcon,
-            title: d.noteReactivateTitle,
-            body: d.noteReactivateBody,
-          },
-          {
-            icon: Trash2Icon,
-            title: d.noteDeletionTitle,
-            body: d.noteDeletionBody,
-          },
-        ]}
-      />
-    </>
   );
 }
 

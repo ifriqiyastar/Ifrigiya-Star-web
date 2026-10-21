@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import {
   CheckIcon,
   MessageSquareWarningIcon,
@@ -11,6 +12,11 @@ import { STACKED_ON_MOBILE } from "@/components/admin/table-stack";
 import { DocumentPreviewDialog } from "@/components/admin/document-preview-dialog";
 import { ComplianceList, DossierRail } from "@/components/admin/dossier-rail";
 import { EmptyState } from "@/components/admin/empty-state";
+import {
+  TableSkeleton,
+  ValidationMetricsSkeleton,
+  ValidationNotesSkeleton,
+} from "@/components/admin/skeletons";
 import { PageHeader } from "@/components/admin/page-header";
 import { Pagination } from "@/components/admin/pagination";
 import { Panel, PanelHeader } from "@/components/admin/panel";
@@ -65,13 +71,27 @@ export default async function ValidationsProsPage({
         description={i18n.t("Les clubs, academies, agents et recruteurs — en attente par defaut, les dossiers deja tranches se demandent dans le bandeau. Un professionnel valide peut organiser des Scout Days et signer des evaluations.")}
       />
 
-      <ValidationMetrics />
+      {/* STREAMING. Les trois blocs ci-dessous interrogent chacun la base. Sans
+          frontiere, la page entiere attendait le plus lent d'entre eux : le
+          `loading.tsx` de la section couvrait tout l'ecran jusqu'au dernier
+          aller-retour, puis tout apparaissait d'un coup. Sous `<Suspense>`, la
+          tete de page et la barre de filtres partent immediatement et chaque
+          bloc se remplace quand sa requete rentre. Les replis sont ceux du
+          `loading.tsx`, nommes dans `components/admin/skeletons.tsx` pour que
+          les deux ne puissent pas diverger. */}
+      <Suspense fallback={<ValidationMetricsSkeleton />}>
+        <ValidationMetrics />
+      </Suspense>
 
       <ValidationFilter search={search} path={path} scope="profile" etat={etat} />
 
-      <ProfessionalsQueue page={page} selected={selected} search={search} etat={etat} />
+      <Suspense fallback={<TableSkeleton rows={PAGE_SIZE} />}>
+        <ProfessionalsQueue page={page} selected={selected} search={search} etat={etat} />
+      </Suspense>
 
-      <ValidationNotes />
+      <Suspense fallback={<ValidationNotesSkeleton />}>
+        <ValidationNotes />
+      </Suspense>
     </>
   );
 }

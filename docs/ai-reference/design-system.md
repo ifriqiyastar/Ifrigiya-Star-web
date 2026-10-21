@@ -348,3 +348,53 @@ coquille ; `UserCell` la monte quand on lui passe `preview={profile}`.
 - **Les libelles vivent dans `common`**, pas dans `screens` : `UserCell` est
   partage par dix-huit ecrans, prendre le vocabulaire de l'un d'eux
   (`dict.users.*`) l'aurait lie a l'annuaire des comptes.
+
+
+## Loading skeletons, and why there are now sixteen of them (Oct 21, 2026)
+
+There was one `app/[locale]/admin/loading.tsx` — a title, four tiles, one big
+block — and it was the fallback for **every** admin screen. Half of them have no
+tile row: a moderation queue, a dossier, the settings form. Those announced four
+tiles that then vanished, shifting the whole page as the data arrived. A skeleton
+that does not match is worse than a plain one: it promises a layout and then
+contradicts it. The old one also rounded its blocks to `rounded-2xl` where `Panel`
+rounds to `rounded-lg`.
+
+`components/admin/skeletons.tsx` is now the kit, and each section carries its own
+`loading.tsx` that composes it.
+
+**The rule the kit follows: trace the furniture, not the content.** The chrome
+classes are copied from the real components — `rounded-lg border border-border
+bg-card` for `Panel` and `KpiTile`, `rounded-xl` for `StatCard`, `border-b
+border-border/70 px-4 py-3` for a panel header, `border-t border-border px-4 py-3`
+for the pagination footer, `px-3 py-2.5` + `border-b border-border/60` for a table
+row. What varies between two loads — how many rows actually came back, how long a
+name is — is not imitated. Nobody counts the rows of a skeleton.
+
+Two traps paid while writing it:
+
+- ⚠️ **`Skeleton` has no radius of its own.** `components/ui/skeleton.tsx` sets
+  only `animate-pulse bg-muted`, so every call must supply one or you get sharp
+  rectangles in an interface where everything is rounded.
+- ⚠️ **The tile grid is a parameter, not a default.** The dashboard is six tiles
+  on four columns, Scout Days five on five, the directory four on four
+  (`md:grid-cols-4`, not `lg:`). A fallback grid that differs from the real one
+  reproduces the exact jump the kit exists to remove — so `TileRowSkeleton` takes
+  `grid` from its caller.
+
+`ValidationMetricsSkeleton` and `ValidationNotesSkeleton` are named rather than
+written inline because they are used in **two** places — the `<Suspense>` fallback
+inside each of the four validation pages, and `validations/loading.tsx`. Two
+copies of a geometry diverge.
+
+⚠️ **`*/` inside a block comment closes it.** Writing ``(`*/loading.tsx`)`` in a
+doc comment broke the parse of the whole file, and eslint reported the error
+twenty lines further down, inside unrelated JSX. Same family as the next one:
+**a `{/* … */}` comment is not valid in an attribute position.** Inside the
+attribute list of an element, put the comment in the attribute's own expression
+container (`meta={ /* … */ <Suspense …>`), or above the element.
+
+**Not visually verified.** The geometry is matched by reading the classes of the
+components each skeleton stands in for, and the pages were loaded against the dev
+server (they compile and redirect). Nobody has seen these skeletons on a logged-in
+screen — any side-by-side check belongs to the first person who does.

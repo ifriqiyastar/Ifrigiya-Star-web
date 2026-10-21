@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { EyeIcon, MessageSquareIcon, ShieldCheckIcon } from "lucide-react";
 
 import { EmptyState } from "@/components/admin/empty-state";
@@ -10,6 +11,7 @@ import {
   whyLines,
 } from "@/components/admin/moderation/pieces";
 import { PageHeader } from "@/components/admin/page-header";
+import { FilterSkeleton, TableSkeleton } from "@/components/admin/skeletons";
 import { Pagination } from "@/components/admin/pagination";
 import { Panel, PanelHeader } from "@/components/admin/panel";
 import { PostPreviewDialog } from "@/components/admin/post-preview-dialog";
@@ -20,7 +22,7 @@ import { approvePost, refusePost } from "@/lib/actions/content-validation";
 import { setPostDeleted, setPostHidden } from "@/lib/actions/moderation";
 import { getAdminAccess, requirePermission } from "@/lib/auth";
 import { CONTENT_MODERATION_STATUS } from "@/lib/labels";
-import { PAGE_SIZE, POST_COLUMNS, fetchContentReports, fetchPendingContent, hasModerationColumns, likeTerm, selectWithModeration, str } from "@/lib/queries/moderation-content";
+import { PAGE_SIZE, POST_COLUMNS, fetchContentReports, fetchPendingContent, likeTerm, selectWithModeration, str } from "@/lib/queries/moderation-content";
 import { displayName, fetchProfilesByIds } from "@/lib/queries/profiles";
 import { signStorageUrls } from "@/lib/queries/signed-media";
 import { createClient } from "@/lib/supabase/server";
@@ -50,7 +52,6 @@ export default async function ModerationPostsPage({
     etat: str(resolved.etat),
     page: str(resolved.page),
   };
-  const available = await hasModerationColumns();
 
   return (
     <>
@@ -60,9 +61,19 @@ export default async function ModerationPostsPage({
         description={i18n.t("La liste montre tout le fil, du plus recent au plus ancien : la moderation y est reactive, pas systematique. Le bandeau sous une publication dit ce qui la met en cause — un signalement, un refus motive — et son absence veut dire que rien ne la vise.")}
       />
 
-      <ModerationFilters vue="publications" params={params} available={available} />
+      {/* STREAMING. Les deux blocs ci-dessous interrogent la base — la barre de
+          filtres pour savoir si les etats de 0089 existent, la vue pour ses
+          lignes. Sans frontiere, la page attendait les deux avant d'envoyer
+          quoi que ce soit, et le `loading.tsx` de la section couvrait tout
+          l'ecran jusqu'au dernier aller-retour. La tete de page part
+          maintenant tout de suite. */}
+      <Suspense fallback={<FilterSkeleton selects={3} />}>
+        <ModerationFilters vue="publications" params={params} />
+      </Suspense>
 
-      <PostsView params={params} canValidate={canValidate} />
+      <Suspense fallback={<TableSkeleton rows={PAGE_SIZE} header />}>
+        <PostsView params={params} canValidate={canValidate} />
+      </Suspense>
     </>
   );
 }
