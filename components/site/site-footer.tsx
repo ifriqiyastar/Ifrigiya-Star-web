@@ -125,6 +125,12 @@ export async function SiteFooter({
           <Link href={`${prefix}/conditions`} className="transition-colors hover:text-(--site-accent)">
             {t.terms}
           </Link>
+          {/* Exige par Google Play a cote des deux autres : la fiche Store
+              pointe vers `/suppression-compte`, et un lien que le site public
+              n'affiche nulle part serait une page orpheline. */}
+          <Link href={`${prefix}/suppression-compte`} className="transition-colors hover:text-(--site-accent)">
+            {t.deletion}
+          </Link>
           <p>{t.motto}</p>
         </div>
       </div>

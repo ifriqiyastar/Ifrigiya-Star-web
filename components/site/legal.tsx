@@ -124,3 +124,22 @@ export function LegalList({ items }: { items: readonly string[] }) {
     </ul>
   );
 }
+
+/**
+ * Les etapes numerotees d'une procedure, par opposition aux puces de
+ * `LegalList`.
+ *
+ * Elles existent pour `/suppression-compte` : Google exige d'une URL de
+ * suppression de compte qu'elle « affiche de maniere bien distincte la
+ * procedure a suivre », et une suite d'etapes dans l'ordre se lit comme une
+ * marche a suivre la ou des puces se lisent comme un inventaire.
+ */
+export function LegalSteps({ items }: { items: readonly string[] }) {
+  return (
+    <ol className="list-decimal space-y-2 ps-5 marker:font-heading marker:font-bold marker:text-(--site-accent)">
+      {items.map((item) => (
+        <li key={item}>{item}</li>
+      ))}
+    </ol>
+  );
+}

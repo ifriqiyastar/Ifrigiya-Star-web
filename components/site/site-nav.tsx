@@ -17,6 +17,7 @@ import {
   RouteIcon,
   ShieldCheckIcon,
   SmartphoneIcon,
+  UserXIcon,
   XIcon,
 } from "lucide-react";
 
@@ -100,6 +101,7 @@ export function SiteNav() {
     { href: `${prefix}/blog`, label: foot.blog, Icon: NewspaperIcon },
     { href: `${prefix}/confidentialite`, label: foot.privacy, Icon: ShieldCheckIcon },
     { href: `${prefix}/conditions`, label: foot.terms, Icon: FileTextIcon },
+    { href: `${prefix}/suppression-compte`, label: foot.deletion, Icon: UserXIcon },
   ];
 
   const [open, setOpen] = React.useState(false);

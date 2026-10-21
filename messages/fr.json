@@ -269,6 +269,7 @@
     "motto": "Detection · Progression · Excellence",
     "privacy": "Confidentialité",
     "terms": "Conditions",
+    "deletion": "Suppression de compte",
     "scoutDays": "Les Scout Days",
     "backToTop": "Revenir en haut de la page"
   },
@@ -513,6 +514,75 @@
     "lawTodo": "Droit applicable, juridiction compétente et éventuel mode de résolution amiable préalable. À faire fixer par un juriste.",
     "changesTitle": "Modifications",
     "changesBody": "Ces conditions peuvent évoluer. En cas de changement significatif, nous vous en informerons dans l'application. La date en haut de page indique la dernière mise à jour ; continuer à utiliser le service vaut acceptation de la version en vigueur."
+  },
+  "deletionPage": {
+    "metaTitle": "Supprimer votre compte",
+    "metaDescription": "Comment demander la suppression de votre compte Ifriqiya Soccer Star et des données associées : la procédure, ce qui est effacé, ce qui est conservé et pendant combien de temps.",
+    "back": "Retour à l'accueil",
+    "pill": "Suppression de compte",
+    "title": "Supprimer votre",
+    "titleAccent": "compte.",
+    "updated": "Dernière mise à jour : 21/10/2026",
+    "lead": "Cette page s'adresse aux utilisateurs de l'application Ifriqiya Soccer Star. Elle explique comment demander la suppression de votre compte et des données associées, depuis l'application ou par e-mail, puis ce qui est effacé, ce qui est conservé et pendant combien de temps.",
+    "todoLabel": "À compléter avant publication",
+    "appTitle": "Depuis l'application",
+    "appIntro": "C'est le chemin le plus rapide, et il est disponible à tout moment.",
+    "appSteps": [
+      "Ouvrez l'application Ifriqiya Soccer Star et connectez-vous.",
+      "Ouvrez l'onglet « Profil », puis touchez « Supprimer mon compte ».",
+      "Lisez ce qui sera effacé et ce qui sera conservé, puis cochez la case de confirmation.",
+      "Saisissez l'adresse e-mail et le mot de passe de votre compte. Si vous vous connectez avec Google, aucun mot de passe n'est demandé.",
+      "Touchez « Désactiver et programmer la suppression »."
+    ],
+    "appAfter": "Votre compte est désactivé immédiatement : votre profil disparaît des recherches, plus personne ne peut vous écrire et vos sessions sont fermées. À ce stade, rien n'est encore effacé.",
+    "mailTitle": "Par e-mail, si vous n'avez plus l'application",
+    "mailBody1": "Écrivez-nous depuis l'adresse e-mail de votre compte, avec « Suppression de compte » en objet :",
+    "mailBody2": "Nous vérifions que la demande provient bien du titulaire du compte, puis nous lançons la même procédure : désactivation immédiate, effacement définitif trente jours plus tard. Vous recevez une confirmation par e-mail.",
+    "graceTitle": "Le délai de trente jours",
+    "graceBody1": "Entre votre demande et l'effacement s'écoulent trente jours. Ce délai existe pour vous laisser revenir sur votre décision.",
+    "graceBody2": "Reconnectez-vous à l'application avant l'échéance et la suppression est annulée : votre profil est restauré dans l'état où vous l'aviez laissé, y compris s'il était masqué. Passé ce délai, l'effacement est définitif et plus rien ne peut être restauré.",
+    "erasedTitle": "Ce qui est effacé",
+    "erasedIntro": "À l'échéance, les données suivantes sont supprimées de nos serveurs :",
+    "erasedItems": [
+      "votre profil et toutes les informations que vous y avez saisies ;",
+      "vos photos, vos vidéos, votre CV, vos justificatifs professionnels et la pièce d'identité transmise lors de la vérification ;",
+      "vos messages et leurs pièces jointes — la conversation disparaît de la boîte de votre correspondant ;",
+      "vos publications, vos commentaires et vos « j'aime » ;",
+      "vos abonnements, vos favoris, les consultations de votre profil et vos notifications ;",
+      "votre accès : votre adresse e-mail redevient disponible pour une nouvelle inscription."
+    ],
+    "keptTitle": "Ce qui est conservé, et pourquoi",
+    "keptIntro": "Trois éléments survivent à l'effacement, parce qu'ils concernent d'autres personnes ou une obligation de modération. Ils ne portent plus votre nom et ne contiennent aucune de vos données personnelles.",
+    "keptRows": [
+      [
+        "Les Scout Days que vous avez organisés",
+        "Ils ont eu lieu et leurs participants y figurent. Un événement encore à venir est annulé au moment de l'effacement, et chaque inscrit en est prévenu."
+      ],
+      [
+        "Les évaluations que vous avez rédigées",
+        "Ce sont les notes de joueurs qui, eux, restent inscrits : les effacer reviendrait à supprimer la donnée de quelqu'un d'autre."
+      ],
+      [
+        "Les signalements liés à votre compte",
+        "Conservés le temps que la modération les traite."
+      ]
+    ],
+    "keptNote": "Dans une conversation, seuls vos messages sont effacés : ceux de votre correspondant lui appartiennent et ne sont pas détruits. Le fil disparaît néanmoins de sa boîte de réception.",
+    "partialTitle": "Supprimer seulement une partie de vos données",
+    "partialIntro": "Vous n'êtes pas obligé de supprimer votre compte pour effacer une donnée précise. Depuis l'application, vous pouvez à tout moment :",
+    "partialItems": [
+      "supprimer une photo ou une vidéo, le fichier compris ;",
+      "supprimer une publication ou un commentaire : il disparaît du fil pour tout le monde ;",
+      "corriger ou vider les informations de votre profil ;",
+      "rendre votre profil invisible dans les recherches des professionnels, sans rien supprimer."
+    ],
+    "partialNote": "Une publication ou un commentaire supprimé n'est plus affiché nulle part. Sa trace est conservée le temps qu'un signalement éventuel soit instruit, puis emportée par la suppression de votre compte.",
+    "retentionTitle": "Conservation après l'effacement",
+    "retentionBody": "Au-delà de l'effacement, nous ne gardons que ce qu'une obligation légale, un litige ou une procédure de modération en cours impose de garder, et pour la seule durée requise.",
+    "retentionTodo": "La durée de conservation imposée par la réglementation comptable et fiscale applicable doit être arrêtée puis écrite ici, ainsi que celle des signalements et des journaux de modération. Une durée annoncée est un engagement : ne rien inventer.",
+    "contactTitle": "Une question",
+    "contactBody": "Pour toute question sur cette procédure ou sur le traitement de vos données, écrivez-nous. Le détail des données que nous traitons figure dans notre politique de confidentialité.",
+    "contactLink": "Lire la politique de confidentialité"
   },
   "testimonials": {
     "pill": "Témoignages",

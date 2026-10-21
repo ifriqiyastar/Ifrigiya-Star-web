@@ -269,6 +269,7 @@
     "motto": "Scouting · Progression · Excellence",
     "privacy": "Privacy",
     "terms": "Terms",
+    "deletion": "Account deletion",
     "scoutDays": "Scout Days",
     "backToTop": "Back to top"
   },
@@ -513,6 +514,75 @@
     "lawTodo": "Governing law, competent courts, and any required prior amicable resolution step. To be settled by a lawyer.",
     "changesTitle": "Changes",
     "changesBody": "These terms may change. If a change is significant, we will tell you in the app. The date at the top of this page shows the last update; continuing to use the service means accepting the version in force."
+  },
+  "deletionPage": {
+    "metaTitle": "Delete your account",
+    "metaDescription": "How to request deletion of your Ifriqiya Soccer Star account and the associated data: the procedure, what is erased, what is kept and for how long.",
+    "back": "Back to home",
+    "pill": "Account deletion",
+    "title": "Delete your",
+    "titleAccent": "account.",
+    "updated": "Last updated: 21/10/2026",
+    "lead": "This page is for users of the Ifriqiya Soccer Star app. It explains how to request deletion of your account and the associated data, from the app or by email, then what is erased, what is kept and for how long.",
+    "todoLabel": "To complete before publishing",
+    "appTitle": "From the app",
+    "appIntro": "This is the fastest route, and it is available at any time.",
+    "appSteps": [
+      "Open the Ifriqiya Soccer Star app and sign in.",
+      "Open the “Profile” tab, then tap “Delete my account”.",
+      "Read what will be erased and what will be kept, then tick the confirmation box.",
+      "Enter the email address and password of your account. If you sign in with Google, no password is asked for.",
+      "Tap “Deactivate and schedule deletion”."
+    ],
+    "appAfter": "Your account is deactivated immediately: your profile disappears from searches, nobody can message you any more, and your sessions are closed. At this stage nothing has been erased yet.",
+    "mailTitle": "By email, if you no longer have the app",
+    "mailBody1": "Write to us from the email address of your account, with “Account deletion” as the subject:",
+    "mailBody2": "We check that the request really comes from the account holder, then we start the same procedure: immediate deactivation, permanent erasure thirty days later. You receive a confirmation by email.",
+    "graceTitle": "The thirty-day period",
+    "graceBody1": "Thirty days pass between your request and the erasure. This delay exists to let you change your mind.",
+    "graceBody2": "Sign back in to the app before the deadline and the deletion is cancelled: your profile is restored exactly as you left it, including if it was hidden. After that deadline the erasure is permanent and nothing can be restored.",
+    "erasedTitle": "What is erased",
+    "erasedIntro": "On the deadline, the following data is deleted from our servers:",
+    "erasedItems": [
+      "your profile and everything you entered in it;",
+      "your photos, your videos, your CV, your professional supporting documents and the identity document submitted for verification;",
+      "your messages and their attachments — the conversation disappears from your correspondent's inbox;",
+      "your posts, your comments and your likes;",
+      "your follows, your favourites, the records of who viewed your profile, and your notifications;",
+      "your access: your email address becomes available again for a new registration."
+    ],
+    "keptTitle": "What is kept, and why",
+    "keptIntro": "Three things survive the erasure, because they concern other people or a moderation obligation. They no longer carry your name and contain none of your personal data.",
+    "keptRows": [
+      [
+        "The Scout Days you organised",
+        "They took place and their participants appear in them. An event still to come is cancelled at the moment of erasure, and every registered player is notified."
+      ],
+      [
+        "The evaluations you wrote",
+        "They are the scores of players who remain registered: erasing them would delete someone else's data."
+      ],
+      [
+        "Reports concerning your account",
+        "Kept for as long as moderation needs to handle them."
+      ]
+    ],
+    "keptNote": "In a conversation, only your messages are erased: those written by your correspondent belong to them and are not destroyed. The thread nevertheless disappears from their inbox.",
+    "partialTitle": "Deleting only part of your data",
+    "partialIntro": "You do not have to delete your account to erase a specific piece of data. From the app you can, at any time:",
+    "partialItems": [
+      "delete a photo or a video, the file included;",
+      "delete a post or a comment: it disappears from the feed for everyone;",
+      "correct or clear the information in your profile;",
+      "make your profile invisible in professionals' searches, without deleting anything."
+    ],
+    "partialNote": "A deleted post or comment is no longer displayed anywhere. A trace is kept for as long as a possible report needs to be handled, then removed along with your account if you delete it.",
+    "retentionTitle": "Retention after erasure",
+    "retentionBody": "Beyond the erasure, we keep only what a legal obligation, a dispute or an ongoing moderation procedure requires us to keep, and only for the required period.",
+    "retentionTodo": "The retention period required by the applicable accounting and tax rules must be settled and written here, together with that of reports and moderation logs. An announced period is a commitment: invent nothing.",
+    "contactTitle": "A question",
+    "contactBody": "For any question about this procedure or about how we process your data, write to us. The detail of the data we process is in our privacy policy.",
+    "contactLink": "Read the privacy policy"
   },
   "testimonials": {
     "pill": "Testimonials",
