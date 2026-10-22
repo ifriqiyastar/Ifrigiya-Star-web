@@ -63,8 +63,14 @@ export default async function GlobalNotFound() {
 
   return (
     // Les memes attributs que `app/[locale]/layout.tsx`, et pour les memes
-    // raisons : `dir` porte tout le miroitage RTL, `dark` porte la palette.
-    <html lang={locale} dir={LOCALE_DIR[locale]} className={cn("dark h-full antialiased", FONT_CLASSNAMES)}>
+    // raisons : `dir` porte tout le miroitage RTL, `dark` porte la palette,
+    // `data-scroll-behavior` garde les changements de route instantanes.
+    <html
+      lang={locale}
+      dir={LOCALE_DIR[locale]}
+      data-scroll-behavior="smooth"
+      className={cn("dark h-full antialiased", FONT_CLASSNAMES)}
+    >
       <body className="flex min-h-full flex-col bg-background text-foreground">
         <NotFoundView dict={dict} locale={locale} />
       </body>

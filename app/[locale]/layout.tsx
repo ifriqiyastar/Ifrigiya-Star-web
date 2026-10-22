@@ -59,6 +59,12 @@ export default async function RootLayout({ children }: LayoutProps<"/[locale]">)
       // `dir` porte tout le miroitage : les utilitaires logiques de Tailwind
       // (`ms-`, `pe-`, `text-start`, `start-0`) se resolvent a partir de lui.
       dir={LOCALE_DIR[locale]}
+      // Depuis Next 16, le framework ne neutralise plus le `scroll-behavior`
+      // du document pendant une navigation : sans cet attribut, le retour en
+      // haut de la nouvelle page serait *anime* par la regle `smooth` de
+      // globals.css. L'attribut redemande l'ancien comportement — les liens
+      // d'ancre restent doux, les changements de route redeviennent instantanes.
+      data-scroll-behavior="smooth"
       // Le back-office reprend le theme sombre de l'app mobile (fond noir,
       // accent lime). Les tokens clairs restent definis dans globals.css.
       className={cn(
