@@ -206,6 +206,61 @@ and what is blocked is handled in the queue above. The row keeps the link to the
 dossier (now the primary button) and "Classer", the one gesture that needs no
 reason.
 
+**…but the row now shows what was reported, in a popup** (Oct 2026, client
+request: "the same preview popup as on subscriptions and payments").
+`ReportTargetPopup` turns the excerpt of both lists — the table and the
+removals-to-validate queue — into a trigger that opens a short card, laid out in
+the four blocks of the dossier it leads to: **the signals** (moderation state
+already applied, quarantine, report count, messaging provenance, blocks
+received, and the short reference), **the evidence** in one frame (media on top,
+the full 400-character excerpt below, author band with the date and a link to
+the target's own record at the bottom), **the reason written by the reporter**
+in full, and the way out to the dossier.
+
+Two things the first version got wrong, both worth remembering:
+
+- **The title repeated the trigger.** It was the excerpt, which the body then
+  showed again in full — the same sentence twice, once truncated. The title now
+  names the *type* ("Publication", "Commentaire"), the body shows the thing.
+- **The reason was missing.** A report is two halves — what was posted and what
+  someone says about it — and the card only carried the first. The reason is the
+  only piece a report brings of itself, and the neighbouring column cuts it at
+  the available width. It is already loaded on the row, so carrying it costs
+  nothing.
+
+**⚠️ The reported media did not display, and the cause was in
+`fetchReportTargets()`** (Oct 2026). It kept `posts.media_url` as-is whenever it
+started with `http` — and the mobile app stores a **full public URL** there
+(`getPublicUrl()`, `~/ifriqiyastar/src/lib/feed.ts`). So the dossier and the
+queue preview pointed at `/object/public/post-media/…` instead of going through
+the repo's own resolution, which is exactly what the rule forbids since the
+media buckets changed regime (mobile 0051). Publications displayed fine because
+it already did it properly: `signStorageUrls()` first, `storageUrl()` as the
+fallback. Both screens now read the media the same way — one batched signing
+request per page, only when there is media to sign, and `storageUrl()` still
+catches what signing misses, so a failed batch costs speed and never the image.
+
+**The author column opens the account preview** (`UserCell preview`), the same
+one Publications, Commentaires, Medias, Scout Days, Evaluations and Abonnements
+already use, and the removals queue shows it for the moderator who proposed the
+removal. This screen is where "who is this, and is the account sound?" is asked
+most, and it was the one list without it. Same rule as everywhere: it shows
+exactly the `ProfileSummary` fields the page already loads, so it adds no round
+trip.
+
+Two constraints decided its shape:
+
+- **It queries nothing.** `fetchReportTargets()` already resolves all of that
+  for every row of the page — it was being read, paid for, then thrown away at
+  render time by a `max-w-64 truncate`. `DetailDialog` renders its children
+  server-side, so the card arrives already rendered. This is exactly why
+  `PostPreviewDialog` was *not* reused here: it needs a comment thread, which
+  would have meant one read per row of a 200-row queue.
+- **It carries no decision gesture**, deliberately. The paragraph above is still
+  the rule: recognising content and judging it are two different acts, and the
+  second one happens in the dossier with the evidence in view. The popup is the
+  first act only.
+
 **One filter bar for the four tabs.** There were two: a hand-rolled GET `<form>`
 in the header hub for Signalements, and `FilterBar` — client component, Base UI
 `Select`, applied on change — rendered *inside* the panel for the other two.

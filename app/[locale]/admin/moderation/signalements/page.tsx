@@ -29,6 +29,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Pagination } from "@/components/admin/pagination";
 import { Panel, PanelHeader } from "@/components/admin/panel";
 import { ReasonDialog } from "@/components/admin/reason-dialog";
+import { ReportTargetPopup } from "@/components/admin/moderation/report-target-popup";
 import { StatusPill } from "@/components/admin/status-pill";
 import { UserCell } from "@/components/admin/user-cell";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -38,7 +39,8 @@ import { getAdminAccess, requirePermission } from "@/lib/auth";
 import { MODERATION_ACTION, REPORTABLE_TYPE, REPORT_STATUS } from "@/lib/labels";
 import { ACCOUNT_TARGETS, removalConfirmation } from "@/lib/moderation-targets";
 import { fetchBlockSignals, fetchReportTargets } from "@/lib/queries/moderation";
-import { PAGE_SIZE, QUEUE_SIZE, REPORT_COLUMNS, fetchReportCounts, likeTerm, str } from "@/lib/queries/moderation-content";
+import { PAGE_SIZE, QUEUE_SIZE, REPORT_COLUMNS, fetchReportCounts, str } from "@/lib/queries/moderation-content";
+import { likeTerm } from "@/lib/queries/search-term";
 import { displayName, fetchProfilesByIds } from "@/lib/queries/profiles";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
@@ -283,12 +285,34 @@ async function ReportsView({
                     secondary={i18n.format.timeAgo(row.proposed_at ?? row.created_at)}
                     avatarUrl={proposer?.avatar_url}
                     href={row.proposed_by ? i18n.path(`/admin/utilisateurs/${row.proposed_by}`) : undefined}
+                    // Qui propose ce retrait : le super administrateur qui
+                    // confirme ou refuse decide aussi sur cette base.
+                    preview={proposer}
                   />
                   {/* Ce sur quoi porte le retrait, et le motif ecrit par le
                       moderateur : la file dit de quoi il s'agit, le dossier
                       porte les pieces. */}
                   <div className="min-w-40 flex-1">
-                    <p className="truncate text-sm">{summary}</p>
+                    {/* Le contenu qu'un super administrateur s'apprete a
+                        retirer definitivement. Il etait resume en une ligne
+                        tronquee ; la fiche courte s'ouvre sans quitter la
+                        file, et le dossier reste a cote pour trancher. */}
+                    <ReportTargetPopup
+                      targetType={row.target_type}
+                      targetId={row.target_id}
+                      summary={summary}
+                      content={content}
+                      author={content?.authorId ? profiles.get(content.authorId) : accountTarget}
+                      account={isAccount ? accountTarget : undefined}
+                      reason={row.reason}
+                      reporterName={displayName(profiles.get(row.reporter_id), undefined, i18n.locale)}
+                      reportCount={reportCounts.get(`${row.target_type}:${row.target_id}`) ?? 1}
+                      blocksReceived={blocks.get(row.target_id)?.received}
+                      fromMessaging={Boolean(row.context_conversation_id)}
+                      quarantined={Boolean(row.quarantined)}
+                      dossierHref={i18n.path(`/admin/moderation/signalements/${row.id}`)}
+                      className="-ms-2"
+                    />
                     <p className="truncate text-xs text-muted-foreground">
                       {i18n.labels.label(MODERATION_ACTION, row.proposed_action)}
                       {row.proposal_reason ? `  ${row.proposal_reason}` : ""}
@@ -440,7 +464,34 @@ async function ReportsView({
                           )}
                         </span>
                         <div className="min-w-0">
-                          <p className="max-w-64 truncate text-sm">{summary}</p>
+                          {/* L'EXTRAIT EST UN DECLENCHEUR, plus un texte mort.
+                              Il etait tronque a la largeur de la colonne alors
+                              que la requete en ramene 400 caracteres, avec le
+                              media, l'etat et la date — tout cela etait lu puis
+                              jete. La fiche courte ne coute aucune requete :
+                              `DetailDialog` rend ses enfants cote serveur. */}
+                          <ReportTargetPopup
+                            targetType={row.target_type}
+                            targetId={row.target_id}
+                            summary={summary}
+                            content={content}
+                            author={contentAuthor}
+                            account={isAccount ? accountTarget : undefined}
+                            reason={row.reason}
+                            reporterName={displayName(reporter, undefined, i18n.locale)}
+                            reportCount={reportCount}
+                            blocksReceived={block?.received}
+                            fromMessaging={Boolean(row.context_conversation_id)}
+                            quarantined={Boolean(row.quarantined)}
+                            dossierHref={i18n.path(`/admin/moderation/signalements/${row.id}`)}
+                            // La marge interne du bouton est annulee a gauche :
+                            // sans cela l'extrait se decalait de deux unites
+                            // par rapport au libelle de type juste en dessous,
+                            // qui n'est pas un bouton. La colonne est alignee a
+                            // gauche, contrairement a celle des paiements, qui
+                            // regle la meme question en se centrant.
+                            className="-ms-2"
+                          />
                           <div className="flex flex-wrap items-center gap-1.5">
                             <span className="text-xs text-muted-foreground">
                               {i18n.labels.label(REPORTABLE_TYPE, row.target_type)}
@@ -471,6 +522,18 @@ async function ReportsView({
                           secondary={contentAuthor.email}
                           avatarUrl={contentAuthor.avatar_url}
                           href={i18n.path(`/admin/utilisateurs/${content?.authorId ?? row.target_id}`)}
+                          // ⚠️ L'APERCU DU COMPTE, a cote du nom et non a sa
+                          // place (voir `ProfilePreviewDialog`). La question
+                          // qu'on se pose dans cette file n'est pas « ouvre-moi
+                          // ce compte » mais « qui est-ce, et le compte est-il
+                          // sain ? » : role, e-mail, pays, inscription, actif
+                          // ou desactive, mineur, suppression demandee. Six
+                          // autres ecrans le posent deja ; celui-ci, ou la
+                          // question se pose le plus, ne l'avait pas. Il ne
+                          // coute aucun aller-retour : ce sont les champs que
+                          // `fetchProfilesByIds()` charge deja pour afficher ce
+                          // nom et cette vignette.
+                          preview={contentAuthor}
                         />
                       ) : (
                         <span className="text-xs text-muted-foreground">{i18n.t("Inconnu")}</span>

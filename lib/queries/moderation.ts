@@ -1,6 +1,7 @@
 import type { AdminTranslations } from "@/lib/i18n/admin-shared";
 import { ACCOUNT_TARGETS } from "@/lib/moderation-targets";
 import { createClient } from "@/lib/supabase/server";
+import { signStorageUrls } from "@/lib/queries/signed-media";
 import { storageUrl } from "@/lib/supabase/config";
 
 /**
@@ -164,13 +165,33 @@ export async function fetchReportTargets(
       (value): value is string => Boolean(value),
     );
 
-  for (const row of posts.data ?? []) {
-    // Meme resolution que l'onglet Publications : un chemin de stockage est
-    // signe par le bucket public, une URL absolue est deja bonne.
+  // ⚠️⚠️ LE MEDIA D'UNE PUBLICATION SIGNALEE NE S'AFFICHAIT PAS, et la cause
+  // tenait a la ligne qui suivait : une valeur commencant par « http » etait
+  // rendue **telle quelle**. Or `posts.media_url` stocke une URL publique
+  // complete — `getPublicUrl()` cote mobile (`src/lib/feed.ts`) — donc le
+  // dossier et l'apercu de la file pointaient sur `/object/public/post-media/…`
+  // au lieu de passer par la resolution du depot. C'est exactement ce que la
+  // regle interdit depuis que les buckets de medias ont change de regime
+  // (migration mobile 0051) : on ne garde pas une URL publique stockee, on la
+  // ramene a son chemin et on la signe.
+  //
+  // L'onglet Publications le faisait deja, et c'est pour cela que l'image y
+  // apparaissait : `signStorageUrls()` d'abord, `storageUrl()` en repli. Les
+  // deux ecrans lisent desormais le meme media de la meme facon.
+  //
+  // Cout : UNE demande de signature groupee pour toute la page, et seulement
+  // s'il y a un media a signer. `storageUrl()` reste le filet — il ramene une
+  // URL publique stockee a `/admin/documents`, qui signe et redirige — donc
+  // une signature groupee en echec coute la rapidite, jamais l'image.
+  const postRows = posts.data ?? [];
+  const signedPostMedia = postRows.some((row) => row.media_url)
+    ? await signStorageUrls(supabase, "post-media", postRows.map((row) => row.media_url))
+    : new Map<string, string>();
+
+  for (const row of postRows) {
     const mediaUrl =
-      row.media_url && !row.media_url.startsWith("http")
-        ? storageUrl("post-media", row.media_url)
-        : (row.media_url ?? null);
+      (row.media_url ? signedPostMedia.get(row.media_url) : null) ??
+      storageUrl("post-media", row.media_url);
 
     targets.set(`publication:${row.id}`, {
       excerpt: excerptOf(row.content),
