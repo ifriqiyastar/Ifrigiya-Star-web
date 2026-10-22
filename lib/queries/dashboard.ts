@@ -1,4 +1,6 @@
+import { isMissingRpc } from "@/lib/actions/result";
 import { createClient } from "@/lib/supabase/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
  * Formes renvoyees par `public.get_admin_dashboard()` (migration 0011 de l'app
@@ -25,15 +27,170 @@ export type DashboardPayload = {
   } | null;
 };
 
+/**
+ * Les chiffres du tableau de bord qui ne viennent pas de
+ * `get_admin_dashboard()`. Une seule forme, deux chemins pour la remplir.
+ */
+export type DashboardExtras = {
+  visiblePlayers: number;
+  active7d: number;
+  active30d: number;
+  pendingReports: number;
+  pendingPayments: number;
+  docsPending: number;
+  activePeriod: number;
+  paymentsTotal: number;
+  paymentsSucceeded: number;
+  nextEvent: NextEvent | null;
+  nextEventRegistrations: number;
+  /** En millisecondes. `null` quand aucun dossier n'est exploitable. */
+  approvalDelay: number | null;
+  plans: DashboardPlan[];
+};
+
+export type NextEvent = {
+  id: string;
+  title: string;
+  event_date: string;
+  start_time: string | null;
+  location: string | null;
+  capacity: number | null;
+};
+
+export type DashboardPlan = {
+  id: string;
+  code: string;
+  label: string;
+  targetRole: string;
+  priceAmount: number;
+  priceCurrency: string;
+  billingPeriodMonths: number;
+  isActive: boolean;
+  activeCount: number;
+};
+
 export async function getDashboard(periodDays = 30) {
   const supabase = await createClient();
+
+  // ⚠️ DEUX APPELS, PAS QUINZE. `get_admin_dashboard()` vient de l'app mobile
+  // (migration 0011) et rend les agregats ; `admin_dashboard_counts()` est
+  // propre a ce depot (202610220001) et rend les treize lectures que ce
+  // fichier posait a cote, inscriptions du prochain evenement comprises —
+  // elles coutaient une vague de plus, puisqu'elles dependaient de
+  // l'evenement trouve par la precedente.
+  const [rpc, fast] = await Promise.all([
+    supabase.rpc("get_admin_dashboard"),
+    supabase.rpc("admin_dashboard_counts", { p_period_days: periodDays }),
+  ]);
+
+  // La regle du depot : degrader a l'ouverture. Fonction absente (migration
+  // pas passee) ou execution revoquee, et les treize lectures d'origine
+  // reprennent la main — l'ecran est plus lent, il n'est pas casse.
+  let extras: DashboardExtras;
+  if (fast.error) {
+    // ⚠️ `42501` EST SIGNALE ICI, contrairement a `loadAdminGuard()`. Pour
+    // cette fonction-la il ne veut pas dire « execution deliberement
+    // revoquee » mais « le `grant execute ... to authenticated` de la
+    // migration n'est pas passe » : l'appelant est deja administrateur, et
+    // l'ecran retomberait alors sur ses quatorze lectures en silence —
+    // resultat juste, lenteur d'avant, et rien pour le dire. Seule l'absence
+    // de la fonction (`PGRST202`) est un etat normal : projet non migre.
+    if (!isMissingRpc(fast.error)) {
+      console.error("admin_dashboard_counts:", fast.error.code, fast.error.message);
+    }
+    extras = await dashboardExtrasBySeparateReads(supabase, periodDays);
+  } else {
+    extras = extrasFromRow((fast.data ?? {}) as CountsRow);
+  }
+
+  return {
+    payload: (rpc.data ?? null) as DashboardPayload | null,
+    error: rpc.error?.message ?? null,
+    ...extras,
+  };
+}
+
+/** La ligne rendue par `public.admin_dashboard_counts()`. */
+type CountsRow = {
+  visible_players?: number;
+  active_7d?: number;
+  active_30d?: number;
+  active_period?: number;
+  pending_reports?: number;
+  pending_payments?: number;
+  docs_pending?: number;
+  payments_total?: number;
+  payments_succeeded?: number;
+  approval_delay_ms?: number | string | null;
+  next_event?: NextEvent | null;
+  next_event_registrations?: number;
+  plans?:
+    | {
+        id: string;
+        code: string;
+        label: string;
+        target_role: string;
+        price_amount: number | string | null;
+        price_currency: string | null;
+        billing_period_months: number | string | null;
+        is_active: boolean | null;
+        active_count: number | string | null;
+      }[]
+    | null;
+};
+
+/**
+ * La meme reponse que le chemin d'origine, lue sur une ligne au lieu de
+ * quatorze requetes. Les deux doivent rendre les memes nombres : deux facons
+ * de repondre a la meme question finissent toujours par diverger, et c'est la
+ * seule raison pour laquelle ce fichier garde les deux cote a cote.
+ */
+function extrasFromRow(row: CountsRow): DashboardExtras {
+  const delay = row.approval_delay_ms;
+  return {
+    visiblePlayers: Number(row.visible_players ?? 0),
+    active7d: Number(row.active_7d ?? 0),
+    active30d: Number(row.active_30d ?? 0),
+    pendingReports: Number(row.pending_reports ?? 0),
+    pendingPayments: Number(row.pending_payments ?? 0),
+    docsPending: Number(row.docs_pending ?? 0),
+    activePeriod: Number(row.active_period ?? 0),
+    paymentsTotal: Number(row.payments_total ?? 0),
+    paymentsSucceeded: Number(row.payments_succeeded ?? 0),
+    nextEvent: row.next_event ?? null,
+    nextEventRegistrations: Number(row.next_event_registrations ?? 0),
+    // ⚠️ `Number(null)` vaut 0, et un delai d'approbation de zero se lirait
+    // comme une decision instantanee : l'absence reste `null`.
+    approvalDelay: delay === null || delay === undefined ? null : Number(delay),
+    plans: (row.plans ?? []).map((plan) => ({
+      id: plan.id,
+      code: plan.code,
+      label: plan.label,
+      targetRole: plan.target_role,
+      priceAmount: Number(plan.price_amount ?? 0),
+      priceCurrency: plan.price_currency ?? "TND",
+      billingPeriodMonths: Number(plan.billing_period_months ?? 1),
+      isActive: Boolean(plan.is_active),
+      activeCount: Number(plan.active_count ?? 0),
+    })),
+  };
+}
+
+/**
+ * Le chemin d'origine, garde intact : treize lectures en une vague, plus une
+ * quatorzieme pour les inscriptions du prochain evenement. Il sert quand
+ * `admin_dashboard_counts()` n'est pas deployee.
+ */
+async function dashboardExtrasBySeparateReads(
+  supabase: SupabaseClient,
+  periodDays: number,
+): Promise<DashboardExtras> {
   const since7d = new Date(Date.now() - 7 * 86_400_000).toISOString();
   const since30d = new Date(Date.now() - 30 * 86_400_000).toISOString();
   const sincePeriod = new Date(Date.now() - periodDays * 86_400_000).toISOString();
   const today = new Date().toISOString().slice(0, 10);
 
   const [
-    rpc,
     visiblePlayers,
     active7d,
     active30d,
@@ -48,7 +205,6 @@ export async function getDashboard(periodDays = 30) {
     plans,
     planSubscriptions,
   ] = await Promise.all([
-    supabase.rpc("get_admin_dashboard"),
     // Metriques absentes des vues SQL de la migration 0011.
     supabase
       .from("player_profiles")
@@ -127,8 +283,6 @@ export async function getDashboard(periodDays = 30) {
     : 0;
 
   return {
-    payload: (rpc.data ?? null) as DashboardPayload | null,
-    error: rpc.error?.message ?? null,
     visiblePlayers: visiblePlayers.count ?? 0,
     active7d: active7d.count ?? 0,
     active30d: active30d.count ?? 0,
@@ -138,14 +292,7 @@ export async function getDashboard(periodDays = 30) {
     activePeriod: activePeriod.count ?? 0,
     paymentsTotal: paymentsTotal.count ?? 0,
     paymentsSucceeded: paymentsSucceeded.count ?? 0,
-    nextEvent: nextEvent.data as {
-      id: string;
-      title: string;
-      event_date: string;
-      start_time: string | null;
-      location: string | null;
-      capacity: number | null;
-    } | null,
+    nextEvent: (nextEvent.data ?? null) as NextEvent | null,
     nextEventRegistrations,
     approvalDelay: averageDelay(approvals.data ?? []),
     plans: (plans.data ?? []).map((plan) => ({

@@ -106,10 +106,14 @@ export function useAdminQueue(): QueueSnapshot {
 export function AdminQueueProvider({
   initial,
   intervalMs = 10_000,
+  idleIntervalMs = 60_000,
   children,
 }: {
   initial: QueueSnapshot;
+  /** Le rythme du filet tant que le temps reel n'est pas etabli. */
   intervalMs?: number;
+  /** Celui qu'il prend une fois le canal abonne. */
+  idleIntervalMs?: number;
   children: React.ReactNode;
 }) {
   const i18n = useAdminTranslations();
@@ -162,7 +166,26 @@ export function AdminQueueProvider({
     // Une lecture des le montage : apres une navigation client, l'arbre rendu
     // peut venir du cache du routeur et donc dater de plusieurs minutes.
     void poll();
-    const timer = setInterval(poll, intervalMs);
+
+    /**
+     * Le minuteur du sondage, **reglable**. Il bat a `intervalMs` tant que le
+     * temps reel n'est pas etabli, et s'espace a `idleIntervalMs` des que le
+     * canal est abonne : les sept tables comptees par la file sont alors
+     * publiees (migration 202609090001), donc chaque ecriture reveille la
+     * cloche par `onChange` et le sondage n'a plus qu'un role de filet.
+     *
+     * Ce que cela evite : six allers-retours authentifies par minute et par
+     * onglet ouvert, pour des chiffres deja pousses. Ce que cela ne change
+     * pas : sans temps reel — variables d'environnement absentes, canal en
+     * erreur, abonnement ferme —, le sondage reprend son rythme de dix
+     * secondes, et il reste le seul chemin.
+     */
+    let timer = setInterval(poll, intervalMs);
+    const beat = (ms: number) => {
+      clearInterval(timer);
+      timer = setInterval(poll, ms);
+    };
+
     document.addEventListener("visibilitychange", poll);
     window.addEventListener("focus", poll);
 
@@ -205,7 +228,13 @@ export function AdminQueueProvider({
       void supabase.auth.getSession().then(({ data }) => {
         if (cancelled) return;
         if (data.session) supabase.realtime.setAuth(data.session.access_token);
-        channel.subscribe();
+        // L'etat de l'abonnement regle le sondage. `SUBSCRIBED` est le seul
+        // etat ou le temps reel livre reellement : tant qu'il n'est pas
+        // atteint — et des qu'il est perdu — le filet reprend son rythme.
+        channel.subscribe((status) => {
+          if (cancelled) return;
+          beat(status === "SUBSCRIBED" ? idleIntervalMs : intervalMs);
+        });
       });
       unsubscribe = () => {
         void supabase.removeChannel(channel);
@@ -216,13 +245,14 @@ export function AdminQueueProvider({
 
     return () => {
       cancelled = true;
+      // `timer` a pu etre remplace par `beat()` : on ferme le courant.
       clearInterval(timer);
       if (coalesce) clearTimeout(coalesce);
       document.removeEventListener("visibilitychange", poll);
       window.removeEventListener("focus", poll);
       unsubscribe?.();
     };
-  }, [intervalMs, router]);
+  }, [intervalMs, idleIntervalMs, router]);
 
   return <QueueContext.Provider value={snapshot}>{children}</QueueContext.Provider>;
 }
