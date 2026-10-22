@@ -38,7 +38,8 @@ import {
 import { requirePermission } from "@/lib/auth";
 import { getAdminI18n } from "@/lib/i18n/admin";
 import { PAYMENT_METHOD, PAYMENT_STATUS, PAYMENT_TYPE } from "@/lib/labels";
-import { displayName, fetchProfilesByIds } from "@/lib/queries/profiles";
+import { NO_PROFILE, displayName, fetchProfilesByIds, searchProfileIds } from "@/lib/queries/profiles";
+import { orLikeTerm } from "@/lib/queries/search-term";
 import {
   fetchScoutDaysByRegistration,
   fetchUnsettledScoutDayRegistrations,
@@ -110,6 +111,16 @@ async function PaymentsQueue({
   const supabase = await createClient();
   const page = Math.max(1, Number(params.page ?? 1) || 1);
 
+  // ⚠️ LA RECHERCHE EST DANS LA REQUETE. Elle passait sur la page deja
+  // paginee : un nom present a la 200e ligne n'etait jamais trouve, et `count`
+  // l'ignorait, donc le pied du tableau annoncait un total que la liste ne
+  // montrait pas. Le nom et l'e-mail vivent dans `profiles`, lu separement
+  // (aucun embed imbrique vers `profiles` : deux cles etrangeres rendent
+  // l'embed ambigu) — d'ou cette lecture prealable, qui ramene les comptes
+  // correspondants et transforme la recherche en `profile_id in (…)`. Elle ne
+  // coute un aller-retour QUE lorsqu'un terme est tape.
+  const matchedProfiles = params.q ? await searchProfileIds(params.q) : null;
+
   let query = supabase
     .from("payments")
     .select(
@@ -122,6 +133,17 @@ async function PaymentsQueue({
   if (params.statut) query = query.eq("status", params.statut);
   if (params.type) query = query.eq("payment_type", params.type);
   if (params.moyen) query = query.eq("method", params.moyen);
+  if (matchedProfiles) {
+    // La reference du prestataire reste cherchee a cote du nom : le jour ou
+    // une passerelle en ecrira, une reference collee dans le champ trouvera
+    // son paiement. Les deux conditions partent dans le meme `or=(...)`.
+    query = query.or(
+      [
+        `provider_reference.ilike.${orLikeTerm(params.q!)}`,
+        `profile_id.in.(${(matchedProfiles.length ? matchedProfiles : [NO_PROFILE]).join(",")})`,
+      ].join(","),
+    );
+  }
 
   const { data, error, count } = await query;
   const rows = data ?? [];
@@ -131,27 +153,6 @@ async function PaymentsQueue({
     fetchProfilesByIds(rows.map((row) => row.profile_id)),
     fetchScoutDaysByRegistration(rows.map((row) => row.scout_day_registration_id)),
   ]);
-
-  // ⚠️ DETTE REPRISE TELLE QUELLE, ET CONNUE : ce filtre passe sur la page
-  // **deja paginee**, ce que le reste du back-office s'interdit — un terme
-  // present a la 200e ligne n'est jamais trouve, et `count` l'ignore, donc le
-  // pied de tableau annonce un total que la liste ne montre pas. Il est ici
-  // parce que la recherche porte sur le nom et l'e-mail, qui vivent dans
-  // `profiles`, lu separement (aucun embed imbrique vers `profiles`). Le
-  // corriger demande de chercher d'abord les comptes correspondants puis de
-  // filtrer les paiements sur `profile_id in (…)` **dans la requete** — un
-  // changement de requete, pas de mise en page, donc hors du decoupage.
-  const filtered = params.q
-    ? rows.filter((row) => {
-        const term = params.q!.toLowerCase();
-        const profile = profiles.get(row.profile_id);
-        return (
-          row.provider_reference?.toLowerCase().includes(term) ||
-          profile?.full_name?.toLowerCase().includes(term) ||
-          profile?.email?.toLowerCase().includes(term)
-        );
-      })
-    : rows;
 
   return (
     <Panel>
@@ -174,7 +175,7 @@ async function PaymentsQueue({
         ]}
       />
       {error ? <FinanceError message={error.message} /> : null}
-      {!filtered.length ? (
+      {!rows.length ? (
         <EmptyState
           icon={ReceiptTextIcon}
           title={i18n.t("Aucun paiement")}
@@ -222,7 +223,7 @@ async function PaymentsQueue({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.map((row) => {
+            {rows.map((row) => {
               const profile = profiles.get(row.profile_id);
               const scoutDay = row.scout_day_registration_id
                 ? scoutDays.get(row.scout_day_registration_id)

@@ -16,7 +16,8 @@ import { approveComment, refuseComment } from "@/lib/actions/content-validation"
 import { setCommentDeleted, setCommentHidden } from "@/lib/actions/moderation";
 import { getAdminAccess, requirePermission } from "@/lib/auth";
 import { CONTENT_MODERATION_STATUS } from "@/lib/labels";
-import { COMMENT_COLUMNS, PAGE_SIZE, POST_COLUMNS, THREAD_COLUMNS, fetchContentReports, fetchPendingContent, likeTerm, selectWithModeration, str } from "@/lib/queries/moderation-content";
+import { COMMENT_COLUMNS, PAGE_SIZE, POST_COLUMNS, THREAD_COLUMNS, fetchContentReports, fetchPendingContent, selectWithModeration, str } from "@/lib/queries/moderation-content";
+import { likeTerm } from "@/lib/queries/search-term";
 import { displayName, fetchProfilesByIds } from "@/lib/queries/profiles";
 import { createClient } from "@/lib/supabase/server";
 import type { ThreadEntry } from "@/components/admin/post-preview-dialog";

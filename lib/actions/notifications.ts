@@ -18,7 +18,7 @@ import {
   type CampaignRecipient,
 } from "@/lib/email/campaign";
 import { fetchCopyForSend } from "@/lib/queries/email-template";
-import { orLikeTerm } from "@/lib/queries/notifications";
+import { orLikeTerm } from "@/lib/queries/search-term";
 import { renderCampaignEmail } from "@/lib/email/preview";
 import { isLocale } from "@/lib/i18n/config";
 import { parseRichText, richToPlainText } from "@/lib/rich-text/server";
@@ -642,7 +642,7 @@ export async function retryNotification(campaignId: string): Promise<ActionResul
       })
     : null;
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("admin_notification_campaigns")
     .update({
       status: count > 0 ? "sent" : "failed",
@@ -652,8 +652,14 @@ export async function retryNotification(campaignId: string): Promise<ActionResul
       error_message: count > 0 ? null : i18n.t("Aucun destinataire ne correspond a cette cible."),
       updated_at: new Date().toISOString(),
     })
-    .eq("id", campaignId);
+    .eq("id", campaignId)
+    .select("id");
   if (error) return fail(makeErrors(i18n.locale).describeError(error));
+  // Les notifications, elles, sont deja parties : l'echec porte sur le journal
+  // de la campagne, qui resterait affiche « en cours » sans rien dire.
+  if (!updated?.length) {
+    return fail(i18n.t("Aucune ligne modifiee : le journal de la campagne n'a pas ete mis a jour."));
+  }
 
   if (email?.deliveries.length) await recordDeliveries(supabase, campaignId, email.deliveries);
 

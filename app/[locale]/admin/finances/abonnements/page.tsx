@@ -30,7 +30,7 @@ import { setSubscriptionStatus } from "@/lib/actions/finances";
 import { requirePermission } from "@/lib/auth";
 import { getAdminI18n } from "@/lib/i18n/admin";
 import { PLAN_CODE, SUBSCRIPTION_STATUS } from "@/lib/labels";
-import { displayName, fetchProfilesByIds } from "@/lib/queries/profiles";
+import { NO_PROFILE, displayName, fetchProfilesByIds, searchProfileIds } from "@/lib/queries/profiles";
 import { createClient } from "@/lib/supabase/server";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -82,6 +82,25 @@ async function SubscriptionsQueue({
   const supabase = await createClient();
   const page = Math.max(1, Number(params.page ?? 1) || 1);
 
+  // ⚠️ LES DEUX FILTRES SONT DANS LA REQUETE. Ils passaient sur la page deja
+  // paginee — l'offre comme le nom —, donc `count` les ignorait et le pied du
+  // tableau annoncait un total que la liste ne montrait pas. Ni l'un ni
+  // l'autre ne vit dans `subscriptions` : l'offre est designee par son code
+  // dans `subscription_plans`, le nom et l'e-mail par `profiles` (lu
+  // separement, aucun embed imbrique vers `profiles` n'etant possible). Les
+  // deux se resolvent donc en identifiants d'abord, ENSEMBLE, et seulement
+  // quand le filtre correspondant est demande.
+  const [planIds, matchedProfiles] = await Promise.all([
+    params.type
+      ? supabase
+          .from("subscription_plans")
+          .select("id")
+          .eq("code", params.type)
+          .then(({ data }) => (data ?? []).map((plan) => plan.id as string))
+      : Promise.resolve(null),
+    params.q ? searchProfileIds(params.q) : Promise.resolve(null),
+  ]);
+
   let query = supabase
     .from("subscriptions")
     .select(
@@ -92,6 +111,13 @@ async function SubscriptionsQueue({
     .range((page - 1) * FINANCE_PAGE_SIZE, page * FINANCE_PAGE_SIZE - 1);
 
   if (params.statut) query = query.eq("status", params.statut);
+  // Une liste vide passe par l'identifiant impossible : PostgREST refuse un
+  // `in ()` vide, et laisser tomber le filtre afficherait tout l'inverse de ce
+  // qui est demande.
+  if (planIds) query = query.in("plan_id", planIds.length ? planIds : [NO_PROFILE]);
+  if (matchedProfiles) {
+    query = query.in("profile_id", matchedProfiles.length ? matchedProfiles : [NO_PROFILE]);
+  }
 
   const [{ data, error, count }, { data: plans }] = await Promise.all([
     query,
@@ -103,23 +129,6 @@ async function SubscriptionsQueue({
   const rows = data ?? [];
   const planById = new Map((plans ?? []).map((plan) => [plan.id, plan]));
   const profiles = await fetchProfilesByIds(rows.map((row) => row.profile_id));
-
-  // ⚠️ Meme dette que l'ecran des paiements, reprise telle quelle : ce filtre
-  // passe sur la page deja paginee, donc `count` l'ignore et le pied de
-  // tableau peut annoncer un total que la liste ne montre pas. L'offre comme
-  // le nom vivent hors de `subscriptions` (`subscription_plans`, `profiles`,
-  // lus separement), d'ou le filtre applicatif. Le corriger est un changement
-  // de requete, pas de mise en page.
-  const filtered = rows.filter((row) => {
-    if (params.type && planById.get(row.plan_id)?.code !== params.type) return false;
-    if (!params.q) return true;
-    const term = params.q.toLowerCase();
-    const profile = profiles.get(row.profile_id);
-    return (
-      profile?.full_name?.toLowerCase().includes(term) ||
-      profile?.email?.toLowerCase().includes(term)
-    );
-  });
 
   return (
     <Panel>
@@ -141,7 +150,7 @@ async function SubscriptionsQueue({
         ]}
       />
       {error ? <FinanceError message={error.message} /> : null}
-      {!filtered.length ? (
+      {!rows.length ? (
         <EmptyState
           icon={CreditCardIcon}
           title={i18n.t("Aucun abonnement")}
@@ -165,7 +174,7 @@ async function SubscriptionsQueue({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.map((row) => {
+            {rows.map((row) => {
               const profile = profiles.get(row.profile_id);
               const plan = planById.get(row.plan_id);
               return (

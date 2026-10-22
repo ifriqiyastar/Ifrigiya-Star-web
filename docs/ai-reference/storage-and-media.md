@@ -67,7 +67,8 @@ They are now one function.
 - `/admin/scout-days` also ran its six reads one after another and filtered
   `q` in JavaScript over the already-paginated page (the moderation bug again).
   The reads now go out together in one `Promise.all`, and the search is an
-  `ilike` inside the query through `orLikeTerm()`.
+  `ilike` inside the query through `orLikeTerm()` (now imported from
+  `lib/queries/search-term.ts`, the single home of every search escaper).
 - ⚠️ **In the popup the image is a plain `<img>`, not `next/image`.** The
   source is a route that **redirects**; Next's optimizer would try to fetch the
   original itself, from a host not declared in `next.config.ts`, and 400 a

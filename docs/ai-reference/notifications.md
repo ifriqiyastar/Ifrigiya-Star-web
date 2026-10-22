@@ -62,7 +62,11 @@ Passe de conception sur `/admin/notifications`. Ce qui a change, et pourquoi :
   premier echappement. Mesure contre le projet reel plutot que deduite :
   `title.ilike."%\%%"` rend les 7 lignes de `blog_posts` (echappement perdu),
   `title.ilike."%\\%%"` en rend 0 (le `%` est bien litteral). `orLikeTerm()`
-  fait les deux passes, dans cet ordre.
+  fait les deux passes, dans cet ordre. **Il a quitte ce fichier** pour
+  `lib/queries/search-term.ts` : le depot portait quatre echappements
+  differents pour la meme question, dont deux qui effacaient les caracteres
+  genants au lieu de les echapper. `tests/search-term.test.cjs` garde les deux
+  passes et l'ordre.
 - **Le journal dit qui a expedie.** Depuis le retrait du journal
   d'administration, `created_by` est la seule trace de l'auteur d'une
   diffusion ; elle se lit sous la date, chargee en une requete pour la page

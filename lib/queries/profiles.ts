@@ -2,6 +2,7 @@ import { DEFAULT_ADMIN_LOCALE, type AdminLocale } from "@/lib/i18n/config";
 import { createClient } from "@/lib/supabase/server";
 import { storageUrl } from "@/lib/supabase/config";
 import { signStorageUrls } from "@/lib/queries/signed-media";
+import { PROFILE_NAME_COLUMNS, orSearchClause } from "@/lib/queries/search-term";
 
 export type ProfileSummary = {
   id: string;
@@ -133,6 +134,43 @@ export async function fetchProfilesByIds(
  * (une URL publique) ne s'affiche pas telle quelle : `storageUrl()` la
  * ramene a son chemin et la fait signer par la route d'administration.
  */
+/**
+ * Les identifiants des comptes dont le nom ou l'e-mail correspond au terme.
+ *
+ * Sert aux ecrans dont la liste ne porte PAS le nom : `payments` et
+ * `subscriptions` ne connaissent qu'un `profile_id`, et aucun embed imbrique
+ * vers `profiles` n'est possible ici (deux cles etrangeres rendent l'embed
+ * ambigu). Les deux ecrans cherchaient donc en JavaScript, sur la page deja
+ * paginee — un nom present a la 200e ligne restait introuvable et `count`
+ * ignorait la recherche, donc le pied du tableau annoncait un total que la
+ * liste ne montrait pas. Avec cette lecture, le filtre redevient un
+ * `profile_id in (…)` **dans la requete**.
+ *
+ * ⚠️ PLAFOND ASSUME, et c'est pourquoi il est large : au-dela de `limit`
+ * comptes correspondants, les suivants ne seraient pas filtres. Deux mille
+ * homonymes sur un terme tape a la main ne se produisent pas dans ce produit,
+ * et un plafond atteint en silence vaut mieux qu'une URL `in (…)` de 60 000
+ * caracteres que PostgREST refuserait en bloc.
+ */
+export async function searchProfileIds(term: string, limit = 2_000) {
+  const trimmed = term.trim();
+  if (!trimmed) return [];
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("profiles")
+    .select("id")
+    .or(orSearchClause(PROFILE_NAME_COLUMNS, trimmed))
+    .limit(limit);
+  return (data ?? []).map((row) => row.id as string);
+}
+
+/**
+ * Identifiant impossible : rend une liste vide exploitable par `in (…)`, que
+ * PostgREST refuse autrement. Meme valeur et meme role que `EMPTY_ID` des
+ * files de validation.
+ */
+export const NO_PROFILE = "00000000-0000-0000-0000-000000000000";
+
 export function accountAvatarUrl(
   playerPhoto: string | null | undefined,
   professionalPhoto?: string | null | undefined,

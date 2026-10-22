@@ -292,13 +292,3 @@ export async function fetchReportCounts(
 
 export const str = (value: string | string[] | undefined) =>
   typeof value === "string" && value ? value : undefined;
-
-/**
- * Le texte tape par le moderateur, rendu inoffensif comme motif `ilike`.
- *
- * `%` et `_` sont des jokers cote Postgres : sans echappement, chercher
- * « 100% » ramene tout ce qui commence par « 100 ». Le `\` doit partir en
- * premier, sinon il echapperait les echappements ajoutes ensuite.
- */
-export const likeTerm = (value: string) =>
-  `%${value.replace(/\\/g, "\\\\").replace(/[%_]/g, (c) => `\\${c}`)}%`;

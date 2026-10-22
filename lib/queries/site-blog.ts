@@ -1,5 +1,6 @@
 import "server-only";
 
+import { orLikeTerm } from "@/lib/queries/search-term";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -25,13 +26,18 @@ const PUBLIC_STATUS_FILTER = () =>
 function statusAndSearchFilter(search?: string): string {
   const statusOnly = PUBLIC_STATUS_FILTER();
   if (!search) return statusOnly;
-  // `*` est le joker de PostgREST a l'interieur d'un `or()`/`and()` imbrique
-  // (`%` normalement) ; virgules et parentheses casseraient la syntaxe du
-  // filtre. Un simple nettoyage suffit, ceci n'etant pas une recherche plein
-  // texte mais un ILIKE sur deux colonnes.
-  const term = search.trim().replace(/[,()*]/g, " ").slice(0, 100);
-  if (!term) return statusOnly;
-  return `and(or(${statusOnly}),or(title.ilike.*${term}*,excerpt.ilike.*${term}*))`;
+  // ⚠️ ECHAPPE, PLUS NETTOYE. Ce filtre effacait `,`, `(`, `)` et `*` du
+  // terme et laissait passer `%` et `_` : chercher « test_blog » sur la page
+  // publique ramenait « test blog 1 » a « test blog 3 », `_` etant le joker
+  // « un caractere quelconque ». Mesure contre le projet reel :
+  // `title.ilike.*test_blog*` rend 4 articles, `title.ilike."%test\\_blog%"`
+  // en rend 0, et un terme avec virgule et parentheses s'analyse sans erreur
+  // — les guillemets d'`orLikeTerm()` les rendent inoffensifs au lieu de les
+  // effacer. Meme echappement que le back-office (`lib/queries/search-term.ts`).
+  const trimmed = search.trim().slice(0, 100);
+  if (!trimmed) return statusOnly;
+  const term = orLikeTerm(trimmed);
+  return `and(or(${statusOnly}),or(title.ilike.${term},excerpt.ilike.${term}))`;
 }
 
 export type PublicBlogPostSummary = {

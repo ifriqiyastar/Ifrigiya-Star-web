@@ -1,4 +1,5 @@
 import { fetchProfilesByIds } from "@/lib/queries/profiles";
+import { orLikeTerm } from "@/lib/queries/search-term";
 import { createClient } from "@/lib/supabase/server";
 
 // Huit lignes par page (demande client) : les files du back-office se
@@ -138,26 +139,6 @@ export type CampaignRow = {
 
 const CAMPAIGN_COLUMNS =
   "id, title, body, target_type, target_value, channels, status, recipient_count, error_message, created_by, created_at";
-
-/**
- * Le texte tape par l'administrateur, rendu inoffensif **a l'interieur d'un
- * `or=(...)` PostgREST** — deux echappements successifs, et l'ordre compte.
- *
- * 1. `%` et `_` sont les jokers de `ilike` : sans `\` devant, chercher
- *    « 100% » ramene tout ce qui commence par « 100 » ;
- * 2. `or=(...)` reserve la virgule et les parentheses, donc la valeur doit
- *    etre entre guillemets — et PostgREST **deshabille un niveau de `\`** en
- *    sortant des guillemets, ce qui mangerait l'echappement de l'etape 1.
- *
- * Mesure contre le projet reel plutot que deduite : `title.ilike."%\%%"`
- * renvoie les 7 lignes de la table (l'echappement a ete perdu), tandis que
- * `title.ilike."%\\%%"` en renvoie 0 (le `%` est bien devenu litteral). Une
- * virgule, une parenthese ou un guillemet passent alors sans erreur d'analyse.
- */
-export function orLikeTerm(value: string) {
-  const pattern = `%${value.replace(/\\/g, "\\\\").replace(/[%_]/g, (char) => `\\${char}`)}%`;
-  return `"${pattern.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
-}
 
 /**
  * Le journal des campagnes, filtre **dans la requete**.

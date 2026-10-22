@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { BlogPostStatus } from "@/lib/labels";
+import { likeTerm } from "@/lib/queries/search-term";
 
 // Huit lignes par page (demande client) : les files du back-office se
 // lisent surtout sur telephone, ou chaque ligne est une rangee compacte de
@@ -59,10 +60,10 @@ export async function listBlogPosts(params: { q?: string; statut?: string; mois?
     .order("updated_at", { ascending: false });
 
   if (params.statut) query = query.eq("status", params.statut);
-  if (params.q) {
-    const term = params.q.replace(/[%,()]/g, " ").trim();
-    if (term) query = query.ilike("title", `%${term}%`);
-  }
+  // Un seul `ilike`, donc `likeTerm()` et non `orSearchClause()` : hors d'un
+  // `or=(...)` la valeur n'est pas entre guillemets, et un echappement de plus
+  // ferait chercher les `\` eux-memes.
+  if (params.q?.trim()) query = query.ilike("title", likeTerm(params.q.trim()));
   // Filtre sur `created_at`, pas `published_at` : un brouillon ou un article
   // programme n'a pas encore de date de publication, et disparaitrait donc
   // en permanence de ce filtre-la — l'administration doit pouvoir retrouver

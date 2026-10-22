@@ -3,6 +3,7 @@ import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { accountAvatarUrl, signAvatarUrls } from "@/lib/queries/profiles";
 import { PROFILE_COLUMNS, fetchProfilesByIds, type ProfileSummary } from "@/lib/queries/profiles";
+import { USER_SEARCH_COLUMNS, orSearchClause } from "@/lib/queries/search-term";
 
 // Huit lignes par page (demande client) : les files du back-office se
 // lisent surtout sur telephone, ou chaque ligne est une rangee compacte de
@@ -80,13 +81,14 @@ export async function listUsers(params: {
   // suppression elle-meme restant un geste manuel de l'administration.
   if (params.suppression === "oui") query = query.not("deletion_requested_at", "is", null);
   if (restrictedIds) query = query.in("id", restrictedIds);
-  if (params.q) {
-    const term = params.q.replace(/[%,()]/g, " ").trim();
-    if (term) {
-      query = query.or(
-        `full_name.ilike.%${term}%,email.ilike.%${term}%,phone.ilike.%${term}%`,
-      );
-    }
+  if (params.q?.trim()) {
+    // ⚠️ ECHAPPE, pas nettoye. Ce filtre effacait `%`, `,`, `(` et `)` du
+    // terme : un nom qui contient vraiment un `%` restait introuvable sans
+    // que rien ne le dise, et `_` — le joker « un caractere quelconque » —
+    // n'etait pas traite du tout, donc « Jean_Pierre » ramenait aussi
+    // « JeanXPierre ». `orSearchClause()` echappe les deux et met la valeur
+    // entre guillemets, ce qui rend la virgule et les parentheses inoffensives.
+    query = query.or(orSearchClause(USER_SEARCH_COLUMNS, params.q.trim()));
   }
 
   const from = (page - 1) * USERS_PAGE_SIZE;
