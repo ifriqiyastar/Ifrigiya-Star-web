@@ -77,15 +77,19 @@ export async function saveEvaluation(formData: FormData): Promise<ActionResult> 
       );
     }
 
-    const { error } = await supabase
+    const { data: updated, error } = await supabase
       .from("scout_evaluations")
       .update({
         ...scores,
         comment,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", id);
+      .eq("id", id)
+      .select("id");
     if (error) return fail(makeErrors(i18n.locale).describeError(error));
+    if (!updated?.length) {
+      return fail(i18n.t("Aucune ligne modifiee : l'evaluation n'a pas ete enregistree."));
+    }
 
     await logAdminAction("update_evaluation", "scout_evaluation", id, { scores, comment });
     revalidatePath("/[locale]/admin", "layout");
@@ -137,11 +141,17 @@ export async function setEvaluationVisibility(id: string, visible: boolean): Pro
 
   await requirePermission("evaluations.manage");
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("scout_evaluations")
     .update({ visible_to_player: visible, updated_at: new Date().toISOString() })
-    .eq("id", id);
+    .eq("id", id)
+    .select("id");
   if (error) return fail(makeErrors(i18n.locale).describeError(error));
+  // Publier une evaluation la rend visible au joueur : l'annoncer sans que la
+  // ligne ait bouge laisserait croire que le joueur la voit.
+  if (!updated?.length) {
+    return fail(i18n.t("Aucune ligne modifiee : la publication de l'evaluation n'a pas ete enregistree."));
+  }
   await logAdminAction(visible ? "publish_evaluation" : "hide_evaluation", "scout_evaluation", id);
   revalidatePath("/[locale]/admin", "layout");
   return ok(visible ? i18n.t("Evaluation publiee au joueur.") : i18n.t("Evaluation masquee au joueur."));

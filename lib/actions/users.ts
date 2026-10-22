@@ -228,12 +228,16 @@ export async function setDocumentStatus(
   const admin = await requirePermission("verifications.review");
   const supabase = await createClient();
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("professional_documents")
     .update({ status, reviewed_by: admin.userId, reviewed_at: new Date().toISOString() })
-    .eq("id", documentId);
+    .eq("id", documentId)
+    .select("id");
 
   if (error) return fail(makeErrors(i18n.locale).describeError(error));
+  if (!updated?.length) {
+    return fail(i18n.t("Aucune ligne modifiee : la decision sur le justificatif n'a pas ete enregistree."));
+  }
 
   await logAdminAction(`document_${status}`, "professional_document", documentId, { status });
   REFRESH();
@@ -259,7 +263,7 @@ export async function setIdentityStatus(
   const admin = await requirePermission("verifications.review");
   const supabase = await createClient();
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("identity_verifications")
     .update({
       status,
@@ -267,9 +271,13 @@ export async function setIdentityStatus(
       reviewed_by: admin.userId,
       reviewed_at: new Date().toISOString(),
     })
-    .eq("id", verificationId);
+    .eq("id", verificationId)
+    .select("id");
 
   if (error) return fail(makeErrors(i18n.locale).describeError(error));
+  if (!updated?.length) {
+    return fail(i18n.t("Aucune ligne modifiee : la decision sur la piece d'identite n'a pas ete enregistree."));
+  }
 
   await logAdminAction(`identity_${status}`, "identity_verification", verificationId, { status });
   REFRESH();
@@ -434,12 +442,16 @@ export async function setPlayerVisibility(
   await requirePermission("users.write");
   const supabase = await createClient();
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("player_profiles")
     .update({ is_visible: isVisible })
-    .eq("id", playerId);
+    .eq("id", playerId)
+    .select("id");
 
   if (error) return fail(makeErrors(i18n.locale).describeError(error));
+  if (!updated?.length) {
+    return fail(i18n.t("Aucune ligne modifiee : la visibilite du profil n'a pas ete enregistree."));
+  }
 
   await logAdminAction(
     isVisible ? "show_player_profile" : "hide_player_profile",
@@ -603,8 +615,19 @@ export async function updateProfileCore(
     locale: text("locale") ?? "fr",
   };
 
-  const { error } = await supabase.from("profiles").update(payload).eq("id", profileId);
+  const { data: updated, error } = await supabase
+    .from("profiles")
+    .update(payload)
+    .eq("id", profileId)
+    .select("id");
   if (error) return fail(makeErrors(i18n.locale).describeError(error));
+  // ⚠️ `profiles` est precisement la table dont la migration mobile 0025 a
+  // revoque des colonnes : une ecriture refusee par privilege leve, mais une
+  // ligne ecartee par la RLS ne leve pas — elle repond « succes » sans rien
+  // changer.
+  if (!updated?.length) {
+    return fail(i18n.t("Aucune ligne modifiee : la fiche du compte n'a pas ete enregistree."));
+  }
 
   if (role && ["player", "professional", "admin"].includes(role)) {
     const { data: current } = await supabase
@@ -679,8 +702,15 @@ export async function updatePlayerProfile(
     about: text("about"),
   };
 
-  const { error } = await supabase.from("player_profiles").update(payload).eq("id", playerId);
+  const { data: updated, error } = await supabase
+    .from("player_profiles")
+    .update(payload)
+    .eq("id", playerId)
+    .select("id");
   if (error) return fail(makeErrors(i18n.locale).describeError(error));
+  if (!updated?.length) {
+    return fail(i18n.t("Aucune ligne modifiee : la fiche sportive n'a pas ete enregistree."));
+  }
 
   await logAdminAction("update_player_profile", "player_profile", playerId);
   REFRESH();
@@ -717,11 +747,15 @@ export async function updateProfessionalProfile(
     city: text("city"),
   };
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("professional_profiles")
     .update(payload)
-    .eq("id", professionalId);
+    .eq("id", professionalId)
+    .select("id");
   if (error) return fail(makeErrors(i18n.locale).describeError(error));
+  if (!updated?.length) {
+    return fail(i18n.t("Aucune ligne modifiee : la fiche professionnelle n'a pas ete enregistree."));
+  }
 
   await logAdminAction("update_professional_profile", "professional_profile", professionalId);
   REFRESH();

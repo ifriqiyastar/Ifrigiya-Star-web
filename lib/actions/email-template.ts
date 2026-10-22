@@ -148,6 +148,10 @@ export async function setDefaultEmailTemplate(id: string): Promise<ActionResult>
   }
 
   const supabase = await createClient();
+  // ⚠️ SANS `.select("id")`, ET C'EST VOULU — la seule exception du depot. Cet
+  // `update` retire le drapeau aux AUTRES modeles : zero ligne touchee est le
+  // cas normal quand aucun autre modele ne le portait. C'est l'ecriture
+  // suivante, celle qui pose le drapeau, qui doit etre controlee — elle l'est.
   const { error: clearError } = await supabase
     .from("admin_email_templates")
     .update({ is_default: false })

@@ -119,7 +119,11 @@ export async function setPaymentStatus(
   await requirePermission("finance.manage");
   const supabase = await createClient();
 
-  const { error } = await supabase
+  // ⚠️ `.select("id")` comme pour l'activation manuelle ci-dessus : PostgREST
+  // ne leve pas quand la RLS ecarte la ligne visee — zero ligne touchee, et la
+  // reponse est un succes. L'ecran annoncait un encaissement que la base
+  // n'avait pas enregistre, sur le seul ecran ou un chiffre engage de l'argent.
+  const { data: updated, error } = await supabase
     .from("payments")
     .update({
       status,
@@ -127,9 +131,13 @@ export async function setPaymentStatus(
       // pour un encaissement effectif.
       paid_at: status === "reussi" ? new Date().toISOString() : null,
     })
-    .eq("id", paymentId);
+    .eq("id", paymentId)
+    .select("id");
 
   if (error) return fail(makeErrors(i18n.locale).describeError(error));
+  if (!updated?.length) {
+    return fail(i18n.t("Aucune ligne modifiee : le statut du paiement n'a pas ete enregistre."));
+  }
 
   await logAdminAction(`payment_${status}`, "payment", paymentId, {
     status,
@@ -148,15 +156,19 @@ export async function setSubscriptionStatus(
   await requirePermission("finance.manage");
   const supabase = await createClient();
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("subscriptions")
     .update({
       status,
       cancelled_at: status === "annulee" ? new Date().toISOString() : null,
     })
-    .eq("id", subscriptionId);
+    .eq("id", subscriptionId)
+    .select("id");
 
   if (error) return fail(makeErrors(i18n.locale).describeError(error));
+  if (!updated?.length) {
+    return fail(i18n.t("Aucune ligne modifiee : le statut de l'abonnement n'a pas ete enregistre."));
+  }
 
   await logAdminAction(`subscription_${status}`, "subscription", subscriptionId, { status });
   REFRESH();

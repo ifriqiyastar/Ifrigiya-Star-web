@@ -86,13 +86,18 @@ async function setHidden(
   }
 
   const table = targetType === "publication" ? "posts" : "post_comments";
-  const { error: serviceError } = await service
+  const { data: updated, error: serviceError } = await service
     .from(table)
     .update({ is_hidden: hidden })
-    .eq("id", targetId);
-  return serviceError
-    ? { ok: false, message: makeErrors(i18n.locale).describeError(serviceError) }
-    : { ok: true };
+    .eq("id", targetId)
+    .select("id");
+  if (serviceError) {
+    return { ok: false, message: makeErrors(i18n.locale).describeError(serviceError) };
+  }
+  // Meme controle que la branche RPC ci-dessus, qui rend `false` quand aucune
+  // ligne ne correspond : la cle de service contourne la RLS, mais pas la
+  // disparition de la ligne.
+  return updated?.length ? { ok: true } : { ok: false, message: i18n.t("Ce contenu n'existe plus.") };
 }
 
 export async function setPostHidden(postId: string, hidden: boolean): Promise<ActionResult> {
@@ -114,8 +119,13 @@ export async function setPostDeleted(postId: string, deleted: boolean): Promise<
   await requirePermission("moderation.validate");
   const supabase = await createClient();
 
-  const { error } = await supabase.from("posts").update({ is_deleted: deleted }).eq("id", postId);
+  const { data: updated, error } = await supabase
+    .from("posts")
+    .update({ is_deleted: deleted })
+    .eq("id", postId)
+    .select("id");
   if (error) return fail(makeErrors(i18n.locale).describeError(error));
+  if (!updated?.length) return fail(i18n.t("Ce contenu n'existe plus."));
 
   await logAdminAction(deleted ? "delete_post" : "restore_post", "post", postId);
   REFRESH();
@@ -147,11 +157,13 @@ export async function setCommentDeleted(
   await requirePermission("moderation.validate");
   const supabase = await createClient();
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("post_comments")
     .update({ is_deleted: deleted })
-    .eq("id", commentId);
+    .eq("id", commentId)
+    .select("id");
   if (error) return fail(makeErrors(i18n.locale).describeError(error));
+  if (!updated?.length) return fail(i18n.t("Ce contenu n'existe plus."));
 
   await logAdminAction(deleted ? "delete_comment" : "restore_comment", "post_comment", commentId);
   REFRESH();
@@ -259,11 +271,14 @@ async function quarantineTarget(targetType: string, targetId: string): Promise<b
       .eq("id", targetId)
       .maybeSingle();
     if (!data?.is_visible) return false;
-    const { error } = await supabase
+    const { data: hidden, error } = await supabase
       .from("player_profiles")
       .update({ is_visible: false })
-      .eq("id", targetId);
-    return !error;
+      .eq("id", targetId)
+      .select("id");
+    // `!error` ne suffisait pas : une ligne ecartee par la RLS laisse la
+    // quarantaine non posee et repondait « posee ».
+    return !error && (hidden?.length ?? 0) > 0;
   }
 
   return false;
@@ -279,7 +294,18 @@ async function liftQuarantine(targetType: string, targetId: string): Promise<voi
     return;
   }
   if (targetType === "profil_joueur") {
-    await supabase.from("player_profiles").update({ is_visible: true }).eq("id", targetId);
+    const { data, error } = await supabase
+      .from("player_profiles")
+      .update({ is_visible: true })
+      .eq("id", targetId)
+      .select("id");
+    // Ce rattrapage n'a pas d'appelant a qui repondre : les trois sites qui
+    // l'invoquent compensent deja un echec precedent. Mais une levee qui ne
+    // touche aucune ligne laisse le profil masque indefiniment, et c'est la
+    // seule trace que quiconque en aura.
+    if (error || !data?.length) {
+      console.error("liftQuarantine profil_joueur:", targetId, error?.message ?? "0 ligne");
+    }
   }
 }
 
@@ -314,8 +340,17 @@ async function applyRemoval(
     case "commentaire": {
       const table = targetType === "publication" ? "posts" : "post_comments";
       if (action === "supprime") {
-        const { error } = await supabase.from(table).update({ is_deleted: true }).eq("id", targetId);
-        return error ? makeErrors(i18n.locale).describeError(error) : null;
+        // ⚠️ Le geste le plus consequent de la moderation (migration mobile
+        // 0041) : sans ce controle, un retrait qui ne touchait aucune ligne
+        // etait annonce applique, et le signalement se fermait sur un contenu
+        // toujours en ligne.
+        const { data: removed, error } = await supabase
+          .from(table)
+          .update({ is_deleted: true })
+          .eq("id", targetId)
+          .select("id");
+        if (error) return makeErrors(i18n.locale).describeError(error);
+        return removed?.length ? null : i18n.t("Aucune ligne modifiee : le retrait n'a pas ete applique.");
       }
       const hiddenResult = await setHidden(targetType, targetId, true);
       return hiddenResult.ok ? null : hiddenResult.message;
@@ -336,11 +371,15 @@ async function applyRemoval(
     case "scout_day": {
       // « Retirer » un evenement, c'est l'annuler : la suppression effacerait
       // les inscriptions, et les inscrits doivent etre prevenus.
-      const { error } = await supabase
+      const { data: cancelled, error } = await supabase
         .from("scout_days")
         .update({ status: "annule" })
-        .eq("id", targetId);
-      return error ? makeErrors(i18n.locale).describeError(error) : null;
+        .eq("id", targetId)
+        .select("id");
+      if (error) return makeErrors(i18n.locale).describeError(error);
+      return cancelled?.length
+        ? null
+        : i18n.t("Aucune ligne modifiee : le retrait n'a pas ete applique.");
     }
     default:
       // Profils et messages : le retrait passe par la suspension du compte,
