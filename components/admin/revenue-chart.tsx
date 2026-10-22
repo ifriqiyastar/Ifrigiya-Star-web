@@ -1,18 +1,27 @@
 import { makeFormat } from "@/lib/format";
 import { EmptyState } from "@/components/admin/empty-state";
-import { getAdminDict, getAdminLocale } from "@/lib/i18n/admin";
+import { fill, getAdminDict, getAdminLocale } from "@/lib/i18n/admin";
+import type { RevenueBucket } from "@/lib/queries/dashboard";
 import { TrendingUpIcon } from "lucide-react";
 
 export type RevenueRow = {
-  mois: string | null;
+  /** Debut du pas de temps. Un jour, une semaine ou un mois selon `bucket`. */
+  bucket: string | null;
   abonnement: number;
   scout_day: number;
 };
 
 /**
- * Revenus encaisses par mois, decomposes en abonnements et Scout Days
- * (§12.4). Barres empilees horizontales : les libelles de mois restent
- * lisibles sur telephone, ce que des barres verticales ne permettent pas.
+ * Revenus encaisses par pas de temps, decomposes en abonnements et Scout Days
+ * (§12.4). Barres empilees horizontales : les libelles restent lisibles sur
+ * telephone, ce que des barres verticales ne permettent pas.
+ *
+ * ⚠️ LE PAS N'EST PLUS TOUJOURS LE MOIS. Il suit la periode choisie — une
+ * barre par jour sur une semaine, par semaine sur un mois ou un trimestre, par
+ * mois au-dela — et c'est la base qui le decide (`admin_dashboard_counts`),
+ * pas cet affichage. Etiqueter en mois une barre qui couvre une semaine
+ * renverrait au defaut d'origine : un intitule qui ne decrit pas ce qu'il
+ * surmonte.
  *
  * Le couple de couleurs (`--viz-1`, `--viz-2`) est valide pour le daltonisme,
  * mais la legende et les valeurs affichees portent l'information : la couleur
@@ -20,13 +29,24 @@ export type RevenueRow = {
  */
 export async function RevenueChart({
   rows,
+  granularity = "mois",
   currency = "TND",
 }: {
   rows: RevenueRow[];
+  granularity?: RevenueBucket;
   currency?: string;
 }) {
   const [locale, dict] = await Promise.all([getAdminLocale(), getAdminDict()]);
-  const { formatAmount, formatMonth } = makeFormat(locale);
+  const { formatAmount, formatMonth, formatShortDay } = makeFormat(locale);
+
+  /** L'intitule d'une barre, dans l'unite que la barre couvre reellement. */
+  const bucketLabel = (value: string | null) => {
+    if (granularity === "jour") return formatShortDay(value);
+    if (granularity === "semaine") {
+      return fill(dict.dashboard.weekOf, { date: formatShortDay(value) });
+    }
+    return formatMonth(value);
+  };
   const max = Math.max(...rows.map((row) => row.abonnement + row.scout_day), 0);
 
   if (!rows.length || max === 0) {
@@ -56,9 +76,9 @@ export async function RevenueChart({
         {rows.map((row) => {
           const total = row.abonnement + row.scout_day;
           return (
-            <li key={row.mois ?? "inconnu"} className="space-y-1.5">
+            <li key={row.bucket ?? "inconnu"} className="space-y-1.5">
               <div className="flex items-baseline justify-between gap-3 text-xs">
-                <span className="font-medium capitalize">{formatMonth(row.mois)}</span>
+                <span className="font-medium capitalize">{bucketLabel(row.bucket)}</span>
                 <span className="font-semibold tabular-nums">
                   {formatAmount(total, currency)}
                 </span>

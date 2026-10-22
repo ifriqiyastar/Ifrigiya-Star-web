@@ -36,7 +36,8 @@
   },
   "userMenu": {
     "profile": "Mon profil",
-    "signOut": "Se deconnecter"
+    "signOut": "Se deconnecter",
+    "settings": "Parametres"
   },
   "header": {
     "searchLabel": "Rechercher un utilisateur",
@@ -219,7 +220,7 @@
     "indexed": "{count} indexes dans la recherche",
     "activeSubscriptions": "Abonnements actifs",
     "noneActive": "Aucun actif",
-    "transactions": "{count} transactions enregistrees",
+    "transactions": "{count} transactions sur la periode",
     "pricing": "Tarifs",
     "revenue": "Revenus encaisses",
     "statusSucceeded": "Statut « reussi »",
@@ -230,7 +231,7 @@
     "publishedCount": "{count} evenements publies",
     "pendingValidation": "En attente valid.",
     "priority": "Priorite",
-    "pendingHint": "{players} joueurs · {docs} justificatifs",
+    "pendingHint": "{profiles} profils · {docs} pieces justificatives",
     "handle": "Traiter",
     "reports": "Signalements",
     "arbitration": "Arbitrage",
@@ -291,7 +292,23 @@
     "period7": "7 derniers jours",
     "period30": "30 derniers jours",
     "period90": "90 derniers jours",
-    "period365": "12 derniers mois"
+    "period365": "12 derniers mois",
+    "since": "depuis le {date}",
+    "last12Months": "12 derniers mois",
+    "weekOf": "sem. du {date}",
+    "noPrevious": "Sans precedent",
+    "successHintAll": "{ok} / {total} paiements depuis l'origine",
+    "activeAccounts": "Comptes actifs",
+    "activeHint": "{week} sur 7 j · {month} sur 30 j",
+    "toCollect": "Encaissements en attente",
+    "toCollectHint": "{collect} inscriptions · {pending} paiements",
+    "superTitle": "Decisions reservees au super administrateur",
+    "superDesc": "Ces files n'attendent que vous : personne d'autre ne peut les trancher.",
+    "superRemovals": "Retraits a confirmer",
+    "superPosts": "Publications a valider",
+    "superComments": "Commentaires a valider",
+    "superScoutDays": "Evenements a publier",
+    "superFootnote": "Tant qu'une publication ou un commentaire attend, son auteur est le seul a le voir."
   },
   "accessDenied": {
     "metaTitle": "Acces refuse",

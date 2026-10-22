@@ -36,7 +36,8 @@
   },
   "userMenu": {
     "profile": "My profile",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "settings": "Settings"
   },
   "header": {
     "searchLabel": "Search for a user",
@@ -219,7 +220,7 @@
     "indexed": "{count} indexed in search",
     "activeSubscriptions": "Active subscriptions",
     "noneActive": "None active",
-    "transactions": "{count} transactions recorded",
+    "transactions": "{count} transactions over the period",
     "pricing": "Pricing",
     "revenue": "Revenue collected",
     "statusSucceeded": "Status “succeeded”",
@@ -230,7 +231,7 @@
     "publishedCount": "{count} published events",
     "pendingValidation": "Awaiting approval",
     "priority": "Priority",
-    "pendingHint": "{players} players · {docs} documents",
+    "pendingHint": "{profiles} profiles · {docs} supporting documents",
     "handle": "Handle",
     "reports": "Reports",
     "arbitration": "Arbitration",
@@ -291,7 +292,23 @@
     "period7": "Last 7 days",
     "period30": "Last 30 days",
     "period90": "Last 90 days",
-    "period365": "Last 12 months"
+    "period365": "Last 12 months",
+    "since": "since {date}",
+    "last12Months": "Last 12 months",
+    "weekOf": "wk of {date}",
+    "noPrevious": "No baseline",
+    "successHintAll": "{ok} / {total} payments all-time",
+    "activeAccounts": "Active accounts",
+    "activeHint": "{week} over 7 d · {month} over 30 d",
+    "toCollect": "Awaiting collection",
+    "toCollectHint": "{collect} registrations · {pending} payments",
+    "superTitle": "Super administrator decisions",
+    "superDesc": "These queues wait on you alone: nobody else can settle them.",
+    "superRemovals": "Removals to confirm",
+    "superPosts": "Posts to approve",
+    "superComments": "Comments to approve",
+    "superScoutDays": "Events to publish",
+    "superFootnote": "While a post or comment waits, its author is the only one who can see it."
   },
   "accessDenied": {
     "metaTitle": "Access denied",

@@ -1,4 +1,9 @@
 import { isMissingRpc } from "@/lib/actions/result";
+import {
+  periodRevenueFromRow,
+  type PeriodRevenue,
+  type RawRevenueKeys,
+} from "@/lib/queries/dashboard-revenue";
 import { createClient } from "@/lib/supabase/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -8,6 +13,17 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  * SECURITY DEFINER et leve « Reserve aux administrateurs » si `is_admin()` est
  * faux : c'est notre garantie que ces agregats ne fuient pas.
  */
+// Les formes des revenus vivent dans un module neutre, pour etre testables
+// sans client Supabase ; on les re-expose ici, ou les appelants les cherchent
+// deja.
+export type {
+  MonthlyRevenueRow,
+  PeriodRevenue,
+  RevenueBucket,
+  RevenueSeriesRow,
+} from "@/lib/queries/dashboard-revenue";
+export { monthlySeries } from "@/lib/queries/dashboard-revenue";
+
 export type DashboardPayload = {
   users: { role: string; total: number; actifs: number; nouveaux_30j: number }[] | null;
   players: { status: string; total: number }[] | null;
@@ -36,13 +52,14 @@ export type DashboardExtras = {
   active7d: number;
   active30d: number;
   pendingReports: number;
-  pendingPayments: number;
   docsPending: number;
   activePeriod: number;
   paymentsTotal: number;
   paymentsSucceeded: number;
   nextEvent: NextEvent | null;
   nextEventRegistrations: number;
+  /** `null` = la base ne sait pas fenetrer les revenus ; voir `PeriodRevenue`. */
+  revenue: PeriodRevenue | null;
   /** En millisecondes. `null` quand aucun dossier n'est exploitable. */
   approvalDelay: number | null;
   plans: DashboardPlan[];
@@ -74,17 +91,18 @@ export async function getDashboard(periodDays = 30) {
 
   // ⚠️ DEUX APPELS, PAS QUINZE. `get_admin_dashboard()` vient de l'app mobile
   // (migration 0011) et rend les agregats ; `admin_dashboard_counts()` est
-  // propre a ce depot (202610220001) et rend les treize lectures que ce
-  // fichier posait a cote, inscriptions du prochain evenement comprises —
-  // elles coutaient une vague de plus, puisqu'elles dependaient de
-  // l'evenement trouve par la precedente.
+  // propre a ce depot (202610220001, puis 202610230001 pour le fenetrage des
+  // revenus) et rend les douze lectures que ce fichier posait a cote,
+  // inscriptions du prochain evenement comprises — elles coutaient une vague
+  // de plus, puisqu'elles dependaient de l'evenement trouve par la
+  // precedente.
   const [rpc, fast] = await Promise.all([
     supabase.rpc("get_admin_dashboard"),
     supabase.rpc("admin_dashboard_counts", { p_period_days: periodDays }),
   ]);
 
   // La regle du depot : degrader a l'ouverture. Fonction absente (migration
-  // pas passee) ou execution revoquee, et les treize lectures d'origine
+  // pas passee) ou execution revoquee, et les douze lectures d'origine
   // reprennent la main — l'ecran est plus lent, il n'est pas casse.
   let extras: DashboardExtras;
   if (fast.error) {
@@ -92,7 +110,7 @@ export async function getDashboard(periodDays = 30) {
     // cette fonction-la il ne veut pas dire « execution deliberement
     // revoquee » mais « le `grant execute ... to authenticated` de la
     // migration n'est pas passe » : l'appelant est deja administrateur, et
-    // l'ecran retomberait alors sur ses quatorze lectures en silence —
+    // l'ecran retomberait alors sur ses treize lectures en silence —
     // resultat juste, lenteur d'avant, et rien pour le dire. Seule l'absence
     // de la fonction (`PGRST202`) est un etat normal : projet non migre.
     if (!isMissingRpc(fast.error)) {
@@ -110,14 +128,19 @@ export async function getDashboard(periodDays = 30) {
   };
 }
 
-/** La ligne rendue par `public.admin_dashboard_counts()`. */
-type CountsRow = {
+/**
+ * La ligne rendue par `public.admin_dashboard_counts()`.
+ *
+ * ⚠️ Les cles de revenus viennent de `RawRevenueKeys` et sont toutes
+ * OPTIONNELLES : une base portant la version precedente de la fonction ne les
+ * rend pas, et `periodRevenueFromRow()` repond alors `null` plutot que zero.
+ */
+type CountsRow = RawRevenueKeys & {
   visible_players?: number;
   active_7d?: number;
   active_30d?: number;
   active_period?: number;
   pending_reports?: number;
-  pending_payments?: number;
   docs_pending?: number;
   payments_total?: number;
   payments_succeeded?: number;
@@ -141,7 +164,7 @@ type CountsRow = {
 
 /**
  * La meme reponse que le chemin d'origine, lue sur une ligne au lieu de
- * quatorze requetes. Les deux doivent rendre les memes nombres : deux facons
+ * treize requetes. Les deux doivent rendre les memes nombres : deux facons
  * de repondre a la meme question finissent toujours par diverger, et c'est la
  * seule raison pour laquelle ce fichier garde les deux cote a cote.
  */
@@ -152,13 +175,13 @@ function extrasFromRow(row: CountsRow): DashboardExtras {
     active7d: Number(row.active_7d ?? 0),
     active30d: Number(row.active_30d ?? 0),
     pendingReports: Number(row.pending_reports ?? 0),
-    pendingPayments: Number(row.pending_payments ?? 0),
     docsPending: Number(row.docs_pending ?? 0),
     activePeriod: Number(row.active_period ?? 0),
     paymentsTotal: Number(row.payments_total ?? 0),
     paymentsSucceeded: Number(row.payments_succeeded ?? 0),
     nextEvent: row.next_event ?? null,
     nextEventRegistrations: Number(row.next_event_registrations ?? 0),
+    revenue: periodRevenueFromRow(row),
     // ⚠️ `Number(null)` vaut 0, et un delai d'approbation de zero se lirait
     // comme une decision instantanee : l'absence reste `null`.
     approvalDelay: delay === null || delay === undefined ? null : Number(delay),
@@ -177,9 +200,16 @@ function extrasFromRow(row: CountsRow): DashboardExtras {
 }
 
 /**
- * Le chemin d'origine, garde intact : treize lectures en une vague, plus une
- * quatorzieme pour les inscriptions du prochain evenement. Il sert quand
+ * Le chemin d'origine : douze lectures en une vague, plus une treizieme pour
+ * les inscriptions du prochain evenement. Il sert quand
  * `admin_dashboard_counts()` n'est pas deployee.
+ *
+ * ⚠️ IL NE SAIT PAS FENETRER LES REVENUS, et c'est assume : il rend
+ * `revenue: null`, ce qui fait afficher les douze derniers mois de la vue
+ * mobile **en le disant**. Reproduire ici le decoupage a la journee voudrait
+ * dire ramener les paiements de la periode ligne a ligne pour les agreger en
+ * JavaScript — donc un plafond de lignes, donc une somme silencieusement
+ * tronquee sous un intitule qui promet un total.
  */
 async function dashboardExtrasBySeparateReads(
   supabase: SupabaseClient,
@@ -195,7 +225,6 @@ async function dashboardExtrasBySeparateReads(
     active7d,
     active30d,
     pendingReports,
-    pendingPayments,
     docsPending,
     activePeriod,
     paymentsTotal,
@@ -220,10 +249,10 @@ async function dashboardExtrasBySeparateReads(
       .select("id", { count: "exact", head: true })
       .gte("last_login_at", since30d),
     supabase.from("reports").select("id", { count: "exact", head: true }).eq("status", "en_attente"),
-    supabase
-      .from("payments")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "en_attente"),
+    // Les paiements en attente ne sont plus lus ici : la tuile « Encaissements
+    // en attente » les compte avec les inscriptions a encaisser, depuis le
+    // comptage des files que la mise en page a deja fait. Une lecture de
+    // moins, et un seul chiffre pour la tuile, la cloche et la pastille.
     supabase
       .from("professional_documents")
       .select("id", { count: "exact", head: true })
@@ -287,13 +316,20 @@ async function dashboardExtrasBySeparateReads(
     active7d: active7d.count ?? 0,
     active30d: active30d.count ?? 0,
     pendingReports: pendingReports.count ?? 0,
-    pendingPayments: pendingPayments.count ?? 0,
     docsPending: docsPending.count ?? 0,
     activePeriod: activePeriod.count ?? 0,
     paymentsTotal: paymentsTotal.count ?? 0,
     paymentsSucceeded: paymentsSucceeded.count ?? 0,
     nextEvent: (nextEvent.data ?? null) as NextEvent | null,
     nextEventRegistrations,
+    // ⚠️ PAS DE FENETRE A LA JOURNEE SANS LA FONCTION, et c'est volontaire.
+    // La reproduire ici voudrait dire ramener les paiements de la periode
+    // ligne a ligne pour les agreger en JavaScript — donc un plafond de
+    // lignes, donc un total silencieusement tronque sous un intitule qui
+    // promet une somme. L'ecran retombe sur les mois de la vue mobile, qui
+    // sont exacts, et annonce « 12 derniers mois » au lieu de la periode
+    // choisie : la fonction disparait, le chiffre reste vrai.
+    revenue: null,
     approvalDelay: averageDelay(approvals.data ?? []),
     plans: (plans.data ?? []).map((plan) => ({
       id: plan.id as string,

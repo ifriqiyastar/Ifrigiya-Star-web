@@ -25,6 +25,7 @@ import {
 import type { AdminPermission } from "@/lib/auth"
 import type { Diagnostic } from "@/lib/queries/diagnostics"
 import { useAdminI18n } from "@/lib/i18n/admin-client"
+import { localePath } from "@/lib/i18n/config"
 
 export function AppSidebar({
   user,
@@ -40,7 +41,7 @@ export function AppSidebar({
   // Memes chiffres que la cloche, et vivants comme elle : les deux lisent le
   // meme instantane.
   const { badges } = useAdminQueue()
-  const { dict } = useAdminI18n()
+  const { dict, locale } = useAdminI18n()
 
   // SUR TELEPHONE, LE RAIL EST UN TIROIR, et il restait ouvert par-dessus
   // l'ecran qu'on venait de demander : il fallait le refermer a la main apres
@@ -107,7 +108,12 @@ export function AppSidebar({
               <SidebarMenuButton
                 className="h-10 rounded-lg p-1! hover:bg-secondary group-data-[collapsible=icon]:p-0!"
                 tooltip="Ifriqiya Soccer Star"
-                render={<Link href="/admin" />}
+                // ⚠️ `localePath()`, PAS UNE ADRESSE EN DUR. Le francais
+                // n'a pas de prefixe, donc une adresse brute marche en
+                // francais et ramene a `/admin` — donc au francais — depuis
+                // `/en` ou `/ar` : le logo faisait sortir de la langue
+                // choisie, et il est le lien le plus clique du rail.
+                render={<Link href={localePath(locale, "/admin")} />}
               >
                 <BrandMark size={32} priority className="size-8" />
                 {/* Plus de baseline sous le nom : « Scouting pro » etait une

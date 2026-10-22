@@ -1,3 +1,5 @@
+import { cache } from "react";
+
 import type { AdminPermission } from "@/lib/auth";
 import { plural, type AdminDictionary } from "@/lib/i18n/admin-shared";
 import { countUnsettledScoutDayRegistrations } from "@/lib/queries/scout-day-payments";
@@ -45,6 +47,9 @@ export type AdminTask = {
  * build.
  */
 type QueueKey = Exclude<keyof AdminDictionary["queue"], "sections">;
+
+/** Les comptages, un par file. */
+export type QueueCounts = Record<QueueKey, number>;
 
 type QueueSpec = {
   key: QueueKey;
@@ -183,7 +188,7 @@ export function hasQueueAccess(permissions: AdminPermission[]): boolean {
  * compter : on retombe alors sur les dix requetes. Un echec pour une autre
  * raison y retombe aussi — au pire on paye ce qu'on payait hier.
  */
-async function countQueues(): Promise<Record<string, number>> {
+const countQueues = cache(async function countQueues(): Promise<QueueCounts> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("admin_queue_counts");
 
@@ -200,14 +205,34 @@ async function countQueues(): Promise<Record<string, number>> {
     // faire confiance a une reponse incomplete.
     const complete = QUEUES.every((queue) => row[queue.key] !== undefined);
     if (complete) {
+      // `Object.fromEntries` s'infere `Record<string, number>` ; la
+      // completude vient d'etre verifiee ligne au-dessus, donc toutes les
+      // cles de `QueueKey` sont la.
       return Object.fromEntries(
         QUEUES.map((queue) => [queue.key, Number(row[queue.key] ?? 0)]),
-      );
+      ) as QueueCounts;
     }
   }
 
   return countQueuesOneByOne();
-}
+});
+
+/**
+ * Les memes comptages, pour un appelant qui veut les nombres bruts plutot que
+ * la liste de taches — le tableau de bord, qui pose ses tuiles « en attente »
+ * dessus.
+ *
+ * ⚠️ C'EST LE MEME APPEL QUE CELUI DE LA MISE EN PAGE, pas un second. Le
+ * `cache()` de React dedoublonne a l'echelle du rendu : la mise en page
+ * (cloche et pastilles) et la page (tuiles) lisent donc une seule reponse.
+ * Deux consequences, et les deux comptent : zero aller-retour de plus sur
+ * l'ecran le plus souvent ouvert, et surtout **un seul chiffre** — la tuile
+ * « En attente de validation » et la pastille du rail ne peuvent plus
+ * s'annoncer differentes, ce qu'elles faisaient quand la tuile comptait les
+ * joueurs et les justificatifs pendant que la pastille comptait les quatre
+ * files.
+ */
+export const fetchQueueCounts = countQueues;
 
 /**
  * Le comptage d'origine, une requete par file.
@@ -217,7 +242,7 @@ async function countQueues(): Promise<Record<string, number>> {
  * mobiles absentes — une colonne inconnue rend `42703`, donc `count` null,
  * donc zero.
  */
-async function countQueuesOneByOne(): Promise<Record<string, number>> {
+async function countQueuesOneByOne(): Promise<QueueCounts> {
   const supabase = await createClient();
   const head = { count: "exact" as const, head: true };
 

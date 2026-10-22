@@ -67,14 +67,16 @@ export async function FinanceMetrics() {
     if (!["reussi", "active_manuellement"].includes(row.status)) continue;
     const date = new Date(row.paid_at);
     const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-01`;
-    const current = byMonth.get(key) ?? { mois: key, abonnement: 0, scout_day: 0 };
+    const current = byMonth.get(key) ?? { bucket: key, abonnement: 0, scout_day: 0 };
     const amount = Number(row.amount ?? 0);
     if (row.payment_type === "abonnement") current.abonnement += amount;
     else current.scout_day += amount;
     byMonth.set(key, current);
   }
+  // Ici le pas est bien le mois — c'est cet ecran qui les construit, un par
+  // `paid_at` — donc `RevenueChart` garde sa granularite par defaut.
   const revenueRows = [...byMonth.values()].sort((a, b) =>
-    (a.mois ?? "").localeCompare(b.mois ?? ""),
+    (a.bucket ?? "").localeCompare(b.bucket ?? ""),
   );
 
   return (

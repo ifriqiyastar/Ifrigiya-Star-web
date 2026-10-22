@@ -22,9 +22,10 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { EllipsisVerticalIcon, LogOutIcon, UserRoundIcon } from "lucide-react"
+import { EllipsisVerticalIcon, LogOutIcon, SettingsIcon, UserRoundIcon } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { useAdminI18n } from "@/lib/i18n/admin-client"
+import { localePath } from "@/lib/i18n/config"
 import { cn } from "@/lib/utils"
 
 /**
@@ -65,7 +66,7 @@ export function NavUser({
   }
 }) {
   const { isMobile } = useSidebar()
-  const { dict } = useAdminI18n()
+  const { dict, locale } = useAdminI18n()
   const router = useRouter()
   async function signOut() {
     await createClient().auth.signOut()
@@ -143,15 +144,38 @@ export function NavUser({
                 </div>
               </DropdownMenuLabel>
             </DropdownMenuGroup>
-            {/* Le compte, et rien d'autre : son profil, puis la deconnexion.
-                Les raccourcis « Validations » et « Notifications » ont ete
-                retires a la demande du client — ils doublaient le rail, juste
-                au-dessus. Le profil est ouvert a tout administrateur, sans
-                permission : c'est son compte, pas un ecran de gestion. */}
+            {/* Le compte, et rien d'autre : son profil, ses reglages, puis la
+                deconnexion. Les raccourcis « Validations » et « Notifications »
+                ont ete retires a la demande du client — ils doublaient le rail,
+                juste au-dessus. Les deux ecrans restants sont ouverts a tout
+                administrateur, sans permission : c'est son compte et sa
+                session, pas des ecrans de gestion.
+
+                ⚠️ `/admin/parametres` EXISTAIT SANS AUCUN LIEN VERS LUI. La
+                route etait bien rendue — c'est l'ecran qui porte le choix de
+                la langue du back-office — mais aucune entree du rail, du menu
+                ni d'un fil d'Ariane n'y menait : on ne pouvait l'ouvrir qu'en
+                tapant l'adresse. Le reglage de langue etait donc, en pratique,
+                inatteignable.
+
+                ⚠️ `localePath()` et non une adresse en dur, pour les deux : le
+                francais n'ayant pas de prefixe, une adresse brute passait
+                inapercue en francais et faisait retomber en francais depuis
+                `/en` ou `/ar`. */}
             <DropdownMenuGroup className="border-b border-border p-1.5">
-              <DropdownMenuItem className="py-2" render={<Link href="/admin/profil" />}>
+              <DropdownMenuItem
+                className="py-2"
+                render={<Link href={localePath(locale, "/admin/profil")} />}
+              >
                 <MenuIcon icon={UserRoundIcon} />
                 {dict.userMenu.profile}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="py-2"
+                render={<Link href={localePath(locale, "/admin/parametres")} />}
+              >
+                <MenuIcon icon={SettingsIcon} />
+                {dict.userMenu.settings}
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <div className="p-1.5">
