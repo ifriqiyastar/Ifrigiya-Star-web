@@ -5,6 +5,7 @@ import {
   CalendarDaysIcon,
   CheckIcon,
   ClockIcon,
+  DownloadIcon,
   ListChecksIcon,
   HourglassIcon,
   ShieldCheckIcon,
@@ -15,6 +16,7 @@ import {
 } from "lucide-react";
 
 import { ActionButton } from "@/components/admin/action-button";
+import { buttonVariants } from "@/components/ui/button";
 import { STACKED_ON_MOBILE } from "@/components/admin/table-stack";
 import { EmptyState } from "@/components/admin/empty-state";
 import { FilterBar } from "@/components/admin/filter-bar";
@@ -46,11 +48,12 @@ import {
 import { setScoutDayMinNotice } from "@/lib/actions/platform-settings";
 
 import { SCOUT_DAY_STATUS } from "@/lib/labels";
-import { orLikeTerm } from "@/lib/queries/notifications";
+import { orLikeTerm } from "@/lib/queries/search-term";
 import { displayName, fetchProfilesByIds } from "@/lib/queries/profiles";
 import { fetchCountries } from "@/lib/countries-api";
 import { fetchScoutDayNotice } from "@/lib/queries/platform-settings";
 import { createClient } from "@/lib/supabase/server";
+import { cn } from "@/lib/utils";
 import { getAdminAccess, requirePermission } from "@/lib/auth";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -78,6 +81,15 @@ export default async function ScoutDaysPage({ searchParams }: PageProps<"/[local
     page: str(resolved.page),
   };
   const page = Math.max(1, Number(params.page ?? 1) || 1);
+
+  // L'export reprend les filtres de l'ecran : exporter autre chose que ce qui
+  // est affiche serait un piege. `page` et `mois` sont ecartes — le premier
+  // parce qu'un export ne se pagine pas, le second parce qu'il ne pilote que
+  // le calendrier, jamais la liste.
+  const exportQuery = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value && key !== "page" && key !== "mois") exportQuery.set(key, value);
+  }
 
   // Mois affiche par le calendrier. On reste en chaines `YYYY-MM` / `YYYY-MM-DD` :
   // `event_date` est un `date` Postgres sans fuseau, et le convertir en `Date`
@@ -232,7 +244,21 @@ export default async function ScoutDaysPage({ searchParams }: PageProps<"/[local
           )
         }
         description={i18n.t("Tous les Scout Days, quel que soit leur organisateur. L'administration peut publier, remettre en brouillon, annuler ou cloturer un evenement, et suivre inscriptions et paiements.")}
-        actions={<ScoutDayDialog organizers={organizers ?? []} countries={countries} />}
+        actions={
+          <>
+            <ScoutDayDialog organizers={organizers ?? []} countries={countries} />
+            {/* L'export reprend les filtres de l'ecran — statut, gratuit ou
+                payant, recherche —, `page` exclu : un export ne se pagine pas. */}
+            <Link
+              href={i18n.path(
+                `/admin/scout-days/export${exportQuery.size ? `?${exportQuery}` : ""}`,
+              )}
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+            >
+              <DownloadIcon />
+              {i18n.t("Exporter CSV")}</Link>
+          </>
+        }
       />
 
       <section className="grid grid-cols-2 gap-3 xl:grid-cols-5">

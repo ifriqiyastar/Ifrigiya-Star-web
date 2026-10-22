@@ -1,9 +1,9 @@
 import type { NextRequest } from "next/server";
 
 import { requirePermission } from "@/lib/auth";
+import { csvCell, csvDocument, csvResponse } from "@/lib/csv";
+import { getRequestAdminI18n } from "@/lib/i18n/admin";
 import { listUsers } from "@/lib/queries/users";
-
-const csv = (value: unknown) => `"${String(value ?? "").replaceAll('"', '""')}"`;
 
 /**
  * Export CSV de l'annuaire, **avec les filtres de l'ecran**.
@@ -15,9 +15,13 @@ const csv = (value: unknown) => `"${String(value ?? "").replaceAll('"', '""')}"`
  */
 export async function GET(request: NextRequest) {
   await requirePermission("users.read");
+  const i18n = await getRequestAdminI18n();
   const params = request.nextUrl.searchParams;
 
   const rows: Record<string, unknown>[] = [];
+  // Le total annonce par la requete, garde pour la derniere ligne du fichier :
+  // l'export s'arrete a 1 000 lignes et ne le disait pas.
+  let total = 0;
   const PAGE_LIMIT = 40; // 40 x 25 = 1 000 lignes au plus, sans requete illimitee.
   for (let page = 1; page <= PAGE_LIMIT; page += 1) {
     const result = await listUsers({
@@ -30,6 +34,7 @@ export async function GET(request: NextRequest) {
       signAvatars: false,
     });
     if (result.error) return Response.json({ error: result.error }, { status: 500 });
+    total = result.total;
     rows.push(...result.rows);
     if (rows.length >= result.total) break;
   }
@@ -49,18 +54,18 @@ export async function GET(request: NextRequest) {
     "created_at",
   ] as const;
 
-  const content = [
-    columns.join(","),
-    ...rows.map((row) => columns.map((column) => csv(row[column])).join(",")),
-  ].join("\n");
-
-  // BOM en tete : sans lui, Excel lit l'UTF-8 comme du Latin-1 et casse les
-  // accents des noms.
-  return new Response(`﻿${content}`, {
-    headers: {
-      "content-type": "text/csv; charset=utf-8",
-      "content-disposition": `attachment; filename="ifriqiya-comptes-${new Date().toISOString().slice(0, 10)}.csv"`,
-      "cache-control": "no-store",
-    },
-  });
+  return csvResponse(
+    csvDocument({
+      columns,
+      rows: rows.map((row) => columns.map((column) => csvCell(row[column]))),
+      notice:
+        total > rows.length
+          ? i18n.t(
+              "Export limite aux {limite} premieres lignes sur {total}. Affinez les filtres de l'ecran pour obtenir le reste.",
+              { limite: i18n.format.formatNumber(rows.length), total: i18n.format.formatNumber(total) },
+            )
+          : null,
+    }),
+    "comptes",
+  );
 }

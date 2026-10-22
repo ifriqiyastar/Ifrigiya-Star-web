@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import Link from "next/link";
 import {
+  DownloadIcon,
   CheckIcon,
   ShieldCheckIcon,
   XIcon,
@@ -23,15 +25,16 @@ import { ReasonDialog } from "@/components/admin/reason-dialog";
 import { StatusPill } from "@/components/admin/status-pill";
 import { UserCell } from "@/components/admin/user-cell";
 import { IdentityDossier } from "@/components/admin/validation-dossier";
-import { QueueError, ValidationFilter, ValidationMetrics, ValidationNotes, validationStatus } from "@/components/admin/validations/pieces";
-import { Button } from "@/components/ui/button";
+import { QueueError, ValidationFilter, ValidationMetrics, ValidationNotes } from "@/components/admin/validations/pieces";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { setIdentityStatus } from "@/lib/actions/users";
 import { requirePermission } from "@/lib/auth";
 import { getAdminI18n } from "@/lib/i18n/admin";
 import { displayName, fetchProfilesByIds } from "@/lib/queries/profiles";
-import { EMPTY_ID, PAGE_SIZE } from "@/lib/queries/validations-shared";
+import { EMPTY_ID, PAGE_SIZE, validationStatus } from "@/lib/queries/validations-shared";
 import { createClient } from "@/lib/supabase/server";
+import { cn } from "@/lib/utils";
 import type { GuardianRow, IdentityRow } from "@/components/admin/validation-dossier";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -55,6 +58,7 @@ export default async function ValidationsIdentityPage({
     "document",
     typeof resolved.etat === "string" ? resolved.etat : undefined,
   );
+  const exportQuery = new URLSearchParams({ file: "identite", etat });
   const path = i18n.path("/admin/validations/identite");
 
   return (
@@ -66,6 +70,17 @@ export default async function ValidationsIdentityPage({
         ]}
         title={i18n.t("Pieces d'identite a controler")}
         description={i18n.t("Le controle KYC, distinct de la validation du compte. Accepter une piece ne donne pas l'acces a l'application, et la refuser demande un motif transmis a l'interesse.")}
+        actions={
+          /* L'export reprend l'etat affiche et, quand la file en a une, la
+             recherche : exporter autre chose que ce qui est a l'ecran serait un
+             piege. La pagination, elle, ne s'exporte pas. */
+          <Link
+            href={i18n.path(`/admin/validations/export?${exportQuery}`)}
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+          >
+            <DownloadIcon />
+            {i18n.t("Exporter CSV")}</Link>
+        }
       />
 
       {/* STREAMING. Les trois blocs ci-dessous interrogent chacun la base. Sans

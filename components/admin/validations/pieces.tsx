@@ -15,6 +15,11 @@ import { MetricStrip } from "@/components/admin/metric-strip";
 import { NoteCards } from "@/components/admin/note-cards";
 import { getAdminI18n } from "@/lib/i18n/admin";
 import { createClient } from "@/lib/supabase/server";
+// L'etat des files vit dans un module neutre : l'export CSV en a besoin et un
+// Route Handler ne peut pas importer ce fichier-ci (il tire `getAdminI18n`,
+// donc `next/root-params`, interdit hors du segment `[locale]`).
+import { validationStatus, type ValidationScope } from "@/lib/queries/validations-shared";
+
 
 /**
  * Les pieces communes aux quatre ecrans de validation.
@@ -139,35 +144,6 @@ export async function ValidationMetrics() {
   );
 }
 
-/**
- * Les etats qu'une file de validation peut lister.
- *
- * ⚠️ `pending` porte la valeur attendue **par la table** : les deux tables de
- * profil disent `en_attente_validation` (enum `player_profile_status`), les
- * deux tables de pieces disent `en_attente`. Les confondre rendait une file
- * vide sans erreur — PostgREST n'a rien a redire a un statut qui n'existe
- * pas, il ne trouve simplement aucune ligne.
- */
-export type ValidationScope = "profile" | "document";
-
-export const VALIDATION_PENDING = {
-  profile: "en_attente_validation",
-  document: "en_attente",
-} as const;
-
-/**
- * L'etat demande, ramene a une valeur que la table connait. Tout le reste —
- * y compris une valeur inventee dans l'URL — retombe sur « en attente », qui
- * reste l'etat par defaut de ces quatre ecrans : ce sont des files de travail,
- * elles s'ouvrent sur ce qui attend.
- */
-export function validationStatus(scope: ValidationScope, etat?: string) {
-  const allowed: readonly string[] =
-    scope === "profile"
-      ? ["en_attente_validation", "valide", "refuse", "incomplet", "suspendu"]
-      : ["en_attente", "valide", "refuse"];
-  return etat && allowed.includes(etat) ? etat : VALIDATION_PENDING[scope];
-}
 
 /**
  * La barre de recherche et le filtre d'etat, UNE pour les quatre ecrans.

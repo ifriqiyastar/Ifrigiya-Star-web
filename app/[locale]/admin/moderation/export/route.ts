@@ -1,9 +1,9 @@
 import type { NextRequest } from "next/server";
 
 import { requirePermission } from "@/lib/auth";
+import { csvCell, csvDocument, csvResponse } from "@/lib/csv";
+import { getRequestAdminI18n } from "@/lib/i18n/admin";
 import { createClient } from "@/lib/supabase/server";
-
-const csv = (value: unknown) => `"${String(value ?? "").replaceAll('"', '""')}"`;
 
 const COLUMNS = [
   "id",
@@ -36,11 +36,14 @@ const COLUMNS = [
 export async function GET(request: NextRequest) {
   await requirePermission("moderation.manage");
   const params = request.nextUrl.searchParams;
+  const i18n = await getRequestAdminI18n();
   const supabase = await createClient();
 
   let query = supabase
     .from("reports")
-    .select(COLUMNS.join(","))
+    // `count` : la derniere ligne du fichier doit pouvoir dire combien de
+    // signalements le plafond a laisses dehors.
+    .select(COLUMNS.join(","), { count: "exact" })
     .order("created_at", { ascending: false })
     .limit(5000);
 
@@ -49,20 +52,22 @@ export async function GET(request: NextRequest) {
   if (statut) query = query.eq("status", statut);
   if (cible) query = query.eq("target_type", cible);
 
-  const { data, error } = await query;
+  const { data, error, count } = await query;
   if (error) return Response.json({ error: error.message }, { status: 500 });
 
   const rows = (data ?? []) as unknown as Record<string, unknown>[];
-  const content = [
-    COLUMNS.join(","),
-    ...rows.map((row) => COLUMNS.map((column) => csv(row[column])).join(",")),
-  ].join("\n");
-
-  return new Response(`﻿${content}`, {
-    headers: {
-      "content-type": "text/csv; charset=utf-8",
-      "content-disposition": `attachment; filename="ifriqiya-signalements-${new Date().toISOString().slice(0, 10)}.csv"`,
-      "cache-control": "no-store",
-    },
+  const total = count ?? rows.length;
+  const content = csvDocument({
+    columns: COLUMNS,
+    rows: rows.map((row) => COLUMNS.map((column) => csvCell(row[column]))),
+    notice:
+      total > rows.length
+        ? i18n.t(
+            "Export limite aux {limite} premieres lignes sur {total}. Affinez les filtres de l'ecran pour obtenir le reste.",
+            { limite: i18n.format.formatNumber(rows.length), total: i18n.format.formatNumber(total) },
+          )
+        : null,
   });
+
+  return csvResponse(content, "signalements");
 }

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import Link from "next/link";
 import {
+  DownloadIcon,
   CheckIcon,
   MessageSquareWarningIcon,
   ShieldCheckIcon,
@@ -24,16 +26,18 @@ import { ReasonDialog } from "@/components/admin/reason-dialog";
 import { StatusPill } from "@/components/admin/status-pill";
 import { UserCell } from "@/components/admin/user-cell";
 import { ProfessionalDossier } from "@/components/admin/validation-dossier";
-import { QueueError, ValidationFilter, ValidationMetrics, ValidationNotes, validationStatus } from "@/components/admin/validations/pieces";
-import { Button } from "@/components/ui/button";
+import { QueueError, ValidationFilter, ValidationMetrics, ValidationNotes } from "@/components/admin/validations/pieces";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { setProfessionalStatus } from "@/lib/actions/users";
 import { requirePermission } from "@/lib/auth";
 import { getAdminI18n } from "@/lib/i18n/admin";
 import { PROFESSIONAL_TYPE } from "@/lib/labels";
 import { displayName, fetchProfilesByIds } from "@/lib/queries/profiles";
-import { EMPTY_ID, PAGE_SIZE } from "@/lib/queries/validations-shared";
+import { orSearchClause } from "@/lib/queries/search-term";
+import { EMPTY_ID, PAGE_SIZE, PRO_SEARCH_COLUMNS, validationStatus } from "@/lib/queries/validations-shared";
 import { createClient } from "@/lib/supabase/server";
+import { cn } from "@/lib/utils";
 import type { ProDocumentRow } from "@/components/admin/validation-dossier";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -58,6 +62,8 @@ export default async function ValidationsProsPage({
     "profile",
     typeof resolved.etat === "string" ? resolved.etat : undefined,
   );
+  const exportQuery = new URLSearchParams({ file: "professionnels", etat });
+  if (search) exportQuery.set("q", search);
   const path = i18n.path("/admin/validations/professionnels");
 
   return (
@@ -69,6 +75,17 @@ export default async function ValidationsProsPage({
         ]}
         title={i18n.t("Comptes professionnels a valider")}
         description={i18n.t("Les clubs, academies, agents et recruteurs — en attente par defaut, les dossiers deja tranches se demandent dans le bandeau. Un professionnel valide peut organiser des Scout Days et signer des evaluations.")}
+        actions={
+          /* L'export reprend l'etat affiche et, quand la file en a une, la
+             recherche : exporter autre chose que ce qui est a l'ecran serait un
+             piege. La pagination, elle, ne s'exporte pas. */
+          <Link
+            href={i18n.path(`/admin/validations/export?${exportQuery}`)}
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+          >
+            <DownloadIcon />
+            {i18n.t("Exporter CSV")}</Link>
+        }
       />
 
       {/* STREAMING. Les trois blocs ci-dessous interrogent chacun la base. Sans
@@ -121,14 +138,7 @@ async function ProfessionalsQueue({
     .order("updated_at", { ascending: false })
     .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
 
-  if (search) {
-    const term = search.replace(/[%,()]/g, " ").trim();
-    if (term) {
-      query = query.or(
-        `contact_full_name.ilike.%${term}%,organization_name.ilike.%${term}%,city.ilike.%${term}%`,
-      );
-    }
-  }
+  if (search) query = query.or(orSearchClause(PRO_SEARCH_COLUMNS, search));
 
   const { data, error, count } = await query;
   const rows = data ?? [];

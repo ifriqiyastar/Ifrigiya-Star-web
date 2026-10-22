@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import Link from "next/link";
 import {
+  DownloadIcon,
   CheckIcon,
   EyeIcon,
   UserCheckIcon,
@@ -28,7 +29,8 @@ import { ReasonDialog } from "@/components/admin/reason-dialog";
 import { StatusPill } from "@/components/admin/status-pill";
 import { UserCell } from "@/components/admin/user-cell";
 import { PlayerDossier } from "@/components/admin/validation-dossier";
-import { QueueError, ValidationFilter, ValidationMetrics, ValidationNotes, validationStatus } from "@/components/admin/validations/pieces";
+import { QueueError, ValidationFilter, ValidationMetrics, ValidationNotes } from "@/components/admin/validations/pieces";
+import { buttonVariants } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { bulkValidatePlayers, setPlayerStatus } from "@/lib/actions/users";
 import { requirePermission } from "@/lib/auth";
@@ -36,8 +38,10 @@ import { ageFromBirthDate } from "@/lib/format";
 import { getAdminI18n } from "@/lib/i18n/admin";
 import { IDENTITY_STATUS, PLAYER_LEVEL } from "@/lib/labels";
 import { displayName, fetchProfilesByIds } from "@/lib/queries/profiles";
-import { EMPTY_ID, PAGE_SIZE, countBy, groupBy } from "@/lib/queries/validations-shared";
+import { orSearchClause } from "@/lib/queries/search-term";
+import { EMPTY_ID, PAGE_SIZE, PLAYER_SEARCH_COLUMNS, countBy, groupBy, validationStatus } from "@/lib/queries/validations-shared";
 import { createClient } from "@/lib/supabase/server";
+import { cn } from "@/lib/utils";
 import type { ClubHistoryRow, GuardianRow, IdentityRow } from "@/components/admin/validation-dossier";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -62,6 +66,8 @@ export default async function ValidationsPlayersPage({
     "profile",
     typeof resolved.etat === "string" ? resolved.etat : undefined,
   );
+  const exportQuery = new URLSearchParams({ file: "joueurs", etat });
+  if (search) exportQuery.set("q", search);
   const path = i18n.path("/admin/validations/joueurs");
 
   return (
@@ -73,6 +79,17 @@ export default async function ValidationsPlayersPage({
         ]}
         title={i18n.t("Profils joueurs a valider")}
         description={i18n.t("Les comptes joueurs, du plus recent au plus ancien — en attente par defaut, les dossiers deja tranches se demandent dans le bandeau. Valider debloque l'acces a l'application : c'est le statut du profil qui l'ouvre, pas celui du document d'identite.")}
+        actions={
+          /* L'export reprend l'etat affiche et, quand la file en a une, la
+             recherche : exporter autre chose que ce qui est a l'ecran serait un
+             piege. La pagination, elle, ne s'exporte pas. */
+          <Link
+            href={i18n.path(`/admin/validations/export?${exportQuery}`)}
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+          >
+            <DownloadIcon />
+            {i18n.t("Exporter CSV")}</Link>
+        }
       />
 
       {/* STREAMING. Les trois blocs ci-dessous interrogent chacun la base. Sans
@@ -130,15 +147,11 @@ async function PlayersQueue({
 
   // Filtre texte : sur les colonnes du profil joueur uniquement. L'email vit
   // dans `profiles`, table jointe apres coup — le chercher ici demanderait une
-  // sous-requete pour un gain nul sur une file de vingt lignes.
-  if (search) {
-    const term = search.replace(/[%,()]/g, " ").trim();
-    if (term) {
-      query = query.or(
-        `first_name.ilike.%${term}%,last_name.ilike.%${term}%,current_club.ilike.%${term}%,nationality.ilike.%${term}%`,
-      );
-    }
-  }
+  // sous-requete pour un gain nul sur une file de vingt lignes. Les colonnes
+  // vivent dans `validations-shared.ts` parce que l'export CSV de cet ecran
+  // cherche dans les memes : un export « avec les filtres de l'ecran » doit
+  // filtrer comme l'ecran.
+  if (search) query = query.or(orSearchClause(PLAYER_SEARCH_COLUMNS, search));
 
   const { data, error, count } = await query;
   const rows = data ?? [];

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import Link from "next/link";
 import {
+  DownloadIcon,
   CheckIcon,
   FileTextIcon,
   XIcon,
@@ -22,15 +24,17 @@ import { Panel, PanelHeader } from "@/components/admin/panel";
 import { StatusPill } from "@/components/admin/status-pill";
 import { UserCell } from "@/components/admin/user-cell";
 import { DocumentDossier } from "@/components/admin/validation-dossier";
-import { QueueError, ValidationFilter, ValidationMetrics, ValidationNotes, validationStatus } from "@/components/admin/validations/pieces";
+import { QueueError, ValidationFilter, ValidationMetrics, ValidationNotes } from "@/components/admin/validations/pieces";
+import { buttonVariants } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { setDocumentStatus } from "@/lib/actions/users";
 import { requirePermission } from "@/lib/auth";
 import { getAdminI18n } from "@/lib/i18n/admin";
 import { DOCUMENT_STATUS } from "@/lib/labels";
 import { displayName, fetchProfilesByIds } from "@/lib/queries/profiles";
-import { EMPTY_ID, PAGE_SIZE, groupBy } from "@/lib/queries/validations-shared";
+import { EMPTY_ID, PAGE_SIZE, groupBy, validationStatus } from "@/lib/queries/validations-shared";
 import { createClient } from "@/lib/supabase/server";
+import { cn } from "@/lib/utils";
 import type { ProDocumentRow } from "@/components/admin/validation-dossier";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -54,6 +58,7 @@ export default async function ValidationsDocumentsPage({
     "document",
     typeof resolved.etat === "string" ? resolved.etat : undefined,
   );
+  const exportQuery = new URLSearchParams({ file: "justificatifs", etat });
   const path = i18n.path("/admin/validations/justificatifs");
 
   return (
@@ -65,6 +70,17 @@ export default async function ValidationsDocumentsPage({
         ]}
         title={i18n.t("Justificatifs professionnels")}
         description={i18n.t("Les pieces deposees a l'appui d'un compte professionnel. Les accepter ne valide pas le compte : les deux gestes sont volontairement separes.")}
+        actions={
+          /* L'export reprend l'etat affiche et, quand la file en a une, la
+             recherche : exporter autre chose que ce qui est a l'ecran serait un
+             piege. La pagination, elle, ne s'exporte pas. */
+          <Link
+            href={i18n.path(`/admin/validations/export?${exportQuery}`)}
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+          >
+            <DownloadIcon />
+            {i18n.t("Exporter CSV")}</Link>
+        }
       />
 
       {/* STREAMING. Les trois blocs ci-dessous interrogent chacun la base. Sans

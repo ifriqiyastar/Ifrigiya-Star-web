@@ -1,6 +1,8 @@
 import { getAdminI18n } from "@/lib/i18n/admin";
 import type { Metadata } from "next";
+import Link from "next/link";
 import {
+  DownloadIcon,
   AwardIcon,
   ClipboardCheckIcon,
   ClipboardPenIcon,
@@ -22,6 +24,7 @@ import { ServerForm } from "@/components/admin/server-form";
 import { StatCard } from "@/components/admin/stat-card";
 import { StatusPill } from "@/components/admin/status-pill";
 import { UserCell } from "@/components/admin/user-cell";
+import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -155,7 +158,17 @@ export default async function EvaluationsPage({
             {i18n.t(privateTotal === 1 ? "{0} rapport prive" : "{0} rapports prives", { "0": i18n.format.formatNumber(privateTotal) })}
           </HeaderMeta>
         }
-        description={i18n.t("Saisissez les observations terrain, mesurez les quatre dimensions du joueur et pilotez la publication des rapports depuis un espace unique.")}
+        description={i18n.t("Saisissez les observations terrain, notez les six axes du joueur et pilotez la publication des rapports depuis un espace unique.")}
+        actions={
+          /* Pas de filtres a reprendre : cet ecran n'en a pas. L'export rend
+             les rapports du plus recent au plus ancien, comme la liste. */
+          <Link
+            href={i18n.path("/admin/evaluations/export")}
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+          >
+            <DownloadIcon />
+            {i18n.t("Exporter CSV")}</Link>
+        }
       />
 
       <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
