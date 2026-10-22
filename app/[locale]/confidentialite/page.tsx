@@ -57,6 +57,14 @@ export default async function PrivacyPage() {
         <LegalList items={t.visibilityItems} />
       </LegalSection>
 
+      {/* Les courriels d'annonce sont un traitement a part des courriels de
+          service, avec son propre refus : la section le dit, et nomme la boite
+          de desabonnement. */}
+      <LegalSection title={t.emailsTitle}>
+        <p>{t.emailsBody1}</p>
+        <p>{t.emailsBody2}</p>
+      </LegalSection>
+
       <LegalSection title={t.moderationTitle}>
         <p>{t.moderationBody1}</p>
         <p>{t.moderationBody2}</p>
@@ -67,6 +75,16 @@ export default async function PrivacyPage() {
         <p>{t.providersNote}</p>
         <p>{t.providersNoSale}</p>
         <LegalTodo label={t.todoLabel}>{t.hostingTodo}</LegalTodo>
+      </LegalSection>
+
+      {/* Les deux sections du SITE, apres celle des prestataires : elles
+          parlent de ce qui se passe hors de l'application. */}
+      <LegalSection title={t.cookiesTitle}>
+        <p>{t.cookiesBody}</p>
+      </LegalSection>
+
+      <LegalSection title={t.siteTitle}>
+        <p>{t.siteBody}</p>
       </LegalSection>
 
       <LegalSection title={t.retentionTitle}>

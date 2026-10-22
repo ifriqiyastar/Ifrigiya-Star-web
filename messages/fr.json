@@ -395,6 +395,10 @@
       [
         "Données techniques",
         "Un identifiant de notification propre à votre appareil, le type d'appareil et son nom, et les journaux nécessaires à la sécurité du service. Lorsque vous utilisez « Ma position » sur la carte d'une détection, votre position est utilisée sur l'appareil uniquement et n'est pas enregistrée par nos serveurs."
+      ],
+      [
+        "Paiements",
+        "Lorsqu'une inscription ou un abonnement est payant : le montant, la devise, le moyen de paiement, l'état du règlement et, le cas échéant, la référence de la transaction. Aucun prestataire de paiement en ligne n'est connecté à ce jour — les encaissements sont saisis par l'administration —, nous ne recevons donc ni numéro de carte ni identifiants bancaires."
       ]
     ],
     "whyTitle": "Pourquoi nous traitons ces données",
@@ -412,8 +416,8 @@
       "Une évaluation de détection n'est visible par le joueur évalué que si l'organisateur choisit de la publier."
     ],
     "moderationTitle": "La modération",
-    "moderationBody1": "Les messages privés sont chiffrés au repos sur nos serveurs. Un administrateur ne peut lire une conversation que si un message de cette conversation, ou l'un de ses participants, a fait l'objet d'un signalement — et chacun de ces accès est journalisé.",
-    "moderationBody2": "Signaler une personne depuis la messagerie rend donc cette conversation lisible par la modération. C'est la contrepartie du traitement de votre signalement.",
+    "moderationBody1": "Les messages privés sont chiffrés au repos sur nos serveurs, et l'espace d'administration ne les affiche pas : l'instruction d'un signalement se fait sur le motif écrit par la personne qui signale, jamais sur le contenu de la conversation.",
+    "moderationBody2": "Signaler une personne depuis la messagerie transmet donc à la modération le motif, l'identifiant de la conversation et celui de ses participants — de quoi instruire le signalement et, s'il y a lieu, suspendre un compte, sans ouvrir vos échanges.",
     "providersTitle": "Nos prestataires techniques",
     "providersRows": [
       [
@@ -459,7 +463,14 @@
     "securityTitle": "Sécurité",
     "securityBody": "Les échanges avec nos serveurs sont chiffrés en transit. Les messages privés sont chiffrés au repos. Les pièces d'identité, les justificatifs professionnels et les pièces jointes de la messagerie sont stockés dans des espaces privés à accès restreint. Aucun système n'étant infaillible, utilisez un mot de passe unique et signalez-nous tout comportement suspect.",
     "changesTitle": "Modifications",
-    "changesBody": "Cette politique peut évoluer. En cas de changement significatif, nous vous en informerons dans l'application. La date en haut de page indique la dernière mise à jour."
+    "changesBody": "Cette politique peut évoluer. En cas de changement significatif, nous vous en informerons dans l'application. La date en haut de page indique la dernière mise à jour.",
+    "emailsTitle": "Courriels que nous envoyons",
+    "emailsBody1": "Deux sortes de courriels partent de nos serveurs. Les courriels de service — réinitialisation de mot de passe, avis de sécurité, confirmation d'une adresse — font partie du fonctionnement de votre compte et vous sont adressés tant qu'il existe. Les annonces — une nouvelle détection, une information sur la plateforme — sont envoyées par l'administration d'Ifriqiya Soccer Star à l'adresse de votre compte.",
+    "emailsBody2": "Chaque annonce porte un lien de désabonnement qui vous est propre : le suivre enregistre votre refus et aucune annonce ne vous est plus envoyée, les courriels de service continuant pour leur part. Vous pouvez aussi écrire à desabonnement@ifriqiya-soccer.com. Nous ne confions votre adresse à aucun annonceur.",
+    "cookiesTitle": "Cookies",
+    "cookiesBody": "Le site et l'espace d'administration ne déposent que des cookies nécessaires : celui qui maintient votre session une fois connecté, et celui qui retient la langue choisie. Aucun cookie publicitaire, aucun traceur, aucun outil de mesure d'audience — ni sur le site, ni dans l'application. Les effacer depuis votre navigateur vous déconnecte et rétablit la langue par défaut ; rien d'autre n'est perdu.",
+    "siteTitle": "Visiteurs du site",
+    "siteBody": "Le site se consulte sans compte et sans identification. Si vous écrivez depuis le formulaire de contact, le nom, l'adresse e-mail et le message que vous y saisissez nous sont transmis par courriel pour que nous puissions vous répondre : ils ne servent à rien d'autre et n'alimentent aucune liste de diffusion."
   },
   "termsPage": {
     "metaTitle": "Conditions d'utilisation",

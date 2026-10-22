@@ -395,6 +395,10 @@
       [
         "Technical data",
         "A notification identifier specific to your device, the device type and name, and the logs required to keep the service secure. When you use “My location” on a Scout Day map, your position is used on the device only and is not stored on our servers."
+      ],
+      [
+        "Payments",
+        "When a registration or a subscription is paid: the amount, the currency, the payment method, the settlement status and, where applicable, the transaction reference. No online payment provider is connected to date — payments are recorded by the administration — so we never receive a card number or banking credentials."
       ]
     ],
     "whyTitle": "Why we process this data",
@@ -412,8 +416,8 @@
       "A Scout Day assessment is only visible to the assessed player if the organiser chooses to publish it."
     ],
     "moderationTitle": "Moderation",
-    "moderationBody1": "Private messages are encrypted at rest on our servers. An administrator can only read a conversation if a message in it, or one of its participants, has been reported — and each such access is logged.",
-    "moderationBody2": "Reporting someone from the messaging screen therefore makes that conversation readable by moderation. That is the trade-off for handling your report.",
+    "moderationBody1": "Private messages are encrypted at rest on our servers, and the administration area does not display them: a report is reviewed on the reason written by the person reporting, never on the content of the conversation.",
+    "moderationBody2": "Reporting someone from the messaging screen therefore passes on to moderation the reason, the conversation's identifier and those of its participants — enough to review the report and, where warranted, suspend an account, without opening your exchanges.",
     "providersTitle": "Our technical providers",
     "providersRows": [
       [
@@ -459,7 +463,14 @@
     "securityTitle": "Security",
     "securityBody": "Traffic to our servers is encrypted in transit. Private messages are encrypted at rest. Identity documents, professional supporting documents and messaging attachments are stored in private, access-restricted areas. No system is infallible, so use a unique password and report any suspicious behaviour to us.",
     "changesTitle": "Changes",
-    "changesBody": "This policy may change. If a change is significant, we will tell you in the app. The date at the top of this page shows the last update."
+    "changesBody": "This policy may change. If a change is significant, we will tell you in the app. The date at the top of this page shows the last update.",
+    "emailsTitle": "Emails we send",
+    "emailsBody1": "Two kinds of email leave our servers. Service emails — password reset, security notices, address confirmation — are part of how your account works and are sent to you for as long as it exists. Announcements — a new scouting day, platform news — are sent by the Ifriqiya Soccer Star administration to your account's address.",
+    "emailsBody2": "Every announcement carries an unsubscribe link of your own: following it records your refusal and no further announcement is sent to you, while service emails continue. You may also write to desabonnement@ifriqiya-soccer.com. We never hand your address to advertisers.",
+    "cookiesTitle": "Cookies",
+    "cookiesBody": "The site and the administration area set only necessary cookies: the one that keeps you signed in, and the one that remembers your chosen language. No advertising cookie, no tracker, no audience measurement tool — neither on the site nor in the app. Clearing them from your browser signs you out and restores the default language; nothing else is lost.",
+    "siteTitle": "Site visitors",
+    "siteBody": "The site can be browsed without an account and without identifying yourself. If you write through the contact form, the name, email address and message you enter reach us by email so that we can reply: they serve no other purpose and feed no mailing list."
   },
   "termsPage": {
     "metaTitle": "Terms of use",
