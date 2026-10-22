@@ -189,9 +189,23 @@
   `cookies()` is async in Next ≥ 15; writes throw during Server Component render
   and are deliberately swallowed (the proxy already refreshed the token).
 - `lib/supabase/service.ts` — `service_role` client, returns `null` when
-  `SUPABASE_SERVICE_ROLE_KEY` is unset. Three uses: permanent account deletion
-  (Auth Admin API), the payment webhook, and **hiding a post or comment** —
-  migrations 0033/0035 revoked `update (is_hidden)` from `authenticated` so an
+  `SUPABASE_SERVICE_ROLE_KEY` is unset. **Six uses, six call sites** — the list
+  said three until an audit counted them (Oct 2026); a seventh needs a line here
+  and a reason:
+  1. permanent account deletion, `lib/actions/users.ts` (Auth Admin API);
+  2. sending a password-reset code to a member, same file — a super-admin-only
+     gesture that bypasses Postgres by construction, so `isSuperAdmin()` is its
+     only barrier;
+  3. creating an editor account, `lib/actions/admin-accounts.ts` (Auth Admin
+     API again, `isSuperAdmin()` likewise);
+  4. the payment webhook, `app/api/webhooks/payment-provider` — no session at
+     all, the signature is the authentication;
+  5. the campaign unsubscribe link, `app/api/email/desabonnement` — no session
+     either, and the gesture is bounded to the one signed profile id;
+  6. **hiding a post or comment**, `lib/actions/moderation.ts`, and only as a
+     fallback (see below).
+  On that last one: migrations 0033/0035 revoked `update (is_hidden)` from
+  `authenticated` so an
   author cannot un-hide their own content, and a column privilege is checked
   *before* RLS, so the admin session is refused too. Never route a gesture
   Postgres must arbitrate on caller identity through it (`is_deleted`,

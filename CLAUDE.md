@@ -134,7 +134,20 @@ everywhere.
   success, so the screen announces "profil valide" with nothing changed. The
   trap was paid on `professional_documents`, then `scout_days`, then content
   moderation, then `platform_settings`. Report the rows that actually changed,
-  never the size of the selection.
+  never the size of the selection. **Audited across `lib/actions/*` in Oct
+  2026**: thirteen writes still lacked it — both payment statuses, the
+  supporting-document and identity decisions, three profile forms, publishing an
+  evaluation, deleting a post or comment, the campaign journal, and the
+  super-admin removal itself, which closed the report on content still online.
+  The audit is one command (`grep -n "\.update("` per file, read to the `;`)
+  and is worth re-running. **One deliberate exception**, marked in place:
+  `email-template.ts` clearing `is_default` on the *other* templates, where zero
+  rows is the normal case — the write that sets the flag is checked.
+- ⚠️ **No export may be silent about what it leaves out.** Every CSV stops at a
+  ceiling (1 000 to 10 000 rows); until Oct 2026 none said so, and a file cut at
+  row 1 000 of 3 000 reads as the complete register. `lib/csv.ts` is the single
+  home of the escaping, the BOM and that last line — pass it `count` from the
+  query and it writes the notice itself.
 - ⚠️⚠️ **`42501` has two different causes and they need opposite fixes.** A
   missing RLS policy, *or* a column privilege revoked from `authenticated`
   (mobile migrations `0025` on `profiles`, `0033`/`0035` on `is_hidden`, `0050`
@@ -158,9 +171,20 @@ everywhere.
 - ⚠️⚠️ **A list filter belongs in the query, never in a pass over the
   already-paginated result.** Otherwise a term in the 200th row is never found,
   `count` ignores the filter, and the footer disagrees with the table. Escaping
-  is `likeTerm()` / `orLikeTerm()`: `%`, `_` and `\` for `ilike`, **and a second
-  pass** inside `or=(...)`, where PostgREST strips one level of `\` on leaving
-  the quotes. Verified by reading the emitted URL, not by reasoning about it.
+  is `likeTerm()` / `orLikeTerm()` / `orSearchClause()`, and they live in **one**
+  neutral module, `lib/queries/search-term.ts`: `%`, `_` and `\` for `ilike`,
+  **and a second pass** inside `or=(...)`, where PostgREST strips one level of
+  `\` on leaving the quotes. Verified by reading the emitted URL, not by
+  reasoning about it — and by probing the project: `title=ilike.%test_blog%`
+  matches the four « test blog N » posts (the `_` is a wildcard),
+  `title=ilike.%test\_blog%` matches none. ⚠️ **Escape, never strip.** Four
+  screens used to erase `%`, `,`, `(` and `)` from the term instead: `_` went
+  untreated, and a name really containing a `%` was unfindable with nothing on
+  screen saying so. When a list cannot search its own table — `payments` and
+  `subscriptions` only know a `profile_id` — resolve the accounts first
+  (`searchProfileIds()`) and filter on `profile_id in (…)` **in the query**.
+  Verified to parse against the project: `or=(provider_reference.ilike."…",
+  profile_id.in.(…))` reaches RLS rather than a syntax error.
 - ⚠️⚠️ **Tailwind's `grid-cols-*` is `repeat(n, minmax(0, 1fr))`: tracks shrink
   *below* their content instead of overflowing.** The symptom is a crushed
   control, and `document.scrollWidth` stays equal to `clientWidth` throughout —
@@ -258,7 +282,11 @@ references below.
 - **Server Actions** live in `lib/actions/*.ts`, call `requireAdmin()` /
   `requirePermission()` first, return a uniform `ActionResult = { ok, message }`
   (never throw for expected failures), and end with
-  `revalidatePath("/admin", "layout")` so the nav's queue counters refresh.
+  `revalidatePath("/[locale]/admin", "layout")` so the nav's queue counters
+  refresh. ⚠️ The **route pattern**, with the bracketed segment — the root
+  layout of this repo is a dynamic segment, and `"/admin"` matches no route, so
+  it would revalidate nothing at all. Every action in `lib/actions/*` passes the
+  bracketed form; `REFRESH()` in the larger files is that one call.
 - **Surface database errors through `describeError()`** (`lib/actions/result.ts`)
   instead of writing your own message. It maps SQLSTATEs to French copy and
   deliberately re-exposes Postgres' raw `42501` text, because that string names
