@@ -50,6 +50,10 @@ export default async function AbonnementsPage({
     statut: str(resolved.statut),
     type: str(resolved.type),
     page: str(resolved.page),
+    // Les trois cartes du panneau des revenus, chacune son mois.
+    mois: str(resolved.mois),
+    "mois-abonnements": str(resolved["mois-abonnements"]),
+    "mois-scout-days": str(resolved["mois-scout-days"]),
   };
   const path = i18n.path(financePath("abonnements"));
 
@@ -61,7 +65,7 @@ export default async function AbonnementsPage({
         description={i18n.t("Activer ou annuler une souscription depuis ici agit sur la base, sans passer par le prestataire de paiement : a reserver aux corrections et aux activations hors ligne.")}
       />
 
-      <FinanceMetrics />
+      <FinanceMetrics basePath={path} params={params} />
 
       <SubscriptionsQueue params={params} path={path} />
 

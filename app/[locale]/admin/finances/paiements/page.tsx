@@ -65,6 +65,10 @@ export default async function PaiementsPage({
     type: str(resolved.type),
     moyen: str(resolved.moyen),
     page: str(resolved.page),
+    // Les trois cartes du panneau des revenus, chacune son mois.
+    mois: str(resolved.mois),
+    "mois-abonnements": str(resolved["mois-abonnements"]),
+    "mois-scout-days": str(resolved["mois-scout-days"]),
   };
   const path = i18n.path(financePath("paiements"));
 
@@ -86,7 +90,7 @@ export default async function PaiementsPage({
         }
       />
 
-      <FinanceMetrics />
+      <FinanceMetrics basePath={path} params={params} />
 
       {/* Avant le releve, pas dedans : ce sont les encaissements qui RESTENT a
           saisir, et ils n'ont aucune ligne dans la table des paiements. */}
