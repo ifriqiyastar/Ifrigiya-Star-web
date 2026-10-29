@@ -584,6 +584,58 @@ body:has(.admin-dashboard-shell) {
   }
 }
 
+/* =====================================================================
+   La ligne en cours de mise a jour.
+
+   ⚠️ LE PROBLEME QU'ELLE CORRIGE. Entre le clic sur « Valider » et l'ecran
+   rafraichi, il s'ecoule le temps de l'ecriture plus celui d'un rendu serveur
+   complet : 10,3 s + 4,8 s mesurees sur une validation de signalement (journal
+   du 29 oct. 2026), la base etant distante et chaque aller-retour coutant 0,5 a
+   1 s. Pendant tout ce temps, seule la roulette du bouton bougeait — large de
+   douze pixels, au bout d'une ligne qui continuait d'afficher l'ancien statut.
+   Le geste paraissait donc sans effet, et c'est ce que le client a remonte.
+
+   ⚠️ POURQUOI UNE REGLE CSS ET NON UN ETAT PAR LIGNE. `ActionButton` est pose
+   sur vingt-deux tables, et aucune ne sait ce que son geste va produire comme
+   nouvelle valeur — seul le serveur le sait. Faire remonter l'information
+   jusqu'au `<tr>` aurait demande d'envelopper chaque ligne de chaque file dans
+   un composant client, c'est-a-dire de toucher les vingt-deux tables pour un
+   effet purement visuel. `:has()` fait le chemin inverse : la ligne se marque
+   elle-meme a partir du bouton qu'elle contient, sans qu'aucune table ne change.
+
+   Ce n'est pas une mise a jour optimiste : rien n'est devine du resultat. La
+   ligne dit « je travaille », pas « c'est fait » — elle s'eclaircit, perd ses
+   interactions et laisse ses propres pastilles de statut inchangees jusqu'a ce
+   que le serveur rende la vraie valeur.
+   ===================================================================== */
+.admin-dashboard-shell tr:has([data-action-busy="true"]),
+.admin-dashboard-shell [data-slot="card"]:has([data-action-busy="true"]) {
+  opacity: 0.55;
+  /* `background-color` et non `background` : la ligne signalee garde son fond
+     lime (`.row-flagged`), qui porte une information que celle-ci ne remplace
+     pas. */
+  background-color: color-mix(in oklch, var(--muted) 45%, transparent);
+  transition: opacity 120ms ease-out;
+}
+
+/* Le geste est en cours : plus rien d'autre ne doit etre cliquable sur la
+   ligne, sinon on lance deux decisions sur la meme cible en attendant la
+   premiere. Les boutons portent deja leur propre `disabled` ; ceci couvre les
+   liens, les declencheurs de modale et les apercus. */
+.admin-dashboard-shell tr:has([data-action-busy="true"]) a,
+.admin-dashboard-shell tr:has([data-action-busy="true"]) button:not([data-action-busy]) {
+  pointer-events: none;
+}
+
+/* Respecte le reglage systeme : l'eclaircissement reste (il porte
+   l'information), la transition disparait. */
+@media (prefers-reduced-motion: reduce) {
+  .admin-dashboard-shell tr:has([data-action-busy="true"]),
+  .admin-dashboard-shell [data-slot="card"]:has([data-action-busy="true"]) {
+    transition: none;
+  }
+}
+
 @layer utilities {
   /* Le degrade lime de la maquette : boutons primaires, onglet de navigation
      actif, pastilles de variation. Declare une fois ici plutot qu'en classes

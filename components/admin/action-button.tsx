@@ -63,6 +63,28 @@ export function ActionButton({
   const router = useRouter();
   const [pending, setPending] = React.useState(false);
   const [open, setOpen] = React.useState(false);
+  /**
+   * ⚠️ LE RAFRAICHISSEMENT FAIT PARTIE DE L'ATTENTE, DONC DE L'ETAT OCCUPE.
+   *
+   * `router.refresh()` ne rend rien qu'on puisse attendre : il declenche un
+   * rendu serveur et retourne immediatement. Le `finally` ci-dessous rendait
+   * donc la main des que l'ecriture etait faite — le toast annoncait le
+   * succes, la roulette s'arretait, et le tableau continuait d'afficher
+   * l'ancien etat pendant tout le temps du nouveau rendu : 4,8 s mesurees sur
+   * une validation de signalement (journal du 29 oct. 2026), contre 10,3 s
+   * pour l'action elle-meme. C'est exactement le « ca ne se met pas a jour »
+   * remonte par le client : l'ecran ne mentait pas, il n'avait simplement
+   * aucun moyen de dire qu'il travaillait encore.
+   *
+   * Dans une transition, React tient `refreshing` a vrai jusqu'a ce que la
+   * nouvelle charge RSC soit **appliquee**. Le bouton reste donc occupe
+   * jusqu'a ce que la ligne porte vraiment sa nouvelle valeur. C'est ce que
+   * `ServerForm` obtenait deja gratuitement via `useActionState`, et c'est
+   * pourquoi les formulaires paraissaient corrects quand les boutons ne
+   * l'etaient pas.
+   */
+  const [refreshing, startRefresh] = React.useTransition();
+  const busy = pending || refreshing;
 
   async function run() {
     setPending(true);
@@ -76,7 +98,7 @@ export function ActionButton({
         // `router.refresh()` explicite le garantit plutot que de compter sur
         // le mecanisme implicite de Next.
         if (redirectTo) router.push(redirectTo);
-        else router.refresh();
+        else startRefresh(() => router.refresh());
       } else {
         toast.error(result.message);
       }
@@ -95,10 +117,14 @@ export function ActionButton({
       className={className}
       aria-label={label}
       title={label}
-      disabled={pending}
+      /* Lu par la regle `tr:has([data-action-busy="true"])` de `globals.css` :
+         la ligne entiere se marque « en cours » a partir d'ici, sans qu'aucune
+         des vingt-deux tables n'ait a envelopper ses lignes. */
+      data-action-busy={busy ? "true" : undefined}
+      disabled={busy}
       onClick={() => (confirm ? setOpen(true) : run())}
     >
-      {pending ? <Loader2Icon className="animate-spin" /> : null}
+      {busy ? <Loader2Icon className="animate-spin" /> : null}
       {children}
     </Button>
   );
@@ -115,12 +141,12 @@ export function ActionButton({
             <AlertDialogDescription>{confirm.description}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={pending}>{dict.common.cancel}</AlertDialogCancel>
+            <AlertDialogCancel disabled={busy}>{dict.common.cancel}</AlertDialogCancel>
             {/* Vert/lime de la marque plutot que rouge : choix explicite du
                 client — le rouge classique d'alerte pour une action
                 irreversible n'est pas garde ici. */}
-            <AlertDialogAction disabled={pending} onClick={run}>
-              {pending ? <Loader2Icon className="animate-spin" /> : null}
+            <AlertDialogAction disabled={busy} onClick={run}>
+              {busy ? <Loader2Icon className="animate-spin" /> : null}
               {confirm.actionLabel ?? dict.common.confirm}
             </AlertDialogAction>
           </AlertDialogFooter>

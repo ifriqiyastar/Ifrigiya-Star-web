@@ -69,6 +69,11 @@ export function ReasonDialog({
   const [open, setOpen] = React.useState(false);
   const [reason, setReason] = React.useState("");
   const [pending, setPending] = React.useState(false);
+  // Voir `ActionButton` : `router.refresh()` ne s'attend pas, donc l'etat
+  // occupe doit couvrir la transition, faute de quoi la modale se ferme sur une
+  // liste qui montre encore l'ancien etat.
+  const [refreshing, startRefresh] = React.useTransition();
+  const busy = pending || refreshing;
 
   const trimmed = reason.trim();
 
@@ -85,7 +90,7 @@ export function ReasonDialog({
         // Voir le commentaire dans ActionButton : un appel d'action hors
         // `<form action>` ne rafraichit pas toujours la page courante tout
         // seul.
-        router.refresh();
+        startRefresh(() => router.refresh());
       } else {
         toast.error(result.message);
       }
@@ -98,7 +103,14 @@ export function ReasonDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={asTrigger(trigger)} />
+      {/* ⚠️ L'ATTRIBUT VA SUR LE DECLENCHEUR, PAS SUR LE BOUTON DE SOUMISSION.
+          Celui-ci vit dans `DialogContent`, qui est rendu dans un portail —
+          donc hors du `<tr>` —, et la regle `tr:has(…)` de `globals.css` ne
+          l'y verrait jamais. Le declencheur, lui, est bien dans la ligne. */}
+      <DialogTrigger
+        data-action-busy={busy ? "true" : undefined}
+        render={asTrigger(trigger)}
+      />
       <DialogContent>
         <form onSubmit={submit} className="contents">
           <DialogHeader>
@@ -123,9 +135,9 @@ export function ReasonDialog({
             <Button
               type="submit"
               variant={destructive ? "destructive" : "default"}
-              disabled={pending || (required && !trimmed)}
+              disabled={busy || (required && !trimmed)}
             >
-              {pending ? <Loader2Icon className="animate-spin" /> : null}
+              {busy ? <Loader2Icon className="animate-spin" /> : null}
               {submitLabel ?? dict.common.confirm}
             </Button>
           </DialogFooter>
