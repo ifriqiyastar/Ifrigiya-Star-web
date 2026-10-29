@@ -3,7 +3,7 @@
 import * as React from "react";
 
 import { useDeviceOs } from "@/lib/use-device-os";
-import { APP_STORE_URL, PLAY_STORE_URL, QR_REDIRECT_PARAM } from "@/lib/store-urls";
+import { ficheDuSysteme, QR_REDIRECT_PARAM } from "@/lib/store-urls";
 
 /**
  * Redirection automatique vers le store, pour le visiteur qui vient de
@@ -15,9 +15,16 @@ import { APP_STORE_URL, PLAY_STORE_URL, QR_REDIRECT_PARAM } from "@/lib/store-ur
  * Ne rend rien : c'est un effet, pas un visuel. Place dans `AppelFinal` (le
  * bloc qui porte `id="telecharger"`), a cote de son propre `<StoreButtons>`.
  *
- * Tant que `NEXT_PUBLIC_APP_STORE_URL` / `NEXT_PUBLIC_PLAY_STORE_URL`
- * (`lib/store-urls.ts`) sont vides, cet effet ne redirige jamais — il n'y a
- * nulle part ou envoyer le visiteur avant que l'app soit publiee.
+ * ⚠️ **Dormant tant qu'une seule fiche est publiee.** Dans cet etat le QR
+ * encode la fiche elle-meme (`cibleDuQrCode`, `lib/store-urls.ts`) et aucun
+ * scan n'arrive plus ici avec `?qr=1` : un relais en JavaScript ne servait
+ * qu'a faire passer le visiteur par le site. Cet effet reprend son role le
+ * jour ou les deux fiches coexistent — un seul QR, deux systemes possibles,
+ * et seul le telephone qui scanne sait lequel il est. Il reste aussi le
+ * recours des QR deja imprimes ou partages sous l'ancienne forme.
+ *
+ * Sans fiche pour le systeme qui scanne, il ne redirige pas : il n'y a nulle
+ * part ou envoyer ce visiteur-la.
  */
 export function QrStoreRedirect() {
   const os = useDeviceOs();
@@ -26,7 +33,7 @@ export function QrStoreRedirect() {
     const viaQr = new URLSearchParams(window.location.search).get(QR_REDIRECT_PARAM) === "1";
     if (!viaQr) return;
 
-    const url = os === "ios" ? APP_STORE_URL : os === "android" ? PLAY_STORE_URL : null;
+    const url = ficheDuSysteme(os);
     if (!url) return;
 
     // `replace` plutot que `href` : la page de la marque ne doit pas rester

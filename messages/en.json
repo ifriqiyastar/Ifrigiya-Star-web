@@ -13,7 +13,7 @@
     "drawerLabel": "Main navigation",
     "qr": {
       "title": "Scan to download",
-      "description": "Point your phone's camera at this code: it opens this same page, ready to show you the right store.",
+      "description": "Point your phone's camera at this code: it opens the app's store listing directly.",
       "close": "Close this window"
     },
     "scoutDays": "Scout Days"

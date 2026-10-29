@@ -31,7 +31,7 @@ import {
 } from "@/components/site/social";
 import { useI18n } from "@/lib/i18n/client";
 import { useDeviceOs } from "@/lib/use-device-os";
-import { QR_REDIRECT_PARAM } from "@/lib/store-urls";
+import { cibleDuQrCode, ficheDuSysteme, QR_REDIRECT_PARAM } from "@/lib/store-urls";
 
 /**
  * L'entete du site public et son tiroir de navigation.
@@ -135,11 +135,18 @@ export function SiteNav() {
 
   const close = () => setOpen(false);
 
-  // Sur telephone (iOS/Android detecte), le bouton reste un lien direct vers
-  // la section : le visiteur peut deja installer depuis cet appareil. Sur un
+  // Sur telephone (iOS/Android detecte), le bouton mene au store de cet
+  // appareil, puisque le visiteur peut y installer l'app tout de suite. Sur un
   // ordinateur — ou tant que le systeme n'est pas encore connu, cote serveur
   // — un clic ouvre plutot la popup de QR code ci-dessous.
   const os = useDeviceOs();
+  // ⚠️ La fiche du systeme, et non la section de la page. Le bouton renvoyait
+  // vers `#telecharger` sur les deux systemes : sur Android il faisait donc
+  // defiler jusqu'aux badges au lieu d'ouvrir le Play Store, soit un geste de
+  // plus pour la seule chose que ce bouton promet. Il ne retombe sur la
+  // section que faute de fiche — sur un iPhone aujourd'hui — ou l'y envoyer
+  // au moins lui montre l'etat des deux stores.
+  const fiche = ficheDuSysteme(os);
   const [qrOpen, setQrOpen] = React.useState(false);
   const [qrUrl, setQrUrl] = React.useState("");
   const qrCloseRef = React.useRef<HTMLButtonElement>(null);
@@ -152,7 +159,9 @@ export function SiteNav() {
     // regenere. Le parametre `?qr=1` (avant le `#`) est ce que
     // `QrStoreRedirect` lit pour distinguer ce flux d'un visiteur qui
     // atteint la meme section en faisant simplement defiler la page.
-    setQrUrl(`${window.location.origin}${prefix}/?${QR_REDIRECT_PARAM}=1#telecharger`);
+    setQrUrl(
+      cibleDuQrCode(`${window.location.origin}${prefix}/?${QR_REDIRECT_PARAM}=1#telecharger`),
+    );
     setQrOpen(true);
   };
   const closeQr = () => setQrOpen(false);
@@ -200,7 +209,16 @@ export function SiteNav() {
           </Link>
 
           <div className="ms-auto flex items-center gap-2 sm:gap-4">
-            {os === "ios" || os === "android" ? (
+            {fiche ? (
+              // Lien externe : `<a>` et non `<Link>`, qui prefetcherait une
+              // route de ce site et n'en est pas une.
+              <a
+                href={fiche}
+                className="inline-flex items-center rounded-full border border-[var(--site-accent)] bg-[var(--site-accent)] px-2 py-2 text-xs font-semibold whitespace-nowrap text-[var(--site-ink)] transition-colors hover:bg-transparent hover:text-[var(--site-accent)] sm:px-5 sm:text-sm"
+              >
+                {nav.download}
+              </a>
+            ) : os === "ios" || os === "android" ? (
               <Link
                 href={`${prefix}/#telecharger`}
                 className="inline-flex items-center rounded-full border border-[var(--site-accent)] bg-[var(--site-accent)] px-2 py-2 text-xs font-semibold whitespace-nowrap text-[var(--site-ink)] transition-colors hover:bg-transparent hover:text-[var(--site-accent)] sm:px-5 sm:text-sm"
@@ -340,13 +358,25 @@ export function SiteNav() {
         </nav>
 
         <div className="shrink-0 space-y-3 border-t border-[var(--site-line)] px-4 py-5">
-          <Link
-            href={`${prefix}/#telecharger`}
-            onClick={close}
-            className="block rounded-full bg-[var(--site-accent)] px-5 py-3.5 text-center text-sm font-semibold text-[var(--site-ink)]"
-          >
-            {nav.download}
-          </Link>
+          {/* Le meme geste que le bouton de l'entete, donc la meme cible : ce
+              tiroir ne s'ouvre que sur telephone, ou le store est a un clic. */}
+          {fiche ? (
+            <a
+              href={fiche}
+              onClick={close}
+              className="block rounded-full bg-[var(--site-accent)] px-5 py-3.5 text-center text-sm font-semibold text-[var(--site-ink)]"
+            >
+              {nav.download}
+            </a>
+          ) : (
+            <Link
+              href={`${prefix}/#telecharger`}
+              onClick={close}
+              className="block rounded-full bg-[var(--site-accent)] px-5 py-3.5 text-center text-sm font-semibold text-[var(--site-ink)]"
+            >
+              {nav.download}
+            </Link>
+          )}
           <Link
             href={`${prefix}/contact`}
             onClick={close}

@@ -35,6 +35,45 @@ export const APP_STORE_URL = process.env.NEXT_PUBLIC_APP_STORE_URL || null;
 export const PLAY_STORE_URL = process.env.NEXT_PUBLIC_PLAY_STORE_URL || PLAY_STORE_PUBLIE;
 
 /**
+ * La fiche a ouvrir pour un systeme donne, `null` s'il n'y en a pas. Partagee
+ * par le bouton « Telecharger l'app » de l'entete (dans ses deux emplacements)
+ * et par `QrStoreRedirect`, pour qu'ils repondent la meme chose : des tests
+ * separes sur les memes deux constantes auraient pu diverger. `StoreButtons`
+ * ne s'en sert pas — il montre les DEUX badges sur un ordinateur, et juge donc
+ * chaque fiche separement.
+ */
+export function ficheDuSysteme(os: "inconnu" | "ios" | "android"): string | null {
+  if (os === "ios") return APP_STORE_URL;
+  if (os === "android") return PLAY_STORE_URL;
+  // Systeme inconnu (ordinateur, robot d'indexation) : aucune fiche ne
+  // s'impose, c'est au visiteur de choisir parmi les badges.
+  return null;
+}
+
+/**
+ * Ce que le QR code de l'entete doit encoder.
+ *
+ * Tant qu'**une seule** fiche est publiee, il encode cette fiche DIRECTEMENT :
+ * tout telephone capable d'installer l'app est alors du meme systeme, et
+ * passer par la page pour la faire rediriger en JavaScript ajoutait une
+ * page-relais, une dependance au script et — c'est ce qui a ete signale — un
+ * scan qui a l'air de ne « mener qu'au site ».
+ *
+ * Des que les deux fiches existent, l'indirection redevient necessaire : le
+ * QR est imprime une fois pour les deux systemes et seul le telephone qui
+ * scanne sait lequel il est. Il encode alors la page, que `QrStoreRedirect`
+ * renvoie vers la bonne fiche — d'ou le `?qr=1`, qui distingue ce flux d'un
+ * visiteur arrive sur la meme section en faisant defiler la page.
+ *
+ * Bascule donc toute seule le jour de la publication sur l'App Store, sans
+ * rien a decider ici.
+ */
+export function cibleDuQrCode(urlDeLaPage: string): string {
+  if (APP_STORE_URL && PLAY_STORE_URL) return urlDeLaPage;
+  return APP_STORE_URL ?? PLAY_STORE_URL ?? urlDeLaPage;
+}
+
+/**
  * Marqueur pose par le QR code sur l'URL qu'il encode (`?qr=1`), lu par
  * `QrStoreRedirect`. Sans lui, un visiteur qui arrive sur `#telecharger` en
  * faisant defiler la page normalement se ferait rediriger de force des que

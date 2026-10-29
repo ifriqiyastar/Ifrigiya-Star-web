@@ -13,7 +13,7 @@
     "drawerLabel": "Navigation principale",
     "qr": {
       "title": "Scannez pour telecharger",
-      "description": "Visez ce code avec l'appareil photo de votre telephone : vous arriverez sur cette meme page, prete a vous montrer le bon store.",
+      "description": "Visez ce code avec l'appareil photo de votre telephone : il ouvre directement la fiche de l'application sur le store.",
       "close": "Fermer la fenetre"
     },
     "scoutDays": "Scout Days"
