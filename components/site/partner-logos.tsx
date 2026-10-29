@@ -57,6 +57,26 @@ function IconZenith(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+/**
+ * Le nombre de copies de la bande dans le ruban defilant.
+ *
+ * ⚠️ IL VIT ICI, A COTE DE LA LISTE, ET IL EST LU PAR LE CSS. Le ruban
+ * n'en portait que deux, et l'animation les faisait glisser de `-50%` : la
+ * distance tombait juste, mais la bande entiere ne mesurait alors qu'environ
+ * deux fois sa propre largeur — soit a peine 2 000 px. Des que la fenetre etait
+ * plus large que le ruban moins une copie, la fin de la bande entrait dans le
+ * champ et laissait du vide a droite avant de se reinitialiser d'un coup. C'est
+ * le « glitch » de fin : il n'y avait plus rien a afficher.
+ *
+ * Pour qu'un defilement soit continu, la bande doit toujours mesurer au moins
+ * la largeur de la fenetre plus une copie. Six copies couvrent environ 6 000 px,
+ * donc tous les ecrans jusqu'au 4K. La valeur est passee au CSS en variable
+ * (`--site-marquee-copies`) par la page qui rend le ruban : la distance de
+ * translation en est **derivee** (`-100% / copies`), elle ne peut donc plus
+ * diverger du nombre de copies rendues — c'est ce couplage-la qui manquait.
+ */
+export const PARTNER_MARQUEE_COPIES = 6;
+
 export const PLACEHOLDER_PARTNER_LOGOS = [
   { name: "Nova", Icon: IconNova },
   { name: "Atlas", Icon: IconAtlas },

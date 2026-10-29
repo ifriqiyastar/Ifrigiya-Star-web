@@ -14,7 +14,10 @@ import { HeroVideo } from "@/components/site/hero-video";
 import { HighlightsCarousel } from "@/components/site/highlights-carousel";
 import { StoreButtons } from "@/components/site/store-buttons";
 import { QrStoreRedirect } from "@/components/site/qr-store-redirect";
-import { PLACEHOLDER_PARTNER_LOGOS } from "@/components/site/partner-logos";
+import {
+  PARTNER_MARQUEE_COPIES,
+  PLACEHOLDER_PARTNER_LOGOS,
+} from "@/components/site/partner-logos";
 import { IconFeed, IconCalendar, IconMessage } from "@/components/site/feature-icons";
 import { Reveal } from "@/components/site/reveal";
 import { appScreens, type AppScreen } from "@/lib/app-screens";
@@ -374,17 +377,45 @@ function Piliers() {
           presentation. Ce sont des marques generiques de demonstration — a
           remplacer par les vrais logos des partenaires des qu'ils arrivent. */}
       <div className="overflow-hidden">
-        <div className="site-marquee flex w-max items-center gap-12 pe-12 sm:gap-16 sm:pe-16">
-          {[...logos, ...logos].map(({ name, Icon }, index) => (
-            <span
-              key={`${name}-${index}`}
-              className="flex shrink-0 items-center gap-2.5 text-(--site-fg)/80"
+        {/* ⚠️ LA BANDE EST DECOUPEE EN COPIES, chacune un bloc a elle. Les douze
+            marques etaient auparavant posees a plat dans un seul conteneur
+            glisse de `-50%` : la distance tombait juste, mais le ruban ne
+            mesurait que deux largeurs de bande, et des que la fenetre devenait
+            plus large que le ruban moins une copie, sa fin entrait dans le champ
+            et laissait du vide a droite avant de se reinitialiser d'un coup.
+
+            Decoupe en blocs, la translation se derive du NOMBRE de copies
+            (`-100% / copies`, voir `globals.css`) au lieu d'etre une fraction
+            ecrite a la main : ajouter ou retirer une copie ne peut plus
+            desynchroniser l'animation du contenu. */}
+        <div
+          className="site-marquee flex w-max items-center"
+          style={{ "--site-marquee-copies": PARTNER_MARQUEE_COPIES } as CSSProperties}
+        >
+          {Array.from({ length: PARTNER_MARQUEE_COPIES }, (_, copy) => (
+            <div
+              key={copy}
+              className="flex shrink-0 items-center gap-12 pe-12 sm:gap-16 sm:pe-16"
+              /* ⚠️ SEULE LA PREMIERE COPIE EST LUE. Les autres sont le meme
+                 texte repete pour que le defilement n'ait pas de fin visible :
+                 annoncees, un lecteur d'ecran enoncait les six marques six fois
+                 de suite. Le `pe` de fin de bloc vaut l'ecart entre deux
+                 marques, sinon la jointure entre deux copies serait plus
+                 serree que le reste du ruban. */
+              aria-hidden={copy > 0 || undefined}
             >
-              <Icon className="size-6 sm:size-7" aria-hidden />
-              <span className="font-heading text-lg font-extrabold tracking-tight whitespace-nowrap italic sm:text-2xl">
-                {name}
-              </span>
-            </span>
+              {logos.map(({ name, Icon }) => (
+                <span
+                  key={name}
+                  className="flex shrink-0 items-center gap-2.5 text-(--site-fg)/80"
+                >
+                  <Icon className="size-6 sm:size-7" aria-hidden />
+                  <span className="font-heading text-lg font-extrabold tracking-tight whitespace-nowrap italic sm:text-2xl">
+                    {name}
+                  </span>
+                </span>
+              ))}
+            </div>
           ))}
         </div>
       </div>

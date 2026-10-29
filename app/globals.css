@@ -782,12 +782,27 @@ body:has(.admin-dashboard-shell) {
   pointer-events: none;
 }
 
+/* ⚠️ LA DISTANCE EST DERIVEE DU NOMBRE DE COPIES, jamais ecrite en dur. Elle
+   valait `-50%`, ce qui supposait exactement deux copies : le ruban ne mesurait
+   alors que deux largeurs de bande, et des que la fenetre devenait plus large
+   que le ruban moins une copie, la fin de la bande entrait dans le champ et
+   laissait du vide a droite avant de se reinitialiser d'un coup — le saut
+   observe en fin de cycle.
+
+   `-100% / copies` vaut exactement une largeur de copie quelle que soit leur
+   nombre, donc la jointure tombe toujours au bon endroit et la vitesse ne
+   change pas quand on en ajoute. La variable est posee par la page qui rend le
+   ruban, depuis la meme constante que celle qui decide combien en rendre
+   (`PARTNER_MARQUEE_COPIES`) : les deux ne peuvent plus diverger.
+
+   Le repli `2` n'est la que pour qu'une declaration oubliee degrade en
+   l'ancien comportement plutot qu'en ruban immobile. */
 @keyframes site-marquee {
   from {
     transform: translateX(0);
   }
   to {
-    transform: translateX(-50%);
+    transform: translateX(calc(-100% / var(--site-marquee-copies, 2)));
   }
 }
 
