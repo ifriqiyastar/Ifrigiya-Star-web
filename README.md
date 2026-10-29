@@ -30,8 +30,8 @@ les deux jeux de variables :
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | oui | Cle publique (le RLS fait le reste) |
 | `SUPABASE_SERVICE_ROLE_KEY` | non (voir ci-dessous) | Suppression definitive d'un compte, webhook de paiement, envoi d'un code de reinitialisation de mot de passe depuis une fiche, et **repli** du masquage si la migration 0042 n'est pas appliquee |
 | `PAYMENT_WEBHOOK_SECRET` | pour les paiements en ligne | Signature HMAC-SHA256 de `/api/webhooks/payment-provider` |
-| `NEXT_PUBLIC_APP_STORE_URL` | non — a renseigner le jour de la publication | Fiche App Store ; des qu'elle existe, le badge Apple du site devient un vrai lien et le QR de l'entete redirige un iPhone qui le scanne directement vers elle (`lib/store-urls.ts`) |
-| `NEXT_PUBLIC_PLAY_STORE_URL` | non — a renseigner le jour de la publication | Meme mecanique, cote Google Play / Android |
+| `NEXT_PUBLIC_APP_STORE_URL` | non — a renseigner le jour de la publication | Fiche App Store, **pas encore publiee** ; des qu'elle existe, le badge Apple du site devient un vrai lien et le QR de l'entete redirige un iPhone qui le scanne directement vers elle (`lib/store-urls.ts`) |
+| `NEXT_PUBLIC_PLAY_STORE_URL` | non, mais **renseignee** | Meme mecanique, cote Google Play / Android. La fiche est en ligne : `https://play.google.com/store/apps/details?id=com.ifriqiyastar.app` — l'URL se batit sur l'identifiant d'application (`android.package` dans `~/ifriqiyastar/app.json`), jamais sur le nom affiche |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | oui tant que la protection anti-robot est active sur le projet Supabase | Cle **publique** du widget Cloudflare Turnstile, la meme que l'app mobile. Voir « Protection anti-robot » ci-dessous |
 | `RESEND_API_KEY` | oui | Envoi des e-mails via Resend : formulaire `/contact` (`lib/actions/contact.ts`) et canal email des campagnes (`lib/email/campaign.ts`) |
 | `NEXT_PUBLIC_SITE_URL` | oui des que le canal email sert | Racine publique du site. Les metadonnees Open Graph l'utilisent, et surtout les **URL absolues des courriels** : un client de messagerie ne resout pas un chemin relatif. A defaut, le domaine de production est utilise |

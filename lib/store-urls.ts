@@ -1,13 +1,22 @@
 /**
- * Les fiches de store ne sont pas encore publiees (voir le commentaire de
- * tete de `components/site/store-buttons.tsx`) : tant que ces deux variables
- * sont vides, les badges restent des boutons desactives et le QR code du
- * telechargement (`components/site/site-nav.tsx`) ne redirige personne.
- *
- * Le jour ou l'app est publiee, renseigner `NEXT_PUBLIC_APP_STORE_URL` et
- * `NEXT_PUBLIC_PLAY_STORE_URL` suffit a activer les deux a la fois — aucun
+ * Les deux fiches de store, chacune derriere sa variable. Une variable vide
+ * laisse son badge en bouton desactive (voir le commentaire de tete de
+ * `components/site/store-buttons.tsx`) et interdit au QR code du
+ * telechargement (`components/site/site-nav.tsx`) de rediriger le telephone
+ * de ce systeme-la ; une variable renseignee active les deux a la fois, sans
  * autre fichier a toucher. `NEXT_PUBLIC_*` est inline au build par Next.js
  * dans tout module qui finit dans le bundle client, y compris celui-ci.
+ *
+ * Etat en octobre 2026 : **Google Play est publie**, l'App Store ne l'est pas
+ * encore. Un iPhone voit donc un badge Apple desactive, et le scan du QR le
+ * laisse sur la page — ce qui est le seul etat honnete tant qu'il n'y a nulle
+ * part ou l'envoyer.
+ *
+ * ⚠️ L'URL de Google Play est batie sur l'**identifiant d'application**
+ * (`com.ifriqiyastar.app` — `android.package` / `ios.bundleIdentifier` dans
+ * `~/ifriqiyastar/app.json`), pas sur le nom affiche de l'app. C'est la cle
+ * de la fiche chez Google : elle ne change jamais, et renommer l'app ne la
+ * renomme pas.
  */
 export const APP_STORE_URL = process.env.NEXT_PUBLIC_APP_STORE_URL || null;
 export const PLAY_STORE_URL = process.env.NEXT_PUBLIC_PLAY_STORE_URL || null;
