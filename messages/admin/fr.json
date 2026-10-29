@@ -2163,7 +2163,22 @@
     "Aucune ligne modifiee : le retrait n'a pas ete applique.": "Aucune ligne modifiee : le retrait n'a pas ete applique.",
     "Export limite aux {limite} premieres lignes sur {total}. Affinez les filtres de l'ecran pour obtenir le reste.": "Export limite aux {limite} premieres lignes sur {total}. Affinez les filtres de l'ecran pour obtenir le reste.",
     "Saisissez les observations terrain, notez les six axes du joueur et pilotez la publication des rapports depuis un espace unique.": "Saisissez les observations terrain, notez les six axes du joueur et pilotez la publication des rapports depuis un espace unique.",
-    "Ce qui a ete signale, sans quitter la file. Les gestes de decision restent dans le dossier.": "Ce qui a ete signale, sans quitter la file. Les gestes de decision restent dans le dossier."
+    "Ce qui a ete signale, sans quitter la file. Les gestes de decision restent dans le dossier.": "Ce qui a ete signale, sans quitter la file. Les gestes de decision restent dans le dossier.",
+    "Historique": "Historique",
+    "Historique de {name}": "Historique de {name}",
+    "Toutes les souscriptions et tous les encaissements enregistres pour ce compte, du plus recent au plus ancien.": "Toutes les souscriptions et tous les encaissements enregistres pour ce compte, du plus recent au plus ancien.",
+    "Souscriptions": "Souscriptions",
+    "Lecture limitee aux {limit} dernieres lignes : l'historique affiche peut etre incomplet.": "Lecture limitee aux {limit} dernieres lignes : l'historique affiche peut etre incomplet.",
+    "Ouvrir la fiche du compte": "Ouvrir la fiche du compte",
+    "{total} souscriptions": "{total} souscriptions",
+    "Affichee dans la liste": "Affichee dans la liste",
+    "Lecture limitee aux {limit} souscriptions les plus recentes : des comptes plus anciens peuvent manquer a cette liste.": "Lecture limitee aux {limit} souscriptions les plus recentes : des comptes plus anciens peuvent manquer a cette liste.",
+    "Un compte par ligne, avec sa souscription la plus recente. Le nombre de souscriptions ouvre l'historique complet du compte.": "Un compte par ligne, avec sa souscription la plus recente. Le nombre de souscriptions ouvre l'historique complet du compte.",
+    "Renouvellement automatique": "Renouvellement automatique",
+    "Sans renouvellement": "Sans renouvellement",
+    "Souscrit le {date}": "Souscrit le {date}",
+    "Encaisse le {date}": "Encaisse le {date}",
+    "Pas encore encaisse": "Pas encore encaisse"
   },
   "validations": {
     "metaTitle": "Validations",

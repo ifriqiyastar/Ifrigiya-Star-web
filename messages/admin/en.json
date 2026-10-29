@@ -2163,7 +2163,22 @@
     "Aucune ligne modifiee : le retrait n'a pas ete applique.": "No records changed: the removal was not applied.",
     "Export limite aux {limite} premieres lignes sur {total}. Affinez les filtres de l'ecran pour obtenir le reste.": "Export limited to the first {limite} rows out of {total}. Narrow the screen's filters to get the rest.",
     "Saisissez les observations terrain, notez les six axes du joueur et pilotez la publication des rapports depuis un espace unique.": "Record field observations, score the player's six axes and manage report publication from a single place.",
-    "Ce qui a ete signale, sans quitter la file. Les gestes de decision restent dans le dossier.": "What was reported, without leaving the queue. Decisions stay in the case file."
+    "Ce qui a ete signale, sans quitter la file. Les gestes de decision restent dans le dossier.": "What was reported, without leaving the queue. Decisions stay in the case file.",
+    "Historique": "History",
+    "Historique de {name}": "History of {name}",
+    "Toutes les souscriptions et tous les encaissements enregistres pour ce compte, du plus recent au plus ancien.": "Every subscription and payment recorded for this account, newest first.",
+    "Souscriptions": "Subscriptions",
+    "Lecture limitee aux {limit} dernieres lignes : l'historique affiche peut etre incomplet.": "Limited to the {limit} most recent rows: the history shown may be incomplete.",
+    "Ouvrir la fiche du compte": "Open the account page",
+    "{total} souscriptions": "{total} subscriptions",
+    "Affichee dans la liste": "Shown in the list",
+    "Lecture limitee aux {limit} souscriptions les plus recentes : des comptes plus anciens peuvent manquer a cette liste.": "Limited to the {limit} most recent subscriptions: older accounts may be missing from this list.",
+    "Un compte par ligne, avec sa souscription la plus recente. Le nombre de souscriptions ouvre l'historique complet du compte.": "One account per row, showing its most recent subscription. The subscription count opens the full account history.",
+    "Renouvellement automatique": "Automatic renewal",
+    "Sans renouvellement": "No renewal",
+    "Souscrit le {date}": "Subscribed on {date}",
+    "Encaisse le {date}": "Collected on {date}",
+    "Pas encore encaisse": "Not collected yet"
   },
   "validations": {
     "metaTitle": "Validations",

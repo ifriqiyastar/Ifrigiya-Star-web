@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { CreditCardIcon } from "lucide-react";
 
+import { AccountHistoryDialog } from "@/components/admin/finances/account-history";
 import { ActionButton } from "@/components/admin/action-button";
 import { EmptyState } from "@/components/admin/empty-state";
 import {
@@ -30,7 +31,12 @@ import { setSubscriptionStatus } from "@/lib/actions/finances";
 import { requirePermission } from "@/lib/auth";
 import { getAdminI18n } from "@/lib/i18n/admin";
 import { PLAN_CODE, SUBSCRIPTION_STATUS } from "@/lib/labels";
-import { NO_PROFILE, displayName, fetchProfilesByIds, searchProfileIds } from "@/lib/queries/profiles";
+import { emptyHistory, fetchAccountHistories } from "@/lib/queries/finance-history";
+import {
+  SUBSCRIPTION_SWEEP_LIMIT,
+  fetchSubscriptionAccounts,
+} from "@/lib/queries/subscription-accounts";
+import { displayName, fetchProfilesByIds, searchProfileIds } from "@/lib/queries/profiles";
 import { createClient } from "@/lib/supabase/server";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -105,40 +111,47 @@ async function SubscriptionsQueue({
     params.q ? searchProfileIds(params.q) : Promise.resolve(null),
   ]);
 
-  let query = supabase
-    .from("subscriptions")
-    .select(
-      "id, profile_id, plan_id, status, starts_at, ends_at, cancelled_at, auto_renew, created_at",
-      { count: "exact" },
-    )
-    .order("created_at", { ascending: false })
-    .range((page - 1) * FINANCE_PAGE_SIZE, page * FINANCE_PAGE_SIZE - 1);
-
-  if (params.statut) query = query.eq("status", params.statut);
-  // Une liste vide passe par l'identifiant impossible : PostgREST refuse un
-  // `in ()` vide, et laisser tomber le filtre afficherait tout l'inverse de ce
-  // qui est demande.
-  if (planIds) query = query.in("plan_id", planIds.length ? planIds : [NO_PROFILE]);
-  if (matchedProfiles) {
-    query = query.in("profile_id", matchedProfiles.length ? matchedProfiles : [NO_PROFILE]);
-  }
-
-  const [{ data, error, count }, { data: plans }] = await Promise.all([
-    query,
+  // ⚠️ UNE LIGNE PAR COMPTE, ET LE REGROUPEMENT EST DANS LA LECTURE (demande
+  // client). La liste montrait une ligne par souscription, donc un compte qui
+  // renouvelle autant de fois qu'il avait souscrit. Regrouper apres pagination
+  // aurait fausse le `count`, rendu les pages inegales et laisse un compte
+  // reapparaitre a cheval sur deux pages — voir `fetchSubscriptionAccounts`.
+  const [accounts, { data: plans }] = await Promise.all([
+    fetchSubscriptionAccounts({
+      page,
+      pageSize: FINANCE_PAGE_SIZE,
+      status: params.statut,
+      planIds,
+      profileIds: matchedProfiles,
+    }),
     supabase
       .from("subscription_plans")
       .select("id, code, label, target_role, price_amount, price_currency"),
   ]);
 
-  const rows = data ?? [];
+  const { rows, total, error } = accounts;
   const planById = new Map((plans ?? []).map((plan) => [plan.id, plan]));
-  const profiles = await fetchProfilesByIds(rows.map((row) => row.profile_id));
+
+  // ⚠️ LA MEME VAGUE QUE LES IDENTITES, pas une de plus. L'historique ne depend
+  // que des `profile_id` de la page — comme `fetchProfilesByIds()` — donc les
+  // deux partent ensemble et la modale de chaque ligne ne coute aucun
+  // aller-retour supplementaire. Une lecture par ligne en aurait ajoute seize.
+  const profileIds = rows.map((row) => row.profile_id);
+  const [profiles, histories] = await Promise.all([
+    fetchProfilesByIds(profileIds),
+    fetchAccountHistories(profileIds),
+  ]);
 
   return (
     <Panel>
+      {/* L'en-tete de page porte deja la mise en garde sur l'effet des gestes ;
+          la repeter mot pour mot ici la faisait figurer deux fois sur le meme
+          ecran. Ce panneau dit a la place ce que la liste montre — un compte,
+          une ligne —, sans quoi un pied annoncant cinq entrees pour six
+          souscriptions se lit comme un decompte faux. */}
       <PanelHeader
         title={i18n.t("Abonnements")}
-        description={i18n.t("Activer ou annuler une souscription depuis ici agit sur la base, sans passer par le prestataire de paiement : a reserver aux corrections et aux activations hors ligne.")}
+        description={i18n.t("Un compte par ligne, avec sa souscription la plus recente. Le nombre de souscriptions ouvre l'historique complet du compte.")}
       />
       <FilterBar
         basePath={path}
@@ -171,9 +184,17 @@ async function SubscriptionsQueue({
                   alignee differemment de l'un a l'autre se lit comme un
                   defaut d'affichage au moment de basculer. */}
               <TableHead className="text-center">{i18n.t("Statut")}</TableHead>
-              <TableHead className="max-lg:hidden">{i18n.t("Debut")}</TableHead>
-              <TableHead className="max-lg:hidden">{i18n.t("Fin")}</TableHead>
-              <TableHead className="max-lg:hidden">{i18n.t("Renouvellement")}</TableHead>
+              {/* ⚠️ QUATRE COLONNES RAMENEES A UNE. « Souscrit le », « Debut »,
+                  « Fin » et « Renouvellement » occupaient la moitie de la
+                  largeur pour trois dates et un oui/non — de la bouillie de
+                  dates dont aucune ne se lisait. « Souscrit le » n'avait
+                  d'ailleurs de raison d'etre que tant qu'un compte occupait
+                  plusieurs lignes qu'il fallait distinguer ; la liste etant
+                  groupee par compte, cette question ne se pose plus ici et sa
+                  reponse est dans l'historique. Reste la periode, qui est ce
+                  qu'on vient lire : du debut a la fin, le renouvellement en
+                  sous-ligne. */}
+              <TableHead className="max-lg:hidden">{i18n.t("Periode")}</TableHead>
               <TableHead className="text-right">{i18n.t("Actions")}</TableHead>
             </TableRow>
           </TableHeader>
@@ -181,6 +202,8 @@ async function SubscriptionsQueue({
             {rows.map((row) => {
               const profile = profiles.get(row.profile_id);
               const plan = planById.get(row.plan_id);
+              const history = histories.byProfile.get(row.profile_id) ?? emptyHistory();
+              const historyCount = history.subscriptions.length;
               return (
                 <TableRow key={row.id}>
                   <TableCell>
@@ -193,33 +216,78 @@ async function SubscriptionsQueue({
                     />
                   </TableCell>
                   <TableCell>
-                    {plan ? (
-                      <div className="flex flex-col gap-0.5">
-                        <span>{i18n.labels.label(PLAN_CODE, plan.code)}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {i18n.format.formatAmount(plan.price_amount, plan.price_currency ?? "TND")}
-                        </span>
-                      </div>
-                    ) : (
-                      i18n.t("Offre inconnue")
-                    )}
+                    <div className="flex flex-col gap-0.5">
+                      <span>
+                        {plan
+                          ? i18n.labels.label(PLAN_CODE, plan.code)
+                          : i18n.t("Offre inconnue")}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {plan
+                          ? i18n.format.formatAmount(
+                              plan.price_amount,
+                              plan.price_currency ?? "TND",
+                            )
+                          : null}
+                        {/* ⚠️ UN FAIT, PAS UNE COMMANDE. Le nombre de
+                            souscriptions etait porte par un bouton borde pose
+                            sous le prix : trois lignes dans la cellule, et une
+                            quatrieme boite cliquable qui entrait en concurrence
+                            avec les gestes de fin de ligne. Il redevient ce
+                            qu'il est — une qualification de la ligne, en texte
+                            attenue — et l'affordance part la ou le depot pose
+                            deja tous ses « voir le detail » : dans la colonne
+                            des actions. */}
+                        {historyCount > 1 ? (
+                          <>
+                            {plan ? " · " : null}
+                            {i18n.t("{total} souscriptions", { total: historyCount })}
+                          </>
+                        ) : null}
+                      </span>
+                    </div>
                   </TableCell>
                   <TableCell className="text-center">
                     <StatusPill tone={i18n.labels.entry(SUBSCRIPTION_STATUS, row.status).tone}>
                       {i18n.labels.label(SUBSCRIPTION_STATUS, row.status)}
                     </StatusPill>
                   </TableCell>
-                  <TableCell className="text-muted-foreground max-lg:hidden">
-                    {i18n.format.formatDate(row.starts_at)}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground max-lg:hidden">
-                    {i18n.format.formatDate(row.ends_at)}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground max-lg:hidden">
-                    {row.auto_renew ? i18n.t("Automatique") : i18n.t("Desactive")}
+                  <TableCell className="max-lg:hidden">
+                    <div className="flex flex-col gap-0.5">
+                      {/* La fleche porte le sens, pas un intitule : « du … au … »
+                          doublerait la largeur pour la meme information. Une
+                          echeance absente s'ecrit « — » et non une date vide,
+                          un abonnement sans terme etant un fait courant ici. */}
+                      <span className="whitespace-nowrap tabular-nums text-foreground">
+                        {i18n.format.formatDate(row.starts_at)}
+                        <span className="px-1.5 text-muted-foreground">→</span>
+                        {row.ends_at ? i18n.format.formatDate(row.ends_at) : "—"}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {row.auto_renew
+                          ? i18n.t("Renouvellement automatique")
+                          : i18n.t("Sans renouvellement")}
+                      </span>
+                    </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap items-center justify-end gap-2">
+                      {/* En tete des gestes, comme « Dossier » dans les files de
+                          validation : la forme d'une ligne devient alors la meme
+                          partout — identite, qualifications, puis « voir », puis
+                          decider. */}
+                      <AccountHistoryDialog
+                        history={history}
+                        plans={planById}
+                        currentSubscriptionId={row.id}
+                        profile={profile}
+                        accountName={displayName(profile, undefined, i18n.locale)}
+                        accountHref={i18n.path(
+                          `/admin/utilisateurs/${row.profile_id}?vue=finances`,
+                        )}
+                        truncated={histories.truncated}
+                        error={histories.error}
+                      />
                       {row.status !== "active" ? (
                         <ActionButton action={setSubscriptionStatus.bind(null, row.id, "active")}>
                           {i18n.t("Activer")}</ActionButton>
@@ -246,12 +314,21 @@ async function SubscriptionsQueue({
           </TableBody>
         </Table>
       )}
+      {/* Le plafond du balayage, annonce des qu'il mord : au-dela, les comptes
+          dont toutes les souscriptions sont plus anciennes manquent a la liste,
+          et un registre ampute presente comme complet est le defaut que
+          `lib/csv.ts` corrige du cote des exports. */}
+      {accounts.truncated ? (
+        <p className="px-4 pb-2 text-xs text-muted-foreground sm:px-6">
+          {i18n.t("Lecture limitee aux {limit} souscriptions les plus recentes : des comptes plus anciens peuvent manquer a cette liste.", { limit: i18n.format.formatNumber(SUBSCRIPTION_SWEEP_LIMIT) })}
+        </p>
+      ) : null}
       <Pagination
         basePath={path}
         params={params}
         page={page}
         pageSize={FINANCE_PAGE_SIZE}
-        total={count ?? 0}
+        total={total}
       />
     </Panel>
   );
