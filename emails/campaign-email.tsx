@@ -227,7 +227,11 @@ export function CampaignEmail({
           </Section>
 
           <Section style={{ padding: "28px 24px 8px" }}>
-            {hasBlockGreeting ? null : (
+            {/* Trois raisons de n'ecrire aucun accueil : la mise en page en
+                porte deja un, l'habillage l'a retire, ou le texte resolu est
+                vide. Les deux premieres sont des choix, la troisieme une
+                garde — « Bonjour , » ne doit jamais sortir. */}
+            {hasBlockGreeting || !copy.showGreeting ? null : (
               <Text
                 style={{
                   color: MUTED,

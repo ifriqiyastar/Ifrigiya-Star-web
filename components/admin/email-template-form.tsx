@@ -91,6 +91,15 @@ export function EmailTemplateForm({
   const showCtaFor = (value: Locale) => ctaOverrides[value] ?? rows[value]?.show_cta ?? true;
   const setShowCta = (value: Locale, next: boolean) =>
     setCtaOverrides((current) => ({ ...current, [value]: next }));
+  // Meme mecanique pour l'accueil : vider les deux champs ne le retire pas —
+  // un champ vide reprend le texte livre —, donc il faut un interrupteur.
+  const [greetingOverrides, setGreetingOverrides] = React.useState<
+    Partial<Record<Locale, boolean>>
+  >({});
+  const showGreetingFor = (value: Locale) =>
+    greetingOverrides[value] ?? rows[value]?.show_greeting ?? true;
+  const setShowGreeting = (value: Locale, next: boolean) =>
+    setGreetingOverrides((current) => ({ ...current, [value]: next }));
   const customisedIn = (value: Locale, field: keyof EmailTemplateRow) =>
     Boolean((rows[value]?.[field] ?? "").toString().trim());
 
@@ -216,14 +225,29 @@ export function EmailTemplateForm({
                   {i18n.t("La mise en page contient un bloc d'accueil : ces champs ne sont pas envoyes.")}
                 </p>
               ) : null}
+              {/* Decocher **cache** l'accueil, il n'efface pas les deux
+                  textes : recocher les retrouve tels quels. */}
+              <label className="flex items-center gap-2 sm:col-span-2">
+                <input
+                  type="checkbox"
+                  name="show_greeting"
+                  checked={showGreetingFor(formLocale)}
+                  disabled={disabled}
+                  onChange={(event) => setShowGreeting(formLocale, event.target.checked)}
+                  className="size-4 accent-brand"
+                />
+                <span className="text-xs font-medium">
+                  {i18n.t("Commencer le courriel par une formule d'accueil")}
+                </span>
+              </label>
               <Field
                 name="greeting_named"
                 label={i18n.t("Avec le nom du destinataire")}
-                hint={i18n.t("Doit contenir {0}, remplace par le nom du compte.", { "0": NAME_TOKEN })}
+                hint={i18n.t("Doit contenir {0}, remplace par le nom du compte. Sans nom possible, reprenez l'accueil sans nom a l'identique.", { "0": NAME_TOKEN })}
                 defaultValue={rows[formLocale]?.greeting_named ?? ""}
                 placeholder={defaults[formLocale].greetingNamed}
                 changed={customisedIn(formLocale, "greeting_named")}
-                disabled={disabled}
+                disabled={disabled || !showGreetingFor(formLocale)}
               />
               <Field
                 name="greeting_plain"
@@ -232,7 +256,7 @@ export function EmailTemplateForm({
                 defaultValue={rows[formLocale]?.greeting_plain ?? ""}
                 placeholder={defaults[formLocale].greetingPlain}
                 changed={customisedIn(formLocale, "greeting_plain")}
-                disabled={disabled}
+                disabled={disabled || !showGreetingFor(formLocale)}
               />
             </Group>
 

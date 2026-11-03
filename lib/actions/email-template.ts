@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { NAME_TOKEN, isHexColor } from "@/emails/copy";
+import { EMAIL_COPY, NAME_TOKEN, isHexColor } from "@/emails/copy";
 import { normalizeBlocks, type EmailBlock } from "@/lib/email/blocks";
 import { makeErrors, fail, ok, type ActionResult } from "@/lib/actions/result";
 import { isSuperAdmin, logAdminAction, requirePermission } from "@/lib/auth";
@@ -194,6 +194,30 @@ export async function deleteEmailTemplate(id: string): Promise<ActionResult> {
 }
 
 /**
+ * Vrai quand la mise en page du modele porte son propre bloc d'accueil : les
+ * deux champs d'accueil de l'habillage ne sont alors pas rendus du tout
+ * (`hasBlockGreeting` dans `emails/campaign-email.tsx`).
+ *
+ * ⚠️ **Degrade ferme, a l'inverse du reste du depot** : si la lecture echoue
+ * ou si le modele n'a pas de ligne, on repond « pas de bloc » et la regle
+ * s'applique. Une lecture ratee n'a pas a ouvrir une validation — ici,
+ * degrader a l'ouverture laisserait passer l'accueil muet que la regle est
+ * faite pour attraper.
+ */
+async function layoutCarriesGreeting(templateId: string): Promise<boolean> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("admin_email_templates")
+    .select("blocks")
+    .eq("id", templateId)
+    .maybeSingle();
+  if (error || !data) return false;
+  // La meme liste blanche que partout : ce qui est lu en base n'est pas plus
+  // sur que ce qui arrive du navigateur.
+  return normalizeBlocks(data.blocks).some((block) => block.type === "greeting");
+}
+
+/**
  * Enregistre les textes d'un modele, pour une langue.
  *
  * ⚠️ **Rien n'est interprete comme du HTML.** Les valeurs partent en texte et
@@ -215,10 +239,38 @@ export async function saveEmailTemplate(
   if (!isLocale(locale)) return fail(i18n.t("Langue inconnue."));
 
   const greetingNamed = text(formData, "greeting_named");
-  // Un accueil « avec nom » qui ne porte pas le jeton ne montrerait jamais le
-  // nom : la faute est silencieuse, donc elle est refusee ici.
-  if (greetingNamed && !greetingNamed.includes(NAME_TOKEN)) {
-    return fail(i18n.t("L'accueil personnalise doit contenir {0}.", { "0": NAME_TOKEN }));
+  const greetingPlain = text(formData, "greeting_plain");
+  // Decoche : aucune ligne d'accueil ne sort. Les deux textes restent en
+  // base — recocher les retrouve — donc rien n'est perdu a l'essai.
+  const showGreeting = formData.get("show_greeting") === "on";
+  // ⚠️⚠️ **La regle visait la faute silencieuse, elle attrapait aussi un choix
+  // deliberé.** Un accueil « avec nom » sans le jeton ne montrera jamais de
+  // nom : si l'accueil sans nom dit autre chose, c'est un oubli, et le refus
+  // tient. Mais quand les deux lignes disent **mot pour mot la meme chose**,
+  // rien n'est perdu en silence — l'administrateur a ecrit « pas de nom, nulle
+  // part », ce qui est le cas d'un modele adresse a des gens qui n'ont pas de
+  // compte, donc pas de nom. Le modele des beta testeurs est seme ainsi
+  // (`202611020002`), et la regle rendait ce modele entierement
+  // inenregistrable : changer une couleur ou l'adresse de reponse etait refuse
+  // au nom d'un accueil que personne ne lira jamais.
+  // Sans accueil affiche, il n'y a plus de faute silencieuse a attraper :
+  // la regle ne s'applique qu'a un texte que quelqu'un va lire.
+  if (showGreeting && greetingNamed && !greetingNamed.includes(NAME_TOKEN)) {
+    // Un champ vide reprend le texte livre : c'est lui qu'il faut comparer,
+    // pas la chaine vide.
+    const plain = greetingPlain || EMAIL_COPY[locale].greetingPlain;
+    const sameAsPlain = greetingNamed.trim() === plain.trim();
+    // Second echappement : la mise en page peut porter son propre bloc
+    // d'accueil, auquel cas ces deux champs ne partent pas du tout et l'ecran
+    // le dit deja. L'aller-retour n'est paye que dans la branche qui refuse.
+    if (!sameAsPlain && !(await layoutCarriesGreeting(templateId))) {
+      return fail(
+        i18n.t(
+          "L'accueil personnalise doit contenir {0}, ou reprendre mot pour mot l'accueil sans nom.",
+          { "0": NAME_TOKEN },
+        ),
+      );
+    }
   }
 
   const ctaUrl = text(formData, "cta_url");
@@ -250,38 +302,51 @@ export async function saveEmailTemplate(
   }
 
   const supabase = await createClient();
+  const fields = {
+    template_id: templateId,
+    locale,
+    sender_name: text(formData, "sender_name"),
+    reply_to: replyTo,
+    greeting_named: greetingNamed,
+    greeting_plain: greetingPlain,
+    show_cta: formData.get("show_cta") === "on",
+    cta_label: text(formData, "cta_label"),
+    cta_url: ctaUrl,
+    signature: text(formData, "signature"),
+    footer_why: text(formData, "footer_why"),
+    unsubscribe_label: text(formData, "unsubscribe_label"),
+    unsubscribe_hint: text(formData, "unsubscribe_hint"),
+    rights: text(formData, "rights"),
+    ...colors,
+  };
+
   // ⚠️ `.select()` apres l'ecriture, toujours : PostgREST ne signale pas une
   // ligne filtree par la RLS — l'upsert toucherait zero ligne et repondrait
   // « enregistre » sans rien avoir change.
-  const { data, error } = await supabase
-    .from("admin_email_template")
-    .upsert(
-      {
-        template_id: templateId,
-        locale,
-        sender_name: text(formData, "sender_name"),
-        reply_to: replyTo,
-        greeting_named: greetingNamed,
-        greeting_plain: text(formData, "greeting_plain"),
-        show_cta: formData.get("show_cta") === "on",
-        cta_label: text(formData, "cta_label"),
-        cta_url: ctaUrl,
-        signature: text(formData, "signature"),
-        footer_why: text(formData, "footer_why"),
-        unsubscribe_label: text(formData, "unsubscribe_label"),
-        unsubscribe_hint: text(formData, "unsubscribe_hint"),
-        rights: text(formData, "rights"),
-        ...colors,
-      },
-      { onConflict: "template_id,locale" },
-    )
-    .select("locale");
+  const write = (payload: Record<string, unknown>) =>
+    supabase
+      .from("admin_email_template")
+      .upsert(payload, { onConflict: "template_id,locale" })
+      .select("locale");
+
+  let { data, error } = await write({ ...fields, show_greeting: showGreeting });
+  // ⚠️ Degrade a l'ouverture, comme partout ici : sur un projet ou
+  // `202611030001` n'est pas passe, la colonne n'existe pas (`42703`) et tout
+  // le reste de la page serait refuse avec elle. On reecrit sans elle et on
+  // le dit — plutot que de laisser croire que l'accueil a ete retire.
+  const missingColumn = error?.code === "42703" && /show_greeting/.test(error.message);
+  if (missingColumn) ({ data, error } = await write(fields));
+
   if (error) return fail(makeErrors(i18n.locale).describeError(error));
   if (!data?.length) return fail(i18n.t("Enregistrement refuse par la base de donnees."));
 
   await logAdminAction("update_email_template", "email_template", templateId, { locale });
   revalidatePath("/[locale]/admin", "layout");
-  return ok(i18n.t("Modele d'e-mail enregistre."));
+  return ok(
+    missingColumn
+      ? i18n.t("Modele enregistre, sauf le choix d'afficher ou non la formule d'accueil : la base de donnees n'a pas encore ete mise a jour.")
+      : i18n.t("Modele d'e-mail enregistre."),
+  );
 }
 
 /** Rend a une langue d'un modele les textes livres avec l'application. */

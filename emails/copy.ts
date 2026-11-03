@@ -110,6 +110,13 @@ export type EmailTemplateRow = {
   reply_to: string | null;
   greeting_named: string | null;
   greeting_plain: string | null;
+  /**
+   * ⚠️ Facultative a dessein : un projet ou `202611030001` n'est pas passe
+   * n'a pas la colonne, et les lectures se font en `select("*")`. Absente,
+   * elle vaut « affiche » — l'accueil ne disparait pas parce qu'une
+   * migration manque.
+   */
+  show_greeting?: boolean | null;
   show_cta: boolean | null;
   cta_label: string | null;
   cta_url: string | null;
@@ -134,6 +141,8 @@ export type ResolvedEmailCopy = {
   replyTo: string | null;
   greetingNamed: string;
   greetingPlain: string;
+  /** `false` : aucune ligne d'accueil, ni avec nom ni sans. */
+  showGreeting: boolean;
   showCta: boolean;
   ctaLabel: string;
   /** `null` = pas de bouton : ni libelle, ni adresse ou l'envoyer. */
@@ -172,6 +181,7 @@ export function resolveEmailCopy(
     replyTo: (row?.reply_to ?? "").trim() || null,
     greetingNamed: pick(row?.greeting_named, base.greetingNamed),
     greetingPlain: pick(row?.greeting_plain, base.greetingPlain),
+    showGreeting: row?.show_greeting ?? true,
     showCta: row?.show_cta ?? true,
     ctaLabel: pick(row?.cta_label, base.ctaLabel),
     ctaUrl: (row?.cta_url ?? "").trim() || siteUrl,

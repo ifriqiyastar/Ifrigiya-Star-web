@@ -244,6 +244,49 @@ test('le texte brut est derive du message mis en forme', () => {
   assert.equal(richToPlainText(null), '');
 });
 
+// Ce que ce test garde : qu'un modele puisse n'avoir **aucune** formule
+// d'accueil. Vider les deux champs ne suffit pas — une chaine vide vaut « non
+// renseigne » et fait revenir le texte livre —, donc la seule facon de le
+// dire est l'interrupteur `show_greeting` (`202611030001`).
+//
+// ⚠️ Verifie par mutation : rendre inconditionnel le rendu de l'accueil dans
+// `emails/campaign-email.tsx` (retirer `|| !copy.showGreeting`) fait tomber
+// le deuxieme cas. Le premier est le temoin — sans lui, un gabarit qui
+// n'afficherait **jamais** d'accueil passerait le test sans rien prouver.
+//
+// Ce qu'il ne couvre PAS : l'ecriture de la colonne par le Server Action, ni
+// son repli quand la migration n'est pas appliquee.
+test("la formule d'accueil se retire entierement, et seulement si on le demande", async () => {
+  const site = 'https://exemple.test';
+  const base = {
+    locale: 'fr', sender_name: null, reply_to: null,
+    greeting_named: 'Bonjour,', greeting_plain: 'Bonjour,',
+    show_cta: false, cta_label: null, cta_url: null, signature: null,
+    footer_why: null, unsubscribe_label: null, unsubscribe_hint: null, rights: null,
+  };
+  const html = async (row, recipientName) =>
+    renderFor({ copy: resolveEmailCopy('fr', row, site), recipientName });
+
+  // Temoin : par defaut, l'accueil est bien la — pour les deux branches,
+  // avec et sans nom de destinataire.
+  assert.match(await html(base), /Bonjour,/);
+  assert.match(await html({ ...base, greeting_named: 'Bonjour {nom},' }, 'Karim'), /Bonjour Karim,/);
+
+  // Decoche : plus aucune ligne d'accueil, quel que soit le destinataire.
+  assert.doesNotMatch(await html({ ...base, show_greeting: false }), /Bonjour/);
+  assert.doesNotMatch(
+    await html({ ...base, greeting_named: 'Bonjour {nom},', show_greeting: false }, 'Karim'),
+    /Bonjour/,
+  );
+
+  // ⚠️ Colonne absente (projet ou la migration n'est pas passee) : l'accueil
+  // reste affiche. Une migration manquante ne doit pas effacer du contenu.
+  const sansColonne = { ...base };
+  delete sansColonne.show_greeting;
+  assert.equal(resolveEmailCopy('fr', sansColonne, site).showGreeting, true);
+  assert.match(await html(sansColonne), /Bonjour,/);
+});
+
 test('les couleurs enregistrees ne passent que si elles sont des #rrggbb', () => {
   const site = 'https://exemple.test';
   const base = resolveEmailCopy('fr', null, site).colors;

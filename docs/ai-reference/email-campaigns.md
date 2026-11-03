@@ -623,3 +623,71 @@ pour seule saisie.
   exportes par l'apercu. **Verifie par mutation** : changer un texte d'un seul
   cote fait tomber le test. Le meme test garde la presence de l'invitation
   dans le modele — la remettre dans le message de la campagne echoue.
+
+## « L'accueil personnalise doit contenir {nom} » bloquait un modele entier (Nov 2026)
+
+Remonte en modifiant un modele d'e-mail. Ce n'etait pas une fausse manoeuvre :
+le modele **Invitation beta testeurs**, seme par `202611020002`, porte
+`greeting_named = 'Bonjour,'` et `greeting_plain = 'Bonjour,'` — sans jeton,
+deliberement, puisque ses destinataires n'ont pas de compte donc pas de nom.
+La regle de `saveEmailTemplate()` refusait tout enregistrement tant que ce
+champ ne contenait pas `{nom}` : changer une couleur ou l'adresse de reponse
+de ce modele etait impossible, au nom d'un accueil que personne ne lira.
+
+⚠️⚠️ **La regle visait une faute silencieuse et attrapait aussi un choix
+delibere.** Elle reste juste dans son intention : un accueil « avec nom » qui
+ne porte pas le jeton ne montrera jamais de nom, et rien a l'ecran ne le
+dirait. Mais le signal manquait : quand les deux accueils disent **mot pour
+mot la meme chose**, rien n'est perdu en silence — c'est « pas de nom, nulle
+part », ecrit exprès.
+
+- Refus desormais **seulement** si l'accueil « avec nom » n'a pas le jeton
+  **et** dit autre chose que l'accueil sans nom (champ vide = le texte livre,
+  c'est lui qu'on compare, pas la chaine vide).
+- Second echappement : la mise en page peut porter son propre **bloc
+  d'accueil**, auquel cas ces deux champs ne sont pas rendus du tout
+  (`hasBlockGreeting`, `emails/campaign-email.tsx`) et l'ecran l'annonce deja.
+  La lecture des blocs n'est payee que dans la branche qui allait refuser.
+- ⚠️ `layoutCarriesGreeting()` **degrade ferme**, contrairement a la regle du
+  depot : lecture en echec ou modele sans ligne → « pas de bloc », donc la
+  regle s'applique. Degrader a l'ouverture laisserait passer exactement
+  l'accueil muet que la regle attrape.
+- ⚠️ Le bloc d'accueil, lui, n'a **jamais** impose le jeton
+  (`normalizeBlocks()` ne le verifie pas) : les deux facons d'ecrire un
+  accueil ne disaient donc pas la meme chose. L'ecart est reduit, pas
+  supprime — le bloc reste libre.
+- Le message et l'aide du champ nomment maintenant la sortie (« ou reprendre
+  mot pour mot l'accueil sans nom ») au lieu d'exiger sans alternative.
+
+Verifie sur les valeurs reellement en base : la ligne du modele beta passe,
+l'oubli du jeton (« Salut champion, » contre « Bonjour, ») est toujours refuse.
+
+### Et pouvoir retirer l'accueil tout court (`202611030001`)
+
+Suite directe de la demande : « au moins, que je puisse supprimer cette
+partie ». Ce n'etait pas possible, et pas par oubli — **vider les deux champs
+ne retire rien** : une chaine vide vaut « non renseigne » et `pick()`
+(`emails/copy.ts`) fait revenir le texte livre. L'absence **est** le defaut,
+donc rien n'exprimait « pas d'accueil du tout ». Un bloc d'accueil vide ne le
+disait pas davantage : `normalizeBlocks()` jette un bloc dont les deux textes
+sont vides, et l'accueil de l'habillage revenait alors par la fenetre.
+
+- `show_greeting boolean not null default true`, une colonne par langue
+  **posee a cote de `show_cta`** et sur exactement la meme mecanique : un
+  interrupteur dans le formulaire, les deux champs grises quand il est
+  decoche. Il **cache**, il n'efface pas : recocher retrouve les textes.
+- ⚠️ La colonne est **facultative dans le type** (`show_greeting?:`) parce que
+  les lectures sont en `select("*")` : sur un projet ou la migration n'est pas
+  passee, elle est simplement absente et vaut « affiche ». Une migration
+  manquante ne doit pas effacer du contenu.
+- ⚠️ L'ecriture se replie aussi : `42703` sur cette colonne → le Server Action
+  reecrit **sans elle** et le dit (« sauf le choix d'afficher ou non la
+  formule d'accueil »), plutot que de refuser toute la page ou de laisser
+  croire que l'accueil a ete retire.
+- Accueil masque = plus de faute silencieuse a attraper : la regle du jeton
+  `{nom}` ne s'applique plus a un texte que personne ne lira.
+- Garde par `tests/campaign-email.test.cjs`, **verifie par mutation** : rendre
+  le rendu de l'accueil inconditionnel (retirer `|| !copy.showGreeting`) fait
+  tomber le test. Son premier cas est le temoin — sans lui, un gabarit qui
+  n'afficherait jamais d'accueil passerait sans rien prouver. Ce qu'il ne
+  couvre pas : l'ecriture de la colonne et son repli.

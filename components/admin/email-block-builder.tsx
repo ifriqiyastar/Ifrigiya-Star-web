@@ -420,7 +420,7 @@ function SortableBlock({
                 className={input}
               />
               <p className="text-[0.625rem] text-muted-foreground">
-                {i18n.t("Doit contenir {0}, remplace par le nom du compte.", { "0": NAME_TOKEN })}
+                {i18n.t("Doit contenir {0}, remplace par le nom du compte. Sans nom possible, reprenez l'accueil sans nom a l'identique.", { "0": NAME_TOKEN })}
               </p>
             </div>
             <div className="space-y-1">
