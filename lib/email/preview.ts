@@ -11,21 +11,35 @@ import type { Locale } from "@/lib/i18n/config";
 import type { EmailBlock } from "@/lib/email/blocks";
 import type { RichDoc } from "@/lib/rich-text/server";
 
-/** Le message d'exemple de l'apercu, dans la langue montree. */
+/**
+ * Le message d'exemple de l'apercu, dans la langue montree.
+ *
+ * ⚠️ **Un texte qui se lit comme un emplacement, pas comme une annonce.**
+ * L'exemple etait une session Scout Day, redigee comme un vrai message : sur
+ * un catalogue qui porte desormais une invitation aux beta testeurs et des
+ * annonces marketing, chaque modele s'apercevait donc en Scout Day, et le
+ * modele semblait parler de ce dont il ne parle pas. Or ces deux lignes ne
+ * sont **pas** le modele : elles tiennent la place du titre et du message
+ * que la campagne apportera, et les blocs du modele — eux — portent bien son
+ * contenu propre. Un emplacement doit se donner pour ce qu'il est.
+ *
+ * La formulation est celle du composeur (`SAMPLE_BODY`), pour que les deux
+ * apercus de l'application ne racontent pas deux choses differentes.
+ */
 const SAMPLE: Record<Locale, { title: string; body: string; name: string }> = {
   fr: {
-    title: "Nouvelle session Scout Day a Tunis",
-    body: "Les inscriptions sont ouvertes jusqu'au 5 octobre.\nPlaces limitees : presentez-vous avec une piece d'identite et vos crampons.",
+    title: "Le titre de votre message",
+    body: "Le message apparaitra ici, tel que le destinataire le lira.\nUn retour a la ligne devient un nouveau paragraphe.",
     name: "Amine Ben Salah",
   },
   en: {
-    title: "New Scout Day session in Tunis",
-    body: "Registration is open until 5 October.\nLimited places: bring your ID and your boots.",
+    title: "Your message title",
+    body: "The message will appear here, as the recipient will read it.\nA line break becomes a new paragraph.",
     name: "Amine Ben Salah",
   },
   ar: {
-    title: "جلسة جديدة في تونس",
-    body: "التسجيل مفتوح حتى 5 أكتوبر.\nالأماكن محدودة: أحضر بطاقة هويتك وحذاءك.",
+    title: "عنوان رسالتك",
+    body: "ستظهر الرسالة هنا، كما سيقرأها المستلم.\nكل سطر جديد يصبح فقرة جديدة.",
     name: "أمين بن صالح",
   },
 };
@@ -88,6 +102,7 @@ export async function renderCampaignPreview(
  */
 export async function renderCampaignEmail({
   title,
+  heading,
   body,
   bodyDoc,
   locale,
@@ -96,6 +111,8 @@ export async function renderCampaignEmail({
   recipientName,
 }: {
   title: string;
+  /** Le titre affiche en tete du message, qui n'est pas l'objet. */
+  heading?: string | null;
   body: string;
   bodyDoc?: RichDoc | null;
   locale: Locale;
@@ -107,6 +124,7 @@ export async function renderCampaignEmail({
   return render(
     CampaignEmail({
       title,
+      heading,
       body,
       bodyDoc: bodyDoc ?? null,
       blocks,

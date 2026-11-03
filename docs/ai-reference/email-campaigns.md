@@ -471,3 +471,155 @@ ou l'on s'y fie pour appuyer sur « Envoyer ».
   rien de rabote, `scrollWidth === clientWidth` partout, la barre se replie
   sur deux lignes (quatre a 375 px) et les onglets tiennent sur une.
 
+
+## Les invitations au test ferme ne passent pas par le composeur (Nov 2026)
+
+Demande : envoyer le lien d'adhesion au test Play Store a une liste
+d'adresses que le client possede deja. La question posee etait « on reutilise
+la fonctionnalite d'e-mail, on ajoute juste ou saisir les adresses ? ».
+
+**Non, et la raison tient en trois accroches.** Le canal email des campagnes
+est indexe de bout en bout sur `profiles` :
+
+| Mecanisme | Ce a quoi il s'accroche |
+|---|---|
+| `admin_broadcast_recipients()` | ne lit que `public.profiles` |
+| `unsubscribeUrl()` | une signature HMAC **sur l'identifiant de compte** |
+| `admin_notification_deliveries.recipient_id` | `not null references profiles(id)` |
+
+Des beta testeurs n'ont pas encore de compte. Un simple champ de saisie
+laisserait donc partir un envoi de masse **sans lien de desabonnement** — ce
+que Gmail et Yahoo declassent, cf. RFC 8058 plus haut — et sans trace dans le
+journal. Ouvrir le pipeline aux adresses hors-base est une evolution reelle
+(`target_type` elargi, `recipient_id` rendu nullable avec une colonne `email`,
+jeton signe sur l'adresse) ; la faire pour un envoi unique affaiblirait trois
+garanties contre rien.
+
+`scripts/send-beta-invite.mjs` fait l'envoi a cote, et **n'ecrit rien en
+base** : une campagne journalisee qui n'a vise aucun compte serait un chiffre
+a l'ecran qu'aucune requete ne soutient.
+
+- Essai a blanc par defaut ; l'apercu est ecrit sur disque, `--send` envoie.
+- Un message par destinataire — une liste de testeurs dans un `to` collectif,
+  c'est la liste des testeurs qui fuite.
+- **Pas de `topicId`.** La thematique des campagnes porte les annonces du
+  produit ; s'y etre desabonne ne dit rien d'une invitation au test, et
+  l'attacher ferait **silencieusement** sauter des destinataires.
+  `List-Unsubscribe` en mailto tient le role, comme le fait deja
+  `sendCampaignEmails()` quand le lien signe n'existe pas.
+- ⚠️ **Cle d'idempotence, et elle a ete gagnee a l'usage.** Un appel a
+  `/emails/batch` a repondu « Unable to fetch data » reseau valide — panne
+  passagere cote Resend. Le lot entier compte en echec, et relancer
+  renverrait aux lots deja partis. Verifie : meme cle → **meme identifiant**
+  renvoye (Resend rejoue, 24 h), cle differente → identifiant neuf. Revers
+  assume : modifier la liste change la cle. Pour des testeurs ajoutes apres
+  coup, envoyer une liste ne contenant qu'eux.
+- ⚠️ **Le gabarit React Email n'est pas reutilise.** `lib/email/campaign.ts`
+  tire `emails/campaign-email.tsx`, donc du JSX, et `lib/email/preview.ts`
+  est `server-only` : le rendu n'existe que dans Next. Le HTML du script est
+  donc ecrit a la main — memes quatre couleurs, meme entete, meme signe a
+  `11 x 32`, et **les constantes partagees sont nommees en tete du fichier**
+  comme le couple a surveiller.
+- ⚠️ Hors du depot : les adresses doivent etre **inscrites comme testeurs
+  dans la Play Console** (liste ou groupe Google), et chacun doit ouvrir le
+  lien avec le compte Google de l'adresse destinataire. Sans cela le lien
+  affiche « indisponible » et l'envoi passe pour un echec produit.
+
+`scripts/beta-testers.txt` et l'apercu rendu sont dans `.gitignore` : ce sont
+des adresses personnelles, elles n'ont pas a entrer dans l'historique.
+`scripts/beta-testers.example.txt` documente le format.
+
+## Le modele « Invitation beta testeurs » (Nov 2026)
+
+Pose par `supabase/migrations/202611020002_beta_tester_template.sql` dans le
+catalogue, donc choisissable a la diffusion et **modifiable a l'ecran** ensuite.
+C'est du contenu, pas du schema : l'identifiant est fixe et le script se
+rejoue sans creer de second modele.
+
+- ⚠️⚠️ **Aucun nom de destinataire, par construction.** Demande du client. Les
+  **deux** formules d'accueil — « avec nom » et « sans » — portent le meme
+  texte, sans jeton de substitution : il n'existe aucun chemin par lequel un
+  nom apparaitrait, pas meme le jour ou ce modele servirait a ecrire a des
+  comptes. L'apercu `emails/apercus/campagne-beta-testeurs.tsx` passe un
+  `recipientName` **exprès** : c'est le temoin, un nom lisible signale un
+  modele casse.
+- ⚠️ **`reply_to` est laisse vide, volontairement**, et le script ne le rejoue
+  pas lors d'une relance. Le corps invite a repondre, or `ifriqiya-soccer.com`
+  n'a **aucun MX** (verifie en DNS-over-HTTPS : MX, SPF et DMARC absents a la
+  racine ; seuls le DKIM `resend._domainkey` et le sous-domaine de rebond
+  `send.` existent). Une reponse n'arriverait nulle part. Renseigner une boite
+  reellement relevee avant le premier envoi, ou retirer la phrase de retour.
+- ⚠️ **L'URL du bouton est un marqueur** (`REMPLACER-PAR-VOTRE-PACKAGE`) : le
+  lien d'adhesion vient de la Play Console et change a chaque piste de test.
+- ⚠️⚠️ **`blocks` vit sur `admin_email_templates` (le catalogue), pas sur
+  `admin_email_template` (la ligne par langue).** Les deux noms ne different
+  que d'un `s` et la premiere version du script s'est trompee de table —
+  `42703: column "blocks" ... does not exist`. La mise en page est **unique**
+  pour les trois langues ; ce sont les textes **dans** chaque bloc qui sont
+  traduits (`{ "fr": …, "en": … }`). La poser par langue laisserait trois
+  mises en page diverger en silence.
+  ⚠️ Lecon de methode : le diagnostic a d'abord conclu « trois migrations non
+  appliquees » en sondant des noms de colonnes **devines**
+  (`profiles.status_reason`, `platform_settings.key`) — deux sur trois etaient
+  de faux absents, et la troisieme etait la mauvaise table. Sonder un nom qu'on
+  n'a pas lu dans la migration ne mesure rien.
+- **`is_default` reste faux.** Un modele qui parle d'un test ferme n'a rien a
+  faire sur une annonce ordinaire envoyee par defaut.
+- Le bouton vit dans les blocs, donc `show_cta` est faux : celui de
+  l'habillage viendrait se poser juste en dessous (regle `hasBlockButton`).
+- Rendu verifie avant livraison : douze blocs sur douze acceptes par la liste
+  blanche, un seul « Bonjour, », une seule signature, pas de double bouton,
+  et le temoin de nom absent du HTML.
+
+### L'exemple de l'apercu n'est plus un Scout Day (Nov 2026)
+
+Signale en ouvrant le modele beta : l'apercu parlait de Scout Day. `SAMPLE`
+(`lib/email/preview.ts`) portait une session Scout Day **redigee comme un vrai
+message**, et l'ecran du modele la pose dans le bloc `message`. Sur un
+catalogue qui porte desormais une invitation aux beta testeurs et des annonces
+marketing, **chaque** modele s'apercevait donc en Scout Day.
+
+⚠️ Le vrai defaut n'etait pas le sujet choisi, c'etait qu'un **emplacement se
+donnait pour du contenu**. Ces deux lignes ne sont pas le modele : elles
+tiennent la place du titre et du message que la campagne apportera. Les blocs,
+eux, portent bien le contenu propre du modele — c'est pourquoi l'apercu du
+modele beta reste manifestement une invitation beta (etapes, bouton
+« Rejoindre le test », colonnes, signature) alors meme que son titre et son
+corps disent « Le titre de votre message ». Mesure apres correction : plus
+aucune trace de Scout Day, le texte se lit comme un emplacement, et les blocs
+beta sont tous rendus.
+
+La formulation reprend celle du composeur (`SAMPLE_BODY`), pour que les deux
+apercus de l'application ne racontent pas deux choses differentes. L'invite de
+saisie du titre, qui disait elle aussi « Ex : nouvelle session Scout Day a
+Tunis », sert les trois modes et est devenue neutre.
+
+### Le modele doit **inviter**, pas seulement expliquer (Nov 2026)
+
+Signale a la relecture : « ce n'est pas un e-mail d'invitation ». C'etait exact,
+et c'etait une faute de conception, pas de redaction. L'invitation vivait dans
+le **titre et le corps de la campagne** — que l'administrateur redige a chaque
+envoi — si bien que le modele seul s'ouvrait sur « Le titre de votre message »
+puis enchainait sur « Pour rejoindre le test, trois gestes ». Personne n'avait
+ete invite, et on ne savait toujours pas ce qu'etait l'application.
+
+L'invitation, ce qu'est Ifriqiya Soccer Star et la raison de ce message sont
+donc **dans les blocs du modele**. Le bloc `message` reste — `normalizeBlocks()`
+en impose toujours un — mais il ne porte plus qu'une note libre : **le corps
+peut rester vide**, et vide il ne rend rien (ce que l'optionalite du corps,
+corrigee plus tot, rend possible). Un courriel complet part donc avec un objet
+pour seule saisie.
+
+- ⚠️ **Les colonnes sont redigees en phrases, pas en faux intertitres.** Un bloc
+  de texte n'a aucun reglage de graisse : « Ce qui peut arriver. » suivi d'un
+  paragraphe se lisait comme une phrase coupee en deux.
+- ⚠️ **Deux affirmations inventees ont ete retirees** : « aucune donnee ne sera
+  publiee » et une duree de test. Ni l'une ni l'autre ne se verifie dans ce
+  depot, et une promesse fausse dans une boite mail ne se rattrape pas.
+- ⚠️⚠️ **Le modele existe en deux exemplaires** — la migration et
+  `emails/apercus/campagne-beta-testeurs.tsx` — et deux copies derivent
+  toujours. Les deux sont **generees de la meme source**, et
+  `tests/campaign-email.test.cjs` compare le JSON de la migration aux blocs
+  exportes par l'apercu. **Verifie par mutation** : changer un texte d'un seul
+  cote fait tomber le test. Le meme test garde la presence de l'invitation
+  dans le modele — la remettre dans le message de la campagne echoue.

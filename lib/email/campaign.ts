@@ -73,14 +73,22 @@ export const MAX_EMAIL_RECIPIENTS = 2000;
 const CHUNK_DELAY_MS = 600;
 
 export type CampaignRecipient = {
-  id: string;
+  /**
+   * Le compte du destinataire — **nul** pour une adresse saisie a la main,
+   * qui n'en a pas. Ce qui en depend s'adapte plutot que de disparaitre :
+   * le lien de desabonnement se signe alors sur l'adresse, et la ligne de
+   * journal nomme l'adresse au lieu du compte.
+   */
+  id: string | null;
   email: string;
   locale: string | null;
   full_name: string | null;
 };
 
 export type CampaignDelivery = {
-  recipient_id: string;
+  recipient_id: string | null;
+  /** L'adresse, quand il n'y a pas de compte a nommer. */
+  email: string | null;
   status: "sent" | "failed";
   provider_reference: string | null;
   error_message: string | null;
@@ -145,6 +153,46 @@ export function unsubscribeUrl(profileId: string): string | null {
   return `${SITE_URL}/api/email/desabonnement?c=${profileId}&t=${token}`;
 }
 
+/**
+ * Le meme lien, pour une adresse sans compte.
+ *
+ * ⚠️ **Un sujet different signe un message different.** Le jeton d'un compte
+ * couvre `unsubscribe:<identifiant>` ; celui d'une adresse couvre
+ * `unsubscribe-email:<adresse>`. Avec un prefixe commun, un identifiant de
+ * compte qui ressemblerait a une adresse — ou l'inverse — ferait accepter un
+ * jeton emis pour l'autre. Les deux espaces sont disjoints par construction.
+ *
+ * ⚠️ L'adresse est **normalisee avant d'etre signee**, exactement comme elle
+ * l'est avant d'etre stockee : sans cela `Jean@Exemple.fr` et
+ * `jean@exemple.fr` donneraient deux jetons, et le lien recu refuserait la
+ * ligne que la base a enregistree.
+ */
+export const normalizeEmail = (email: string) => email.trim().toLowerCase();
+
+export function emailUnsubscribeToken(email: string): string | null {
+  const key = signingKey();
+  if (!key) return null;
+  return createHmac("sha256", key)
+    .update(`unsubscribe-email:${normalizeEmail(email)}`)
+    .digest("base64url");
+}
+
+export function verifyEmailUnsubscribeToken(email: string, token: string): boolean {
+  const expected = emailUnsubscribeToken(email);
+  if (!expected) return false;
+  const a = Buffer.from(expected);
+  const b = Buffer.from(token);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
+export function emailUnsubscribeUrl(email: string): string | null {
+  const token = emailUnsubscribeToken(email);
+  if (!token) return null;
+  // L'adresse voyage encodee : elle contient un `@` et peut contenir un `+`,
+  // que la lecture d'une chaine de requete interpreterait comme une espace.
+  return `${SITE_URL}/api/email/desabonnement?e=${encodeURIComponent(normalizeEmail(email))}&t=${token}`;
+}
+
 // ---------------------------------------------------------------------------
 // Rendu
 // ---------------------------------------------------------------------------
@@ -185,6 +233,7 @@ async function renderVariant(
   locale: Locale,
   named: boolean,
   title: string,
+  heading: string | null | undefined,
   body: string,
   withUnsubscribe: boolean,
   copy: ResolvedEmailCopy,
@@ -193,6 +242,7 @@ async function renderVariant(
 ): Promise<Rendered> {
   const element = CampaignEmail({
     title,
+    heading,
     body,
     bodyDoc,
     blocks,
@@ -297,6 +347,7 @@ const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 export async function sendCampaignEmails({
   campaignKey,
   title,
+  heading,
   body,
   recipients,
   copy,
@@ -306,6 +357,12 @@ export async function sendCampaignEmails({
   /** Identifiant stable de la diffusion : sert de cle d'idempotence. */
   campaignKey: string;
   title: string;
+  /**
+   * Le titre affiche en tete du courriel. ⚠️ Ce n'est **pas** l'objet :
+   * l'ecrire deux fois faisait relire dans le message la ligne deja lue dans
+   * la boite de reception. `undefined` garde l'ancien comportement.
+   */
+  heading?: string | null;
   body: string;
   recipients: CampaignRecipient[];
   /**
@@ -343,7 +400,7 @@ export async function sendCampaignEmails({
     const cached = variants.get(key);
     if (cached) return cached;
     const resolvedCopy = copy?.[locale] ?? resolveEmailCopy(locale, null, SITE_URL);
-    const rendered = await renderVariant(locale, named, title, body, withUnsubscribe, resolvedCopy, bodyDoc ?? null, blocks);
+    const rendered = await renderVariant(locale, named, title, heading, body, withUnsubscribe, resolvedCopy, bodyDoc ?? null, blocks);
     variants.set(key, rendered);
     return rendered;
   };
@@ -354,7 +411,8 @@ export async function sendCampaignEmails({
     const locale = emailLocale(recipient.locale);
     const resolvedCopy = copy?.[locale] ?? resolveEmailCopy(locale, null, SITE_URL);
     const name = recipient.full_name?.trim() || null;
-    const url = unsubscribeUrl(recipient.id);
+    // Un compte signe sur son identifiant, une adresse saisie sur elle-meme.
+    const url = recipient.id ? unsubscribeUrl(recipient.id) : emailUnsubscribeUrl(recipient.email);
     const rendered = fillTemplate(await variantOf(locale, Boolean(name), Boolean(url)), name, url);
     prepared.push({
       recipient,
@@ -406,6 +464,7 @@ export async function sendCampaignEmails({
           failed += 1;
           deliveries.push({
             recipient_id: item.recipient.id,
+            email: item.recipient.id ? null : item.recipient.email,
             status: "failed",
             provider_reference: null,
             error_message: response.error.message,
@@ -431,6 +490,7 @@ export async function sendCampaignEmails({
           failed += 1;
           deliveries.push({
             recipient_id: item.recipient.id,
+            email: item.recipient.id ? null : item.recipient.email,
             status: "failed",
             provider_reference: null,
             error_message: message,
@@ -440,6 +500,7 @@ export async function sendCampaignEmails({
         sent += 1;
         deliveries.push({
           recipient_id: item.recipient.id,
+          email: item.recipient.id ? null : item.recipient.email,
           status: "sent",
           provider_reference: aligned ? (ids[position]?.id ?? null) : null,
           error_message: null,
@@ -450,6 +511,7 @@ export async function sendCampaignEmails({
         failed += 1;
         deliveries.push({
           recipient_id: item.recipient.id,
+          email: item.recipient.id ? null : item.recipient.email,
           status: "failed",
           provider_reference: null,
           error_message: cause instanceof Error ? cause.message : "send_failed",

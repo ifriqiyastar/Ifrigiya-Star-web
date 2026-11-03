@@ -42,3 +42,7 @@ next-env.d.ts
 
 # supabase cli cache
 /supabase/.temp
+
+# liste des beta testeurs : des adresses personnelles, hors historique
+/scripts/beta-testers.txt
+/scripts/beta-invite.preview.html

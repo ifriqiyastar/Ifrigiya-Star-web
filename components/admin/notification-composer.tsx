@@ -12,6 +12,7 @@ import {
   SmartphoneIcon,
   TargetIcon,
   UserRoundIcon,
+  AtSignIcon,
   UsersIcon,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -31,6 +32,10 @@ import { AccountPicker, type Account } from "@/components/admin/account-picker";
 import { NativeSelect } from "@/components/ui/native-select";
 import { RichTextEditor } from "@/components/admin/rich-text-editor";
 import type { ActionResult } from "@/lib/actions/result";
+// ⚠️ Module neutre, qui n'importe rien : un composant client ne peut emprunter
+// ni `lib/actions/*` ni rien qui tire `server-only`. Le decompte affiche et la
+// liste envoyee sortent ainsi de la meme analyse.
+import { MAX_TYPED_ADDRESSES, parseAddressList } from "@/lib/email/address-list";
 import { useAdminI18n, useAdminTranslations } from "@/lib/i18n/admin-client";
 import { cn } from "@/lib/utils";
 
@@ -106,6 +111,7 @@ export function NotificationComposer({
   /** Rend le courriel tel qu'il partirait, pour l'apercu vivant. */
   previewAction: (input: {
     title: string;
+    heading?: string | null;
     body: string;
     bodyHtml: string | null;
     templateId: string | null;
@@ -167,6 +173,17 @@ export function NotificationComposer({
   const splitText = mode === "both" && !sameText;
   /** Ce que le courriel portera reellement, quel que soit le mode. */
   const mailTitle = splitText ? emailTitle : title;
+  /**
+   * ⚠️ **Le titre pose en tete du courriel n'est pas son objet.**
+   *
+   * Le champ s'appelle « Objet de l'e-mail » des que le courriel a son
+   * propre texte — courriel seul, ou texte dissocie — et ce qu'on y tape
+   * est redige pour une boite de reception, pas pour coiffer une page. Le
+   * poser aussi en gros dans le message faisait lire deux fois la meme
+   * phrase. Il ne reste donc que lorsque le courriel reprend litteralement
+   * le titre de la notification. Meme regle que le Server Action.
+   */
+  const mailHeading = mode === "both" && !splitText ? title : null;
   const mailBody = splitText ? emailBody : body;
   const mailBodyHtml = splitText ? emailBodyHtml : bodyHtml;
 
@@ -183,7 +200,14 @@ export function NotificationComposer({
   // Un canal non selectionnable suit son etat impose : le push part toujours
   // quand on ne peut pas le decocher, l'email jamais quand on ne peut pas le
   // cocher.
-  const notificationOn = mode !== "email";
+  /**
+   * ⚠️ `targetType !== "emails"` en plus du mode : une adresse sans compte
+   * n'a pas de cloche ou deposer une notification. Choisir cette cible bascule
+   * deja le mode sur « courriel seul » (`pickSegment`), mais un etat qui
+   * reviendrait par un autre chemin ne doit pas pouvoir emettre `in_app` —
+   * le Server Action le refuserait, et l'ecran aurait menti jusque-la.
+   */
+  const notificationOn = mode !== "email" && targetType !== "emails";
   const emailOn = mode !== "notification" && channels.email.selectable;
   const pushOn = notificationOn && (channels.push.selectable ? withPush : true);
   const [confirming, setConfirming] = React.useState(false);
@@ -200,9 +224,20 @@ export function NotificationComposer({
     // precis » ailleurs eteignait toute la barre, qui annoncait alors une
     // cible que le formulaire n'avait plus.
     { value: "user", label: i18n.t("Compte precis"), icon: UserRoundIcon, count: null },
+    // Sixieme pastille : des adresses qui n'ont pas de compte. Elle vit dans
+    // la meme barre que les autres parce que c'est une cible comme une autre
+    // du point de vue de qui compose — ce qu'elle a de different (courriel
+    // seul, pas de nom, pas de langue) se dit sous le champ.
+    { value: "emails", label: i18n.t("Adresses saisies"), icon: AtSignIcon, count: null },
   ] as const;
 
   const selectedSegment = targetType === "role" ? `role:${targetValue}` : targetType;
+  // La **meme** analyse que celle du Server Action : le nombre affiche ici est
+  // celui qui partira, pas une approximation faite a cote.
+  const typed = React.useMemo(
+    () => (targetType === "emails" ? parseAddressList(targetValue) : null),
+    [targetType, targetValue],
+  );
   const selectedScoutDay = scoutDays.find((event) => event.id === targetValue);
   // Le compte choisi est garde en memoire du composant : il vient du
   // chercheur, la page ne le connait pas.
@@ -220,7 +255,9 @@ export function NotificationComposer({
             ? (selectedScoutDay?.count ?? null)
             : targetType === "user"
               ? (selectedUser ? 1 : null)
-              : null;
+              : targetType === "emails"
+                ? (typed?.emails.length || null)
+                : null;
 
   const resolved =
     targetType === "all"
@@ -235,16 +272,37 @@ export function NotificationComposer({
               : i18n.t("Selectionnez un Scout Day")
             : targetType === "user"
               ? (selectedUser?.name ?? i18n.t("Selectionnez un compte"))
-              : "—";
+              : targetType === "emails"
+                ? (typed?.emails.length
+                    ? i18n.t("{0} adresse(s) saisie(s)", { "0": typed.emails.length })
+                    : i18n.t("Saisissez au moins une adresse e-mail valide."))
+                : "—";
 
-  const needsPick = targetType === "scout_day" || targetType === "user";
+  const needsPick =
+    targetType === "scout_day" || targetType === "user" || targetType === "emails";
+  /**
+   * ⚠️ **Le bouton doit repondre exactement comme le Server Action.**
+   *
+   * Il exigeait un corps dans tous les cas, y compris en courriel seul ou
+   * l'ecran venait d'annoncer le champ « facultatif » : le libelle disait
+   * une chose, le bouton grise en disait une autre, et c'est le bouton qui
+   * tranchait. Un garde-fou plus severe que la regle qu'il represente
+   * ne protege de rien — il cache un geste legitime, exactement comme une
+   * permission qui masque un bouton que l'action aurait accepte.
+   *
+   * La regle, la meme des deux cotes : un titre, une cible quand elle se
+   * choisit, et un corps **seulement si une notification part** — la cloche
+   * et l'ecran verrouille n'auraient rien a montrer. Le courriel, lui, peut
+   * tenir entierement dans les blocs de son modele.
+   *
+   * ⚠️ Les champs du texte dissocie ne bloquent plus non plus : vides, ils
+   * ne partent pas vides — `email_subject`/`email_body` nuls signifient « le
+   * courriel reprend le texte de la notification », et c'est ce que les
+   * invites de saisie annoncent deja.
+   */
+  const needsBody = mode !== "email";
   const ready = Boolean(
-    title.trim() &&
-      body.trim() &&
-      (!needsPick || targetValue) &&
-      // ⚠️ Un courriel redige a part et laisse vide partirait sans objet ni
-      // corps : le bouton reste bloque tant qu'il n'est pas ecrit.
-      (!splitText || (emailTitle.trim() && emailBody.trim())),
+    title.trim() && (!needsBody || body.trim()) && (!needsPick || targetValue),
   );
   /**
    * Une diffusion ne se rappelle pas. Au-dela d'un destinataire, le clic
@@ -279,6 +337,7 @@ export function NotificationComposer({
       // depend de ce qu'on va ecrire.
       previewAction({
         title: mailTitle.trim() || SAMPLE_TITLE,
+        heading: mailHeading?.trim() || null,
         body: mailBody.trim() || SAMPLE_BODY,
         bodyHtml: mailBody.trim() ? mailBodyHtml || null : null,
         templateId: templateId || null,
@@ -302,7 +361,29 @@ export function NotificationComposer({
     };
     // `SAMPLE_*` sont des chaines : la comparaison de dependances se fait par
     // valeur, donc les citer ne relance pas l'effet a chaque rendu.
-  }, [previewTab, previewLocale, mailTitle, mailBody, mailBodyHtml, templateId, previewAction, SAMPLE_TITLE, SAMPLE_BODY]);
+  }, [previewTab, previewLocale, mailTitle, mailHeading, mailBody, mailBodyHtml, templateId, previewAction, SAMPLE_TITLE, SAMPLE_BODY]);
+
+  /**
+   * ⚠️ **Le couple mode / cible se tient dans les deux sens.**
+   *
+   * Choisir « adresses saisies » basculait bien en courriel seul, mais rien
+   * ne se passait dans l'autre sens : on pouvait repasser sur « une
+   * notification » en gardant cette cible selectionnee, et l'ecran proposait
+   * alors d'envoyer une notification a des adresses qui n'ont pas
+   * d'application. Le Server Action l'aurait refuse — apres coup, apres avoir
+   * laisse composer tout le message.
+   *
+   * La cible revient donc a « tous » des qu'un mode qui porte l'in-app est
+   * choisi, et la pastille disparait de la barre : elle n'est pas grisee,
+   * elle n'a simplement pas de sens ici.
+   */
+  function pickMode(value: "notification" | "email" | "both") {
+    setMode(value);
+    if (value !== "email" && targetType === "emails") {
+      setTargetType("all");
+      setTargetValue("");
+    }
+  }
 
   function pickSegment(value: string) {
     if (value.startsWith("role:")) {
@@ -313,6 +394,9 @@ export function NotificationComposer({
     setTargetType(value);
     setTargetValue("");
     setSelectedUser(null);
+    // Des adresses sans compte ne peuvent recevoir que du courriel : le mode
+    // suit la cible plutot que de laisser choisir un canal impossible.
+    if (value === "emails") setMode("email");
   }
 
   /**
@@ -378,14 +462,14 @@ export function NotificationComposer({
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 <ModeCard
                   active={mode === "notification"}
-                  onClick={() => setMode("notification")}
+                  onClick={() => pickMode("notification")}
                   icon={BellRingIcon}
                   title={i18n.t("Une notification")}
                   hint={i18n.t("Dans l'application, et sur le telephone.")}
                 />
                 <ModeCard
                   active={mode === "email"}
-                  onClick={() => setMode("email")}
+                  onClick={() => pickMode("email")}
                   icon={MailIcon}
                   title={i18n.t("Un e-mail")}
                   hint={i18n.t("Rien dans l'application, rien sur le telephone.")}
@@ -394,7 +478,7 @@ export function NotificationComposer({
                 />
                 <ModeCard
                   active={mode === "both"}
-                  onClick={() => setMode("both")}
+                  onClick={() => pickMode("both")}
                   icon={SendIcon}
                   title={i18n.t("Les deux")}
                   hint={i18n.t("Le meme texte par les deux voies.")}
@@ -409,9 +493,14 @@ export function NotificationComposer({
               {/* Une rangee qui se replie, pas une grille : des colonnes
                   `minmax(0,1fr)` retrecissent sous leur contenu au lieu de
                   deborder, et cinq pastilles dans huit colonnes finissent
-                  tronquees sans que rien ne defile. */}
+                  tronquees sans que rien ne defile. La barre en porte cinq ou
+                  six selon le mode, ce que seul un `flex-wrap` encaisse. */}
               <div className="flex flex-wrap gap-1 rounded-lg bg-background p-1">
-                {SEGMENTS.map((segment) => {
+                {SEGMENTS.filter(
+                  // Une adresse sans compte ne peut pas recevoir d'in-app :
+                  // la pastille n'est proposee qu'en courriel seul.
+                  (segment) => segment.value !== "emails" || mode === "email",
+                ).map((segment) => {
                   const Icon = segment.icon;
                   const active = selectedSegment === segment.value;
                   return (
@@ -446,32 +535,85 @@ export function NotificationComposer({
               {targetType === "all" ? <input type="hidden" name="target_value" value="" /> : null}
 
               {targetType === "scout_day" ? (
-                <NativeSelect
-                  name="target_value"
-                  required
-                  aria-label={i18n.t("Selectionner un Scout Day")}
-                  value={targetValue}
-                  onChange={(event) => setTargetValue(event.target.value)}
-                >
-                  <option value="">{i18n.t("Selectionner un Scout Day")}</option>
-                  {scoutDays.map((event) => (
-                    <option key={event.id} value={event.id}>
-                      {event.label} — {event.count} {i18n.t("inscrit(s)")}
-                    </option>
-                  ))}
-                </NativeSelect>
+                <Field label={i18n.t("Scout Day concerne")} htmlFor="notif-scout-day">
+                  <NativeSelect
+                    id="notif-scout-day"
+                    name="target_value"
+                    required
+                    className="h-8 rounded-md border-0 bg-transparent pr-7 pl-0"
+                    value={targetValue}
+                    onChange={(event) => setTargetValue(event.target.value)}
+                  >
+                    <option value="">{i18n.t("Selectionner un Scout Day")}</option>
+                    {scoutDays.map((event) => (
+                      <option key={event.id} value={event.id}>
+                        {event.label} — {event.count} {i18n.t("inscrit(s)")}
+                      </option>
+                    ))}
+                  </NativeSelect>
+                </Field>
+              ) : null}
+
+              {targetType === "emails" ? (
+                <div className="space-y-1.5">
+                  <Field label={i18n.t("Adresses e-mail")} htmlFor="notif-addresses">
+                    <textarea
+                      id="notif-addresses"
+                      name="target_value"
+                      required
+                      rows={4}
+                      value={targetValue}
+                      onChange={(event) => setTargetValue(event.target.value)}
+                      placeholder={i18n.t("marie@exemple.com, karim@exemple.com — une par ligne, ou separees par des virgules")}
+                      className="w-full resize-y bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                    />
+                  </Field>
+                  {/* ⚠️ Ce que la saisie ecarte se lit **avant** d'envoyer.
+                      Decouvrir apres coup que douze adresses etaient des
+                      doublons, ou qu'une faute de frappe en a fait tomber une,
+                      arrive trop tard : une diffusion ne se rappelle pas. */}
+                  <p className="text-[0.6875rem] leading-relaxed text-muted-foreground">
+                    {typed?.emails.length
+                      ? i18n.t("{0} adresse(s) retenue(s) sur un maximum de {1}.", {
+                          "0": typed.emails.length,
+                          "1": MAX_TYPED_ADDRESSES,
+                        })
+                      : i18n.t("Collez des adresses : une par ligne, ou separees par des virgules.")}
+                    {typed?.duplicates
+                      ? ` ${i18n.t("{0} doublon(s) retire(s).", { "0": typed.duplicates })}`
+                      : ""}
+                    {typed?.overflow
+                      ? ` ${i18n.t("{0} adresse(s) au-dela du plafond de {1} non servie(s).", { "0": typed.overflow, "1": MAX_TYPED_ADDRESSES })}`
+                      : ""}
+                  </p>
+                  {typed?.invalid.length ? (
+                    <p className="text-[0.6875rem] leading-relaxed text-warning">
+                      {i18n.t("{0} adresse(s) illisible(s) ignoree(s) : {1}.", {
+                        "0": typed.invalid.length,
+                        "1": typed.invalid.slice(0, 5).join(", "),
+                      })}
+                    </p>
+                  ) : null}
+                  {/* Ce que cette cible a de different, dit a sa place plutot
+                      que decouvert dans un refus apres l'envoi. */}
+                  <p className="text-[0.6875rem] leading-relaxed text-muted-foreground">
+                    {i18n.t("Ces adresses n'ont pas de compte : elles ne recoivent que l'e-mail, en francais, sans leur nom. Un lien de desabonnement est joint, et une adresse desabonnee est ecartee.")}
+                  </p>
+                </div>
               ) : null}
 
               {targetType === "user" ? (
-                <AccountPicker
-                  value={targetValue}
-                  selected={selectedUser}
-                  onSelect={(account) => {
-                    setSelectedUser(account);
-                    setTargetValue(account?.id ?? "");
-                  }}
-                  search={searchAccounts}
-                />
+                <Field label={i18n.t("Compte destinataire")}>
+                  <AccountPicker
+                    value={targetValue}
+                    selected={selectedUser}
+                    onSelect={(account) => {
+                      setSelectedUser(account);
+                      setTargetValue(account?.id ?? "");
+                    }}
+                    search={searchAccounts}
+                  />
+                </Field>
               ) : null}
 
               <p
@@ -492,15 +634,14 @@ export function NotificationComposer({
             <section className="space-y-2">
               <Step number={3} label={i18n.t("Message")} />
 
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between gap-2">
-                  <label htmlFor="notif-title" className="micro-label">
-                    {mode === "email" ? i18n.t("Objet de l'e-mail") : i18n.t("Titre de la notification")}
-                  </label>
-                  {/* L'objet d'un courriel n'a pas la contrainte d'un titre
-                      de notification, que l'ecran verrouille tronque. */}
-                  <Counter value={title.length} max={mode === "email" ? 120 : 64} />
-                </div>
+              {/* L'objet d'un courriel n'a pas la contrainte d'un titre de
+                  notification, que l'ecran verrouille tronque : le compteur
+                  pose sur la bordure change de plafond avec le mode. */}
+              <Field
+                label={mode === "email" ? i18n.t("Objet de l'e-mail") : i18n.t("Titre de la notification")}
+                htmlFor="notif-title"
+                aside={<Counter value={title.length} max={mode === "email" ? 120 : 64} />}
+              >
                 <input
                   id="notif-title"
                   name="title"
@@ -508,33 +649,57 @@ export function NotificationComposer({
                   maxLength={mode === "email" ? 120 : 64}
                   value={title}
                   onChange={(event) => setTitle(event.target.value)}
-                  placeholder={i18n.t("Ex : nouvelle session Scout Day a Tunis")}
-                  className="h-9 w-full rounded-lg bg-background px-3 text-sm outline-none placeholder:text-muted-foreground focus:ring-1 focus:ring-brand"
+                  placeholder={i18n.t("Ex : ce que le destinataire lira en premier")}
+                  className="h-7 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
                 />
-              </div>
+              </Field>
 
               <div className="space-y-1.5">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="micro-label">{i18n.t("Corps du message")}</span>
-                  <Counter value={body.length} max={LOCK_SCREEN_BODY_CHARS} soft />
-                </div>
                 {/* Le texte brut voyage dans `FormData` sous le nom que le
                     Server Action lit depuis toujours ; la mise en forme
                     l'accompagne a cote, sans le remplacer. */}
                 <input type="hidden" name="body" value={body} />
                 <input type="hidden" name="body_html" value={bodyHtml} />
-                <RichTextEditor
-                  value={bodyHtml}
-                  onChange={(html, text) => {
-                    setBodyHtml(html);
-                    setBody(text);
-                  }}
-                  placeholder={i18n.t("Detaillez la session, la date et ce que le destinataire doit faire.")}
-                />
+                <Field
+                  inset={false}
+                  label={
+                    <>
+                      {mode === "email" ? i18n.t("Corps de l'e-mail") : i18n.t("Corps du message")}
+                      {/* ⚠️ Dit facultatif plutot que laisse deviner : le champ
+                          etait exige meme pour un courriel bati sur un modele,
+                          dont les blocs portent deja le texte. */}
+                      {mode === "email" ? (
+                        <span className="ml-1.5 font-normal normal-case text-muted-foreground">
+                          {i18n.t("(facultatif)")}
+                        </span>
+                      ) : null}
+                    </>
+                  }
+                  /* ⚠️ Le compteur mesure ce que l'ecran verrouille d'un
+                     telephone laisse lire. Un courriel n'a pas d'ecran
+                     verrouille : afficher « 0 / 120 » sur un envoi par
+                     courriel seul annoncait une limite qui n'existe pas. */
+                  aside={
+                    mode === "email" ? null : (
+                      <Counter value={body.length} max={LOCK_SCREEN_BODY_CHARS} soft />
+                    )
+                  }
+                >
+                  <RichTextEditor
+                    value={bodyHtml}
+                    onChange={(html, text) => {
+                      setBodyHtml(html);
+                      setBody(text);
+                    }}
+                    placeholder={i18n.t("Detaillez la session, la date et ce que le destinataire doit faire.")}
+                  />
+                </Field>
                 <p className="text-[0.6875rem] leading-relaxed text-muted-foreground">
-                  {body.length > LOCK_SCREEN_BODY_CHARS
-                    ? i18n.t("Au-dela d'environ {0} caracteres, la suite est repliee sur l'ecran verrouille : le message reste entier dans l'application.", { "0": LOCK_SCREEN_BODY_CHARS })
-                    : i18n.t("Le texte part tel quel : aucune variable n'est remplacee a l'envoi.")}
+                  {mode === "email"
+                    ? i18n.t("Le texte part tel quel : aucune variable n'est remplacee a l'envoi.")
+                    : body.length > LOCK_SCREEN_BODY_CHARS
+                      ? i18n.t("Au-dela d'environ {0} caracteres, la suite est repliee sur l'ecran verrouille : le message reste entier dans l'application.", { "0": LOCK_SCREEN_BODY_CHARS })
+                      : i18n.t("Le texte part tel quel : aucune variable n'est remplacee a l'envoi.")}
                 </p>
               </div>
             </section>
@@ -554,24 +719,35 @@ export function NotificationComposer({
                 </label>
                 {splitText ? (
                   <>
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between gap-2">
-                        <label htmlFor="mail-title" className="micro-label">
-                          {i18n.t("Objet de l'e-mail")}
-                        </label>
-                        <Counter value={emailTitle.length} max={120} />
-                      </div>
+                    <Field
+                      label={i18n.t("Objet de l'e-mail")}
+                      htmlFor="mail-title"
+                      surface="background"
+                      aside={<Counter value={emailTitle.length} max={120} />}
+                    >
                       <input
                         id="mail-title"
                         maxLength={120}
                         value={emailTitle}
                         onChange={(event) => setEmailTitle(event.target.value)}
-                        placeholder={title || i18n.t("Ex : nouvelle session Scout Day a Tunis")}
-                        className="h-9 w-full rounded-lg bg-card px-3 text-sm outline-none placeholder:text-muted-foreground/60 focus:ring-1 focus:ring-brand"
+                        placeholder={title || i18n.t("Ex : ce que le destinataire lira en premier")}
+                        className="h-7 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
                       />
-                    </div>
-                    <div className="space-y-1.5">
-                      <span className="micro-label">{i18n.t("Corps de l'e-mail")}</span>
+                    </Field>
+                    <Field
+                      inset={false}
+                      surface="background"
+                      label={
+                        <>
+                          {i18n.t("Corps de l'e-mail")}
+                          <span className="ml-1.5 font-normal normal-case text-muted-foreground">
+                            {i18n.t("(facultatif)")}
+                          </span>
+                        </>
+                      }
+                    >
+                      {/* Vide, il ne part pas vide : le courriel reprend
+                          alors le texte de la notification. */}
                       <RichTextEditor
                         value={emailBodyHtml}
                         onChange={(html, text) => {
@@ -580,7 +756,7 @@ export function NotificationComposer({
                         }}
                         placeholder={i18n.t("Detaillez la session, la date et ce que le destinataire doit faire.")}
                       />
-                    </div>
+                    </Field>
                   </>
                 ) : (
                   <p className="text-[0.625rem] leading-relaxed text-muted-foreground">
@@ -642,21 +818,22 @@ export function NotificationComposer({
                 </>
               ) : null}
               {emailOn && templates.length ? (
-                <div className="space-y-1.5 rounded-lg bg-background p-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <label htmlFor="notif-template" className="micro-label">
-                      {i18n.t("Modele d'e-mail")}
-                    </label>
+                <Field
+                  label={i18n.t("Modele d'e-mail")}
+                  htmlFor="notif-template"
+                  aside={
                     <a
                       href={templatesHref}
                       className="text-[0.6875rem] font-semibold text-brand hover:underline"
                     >
                       {i18n.t("Voir les modeles")}
                     </a>
-                  </div>
+                  }
+                >
                   <NativeSelect
                     id="notif-template"
                     name="email_template"
+                    className="h-8 rounded-md border-0 bg-transparent pr-7 pl-0"
                     value={templateId}
                     onChange={(event) => setTemplateId(event.target.value)}
                   >
@@ -667,7 +844,7 @@ export function NotificationComposer({
                       </option>
                     ))}
                   </NativeSelect>
-                </div>
+                </Field>
               ) : null}
               {notificationOn && !pushOn ? (
                 <p className="rounded-lg bg-warning/10 px-3 py-2 text-[0.6875rem] leading-relaxed text-warning">
@@ -694,7 +871,9 @@ export function NotificationComposer({
                 <button
                   type="button"
                   onClick={sendTest}
-                  disabled={testing || pending || !title.trim() || !body.trim()}
+                  // Meme regle que l'envoi : un test refuse la ou la
+                  // diffusion passerait ne testerait rien d'utile.
+                  disabled={testing || pending || !ready}
                   className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-accent px-3 text-sm font-semibold hover:bg-accent/70 disabled:opacity-60"
                 >
                   {testing ? (
@@ -994,6 +1173,64 @@ function PreviewTab({
   );
 }
 
+/**
+ * Un champ encadre, libelle pose dans l'encoche de sa bordure.
+ *
+ * Le cadre est un vrai `<fieldset>` : c'est le navigateur qui interrompt la
+ * bordure sous le `<legend>`, rien n'est simule a coups de fond opaque, et le
+ * libelle reste rattache au champ pour un lecteur d'ecran.
+ *
+ * ⚠️ **Le cadre ne bouge pas, jamais.** Un champ qui ne se dessinait qu'une
+ * fois touche laissait l'ecran vide de limites ; mais un cadre qui change de
+ * couleur au clic se lit comme un **second** cadre pose sur le premier, ce
+ * qui etait le reproche. ⚠️ `:focus-visible` n'est pas un garde-fou ici :
+ * Chrome le fait correspondre **aussi a la souris** sur un champ texte, ou
+ * l'on attend une saisie au clavier — la regle « clavier seulement » colorait
+ * donc le cadre a chaque clic. C'est le **libelle** qui prend la couleur de la
+ * marque quand le champ a le focus : une tabulation reste suivable sans qu'un
+ * trait se redessine.
+ *
+ * `aside` — un compteur, un lien — se pose sur la bordure a droite : il faut
+ * donc lui donner le fond exact de la surface qui porte le cadre, d'ou
+ * `surface`. Sur le mauvais fond, le trait reapparaitrait derriere.
+ */
+function Field({
+  label,
+  htmlFor,
+  aside,
+  surface = "card",
+  inset = true,
+  children,
+}: {
+  label: React.ReactNode;
+  htmlFor?: string;
+  aside?: React.ReactNode;
+  /** Fond de la surface qui porte le cadre, recopie derriere `aside`. */
+  surface?: "card" | "background";
+  /** `false` quand l'enfant porte deja ses marges (l'editeur riche). */
+  inset?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <fieldset className="group relative min-w-0 rounded-lg border border-border pt-1">
+      <legend className="micro-label ml-2.5 px-1.5 text-muted-foreground transition-colors group-focus-within:text-brand">
+        {htmlFor ? <label htmlFor={htmlFor}>{label}</label> : label}
+      </legend>
+      {aside ? (
+        <span
+          className={cn(
+            "absolute -top-2 right-2.5 px-1.5",
+            surface === "card" ? "bg-card" : "bg-background",
+          )}
+        >
+          {aside}
+        </span>
+      ) : null}
+      {inset ? <div className="px-3 pb-2.5">{children}</div> : children}
+    </fieldset>
+  );
+}
+
 /** Numero d'etape du formulaire, dans la pastille carree du systeme. */
 function Step({ number, label }: { number: number; label: string }) {
   return (
@@ -1055,9 +1292,16 @@ function ChannelCard({
   // « Toujours » et « Indisponible » sont `shrink-0` et prennent leur largeur
   // sur le texte, qui se faisait raboter bien avant de deborder. Le descriptif
   // occupe donc sa propre ligne, et il se replie au lieu d'etre coupe.
+  //
+  // ⚠️⚠️ **Et la premiere ligne se replie aussi.** Rabattre l'etat sous le
+  // descriptif avait suffi en francais (« Hors mode »), pas en anglais : « OFF
+  // IN THIS MODE » reclame 170 px la ou la carte en offre 176 a 1280 px — la
+  // largeur ou la colonne tombe a 8/12 — et le titre du canal se lisait « E… ».
+  // Le titre ne se rabote plus : c'est l'etat qui passe a la ligne, pousse a
+  // droite par `ml-auto` dans les deux cas.
   const body = (
     <>
-      <span className="flex w-full items-center justify-between gap-2">
+      <span className="flex w-full flex-wrap items-center gap-x-2 gap-y-1">
         <span className="flex min-w-0 items-center gap-2">
           <Icon
             className={cn(
@@ -1071,7 +1315,7 @@ function ChannelCard({
           <span
             aria-hidden
             className={cn(
-              "flex size-4 shrink-0 items-center justify-center rounded border",
+              "ml-auto flex size-4 shrink-0 items-center justify-center rounded border",
               checked ? "border-brand bg-brand text-brand-foreground" : "border-border",
             )}
           >
@@ -1081,7 +1325,7 @@ function ChannelCard({
           // Pas d'icone a cote de l'etat : les seize pixels qu'elle prend
           // etaient pris sur le titre du canal, rabote a 1280 px. Le mot
           // suffit, et l'opacite de la carte dit deja l'absence.
-          <span className="micro-label shrink-0 text-muted-foreground">{stateLabel}</span>
+          <span className="micro-label ml-auto shrink-0 text-muted-foreground">{stateLabel}</span>
         )}
       </span>
       <span className="mt-1 line-clamp-2 text-[0.625rem] leading-relaxed text-muted-foreground">

@@ -22,6 +22,7 @@ import { orLikeTerm } from "@/lib/queries/search-term";
 import { renderCampaignEmail } from "@/lib/email/preview";
 import { isLocale } from "@/lib/i18n/config";
 import { parseRichText, richToPlainText } from "@/lib/rich-text/server";
+import { MAX_TYPED_ADDRESSES, parseAddressList } from "@/lib/email/address-list";
 import { createClient } from "@/lib/supabase/server";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
@@ -48,20 +49,35 @@ async function broadcastEmails(
   {
     campaignKey,
     title,
+    heading,
     body,
     targetType,
     targetValue,
+    recipients,
     templateId,
     bodyHtml,
   }: {
     campaignKey: string;
     /** L'objet du courriel : le sien s'il en a un, celui de la campagne sinon. */
     title: string;
+    /** Le titre affiche en tete du message — jamais l'objet. Voir l'appelant. */
+    heading: string | null;
     body: string;
     /** Le message mis en forme ; le courriel seul s'en sert. */
     bodyHtml: string | null;
     targetType: string;
     targetValue: string | null;
+    /**
+     * Les destinataires, quand ils ne se deduisent pas d'une cible.
+     *
+     * ⚠️ C'est le **seul** cas ou la liste n'est pas calculee en Postgres.
+     * Pour toute cible rattachee a des comptes, `admin_broadcast_recipients()`
+     * reste la definition unique de « qui recoit » — la recopier en
+     * TypeScript ferait exister deux definitions qui finiraient par diverger.
+     * Des adresses tapees a la main ne se deduisent de rien : il n'y a rien a
+     * recalculer, donc rien a faire diverger.
+     */
+    recipients?: CampaignRecipient[];
     /** Le modele choisi a l'envoi ; a defaut, celui marque par defaut. */
     templateId: string | null;
   },
@@ -75,15 +91,20 @@ async function broadcastEmails(
   };
   if (!emailChannelKey()) return { ...empty, unavailable: "unconfigured" };
 
-  const { data, error } = await supabase.rpc("admin_broadcast_recipients", {
-    p_target_type: targetType,
-    p_target_value: targetValue,
-  });
-  if (error) {
-    const missing =
-      error.code === "PGRST202" || /admin_broadcast_recipients/i.test(error.message ?? "");
-    return { ...empty, unavailable: missing ? "migration" : error.message };
+  let list = recipients ?? null;
+  if (!list) {
+    const { data, error } = await supabase.rpc("admin_broadcast_recipients", {
+      p_target_type: targetType,
+      p_target_value: targetValue,
+    });
+    if (error) {
+      const missing =
+        error.code === "PGRST202" || /admin_broadcast_recipients/i.test(error.message ?? "");
+      return { ...empty, unavailable: missing ? "migration" : error.message };
+    }
+    list = (data ?? []) as CampaignRecipient[];
   }
+  if (!list.length) return empty;
 
   // L'habillage du modele choisi, langue par langue. `fetchCopyForSend()`
   // retombe sur le modele par defaut puis sur les textes livres : une
@@ -93,12 +114,13 @@ async function broadcastEmails(
   const sent = await sendCampaignEmails({
     campaignKey,
     title,
+    heading,
     body,
     // ⚠️ Reanalyse cote serveur, jamais pose tel quel : un POST direct
     // n'emprunte pas l'editeur, et le schema Tiptap est la liste blanche.
     bodyDoc: parseRichText(bodyHtml),
     blocks: chosen.blocks,
-    recipients: (data ?? []) as CampaignRecipient[],
+    recipients: list,
     copy: chosen.copy,
   });
   return { ...sent, templateId: chosen.id };
@@ -122,16 +144,36 @@ async function recordDeliveries(
     const rows = deliveries.slice(index, index + 500).map((delivery) => ({
       campaign_id: campaignId,
       recipient_id: delivery.recipient_id,
+      // Nulle pour un compte : c'est `recipient_id` qui fait foi.
+      email: delivery.email,
       channel: "email",
       status: delivery.status,
       provider_reference: delivery.provider_reference,
       error_message: delivery.error_message,
       sent_at: delivery.status === "sent" ? new Date().toISOString() : null,
     }));
-    const { error } = await supabase.from("admin_notification_deliveries").upsert(rows, {
-      onConflict: "campaign_id,recipient_id,channel",
-    });
-    if (error) return;
+    /**
+     * ⚠️ **Deux cibles de conflit, parce qu'il y a deux sortes de lignes.**
+     * `unique` tient les NULL pour distincts : sur une adresse sans compte,
+     * `(campaign_id, recipient_id, channel)` ne contraint plus rien et une
+     * relance deposerait un doublon. Les lignes sans compte sont donc
+     * reconciliees sur `(campaign_id, email, channel)`, l'index pose par
+     * `202611020001`.
+     */
+    const comptes = rows.filter((row) => row.recipient_id !== null);
+    const adresses = rows.filter((row) => row.recipient_id === null);
+    if (comptes.length) {
+      const { error } = await supabase
+        .from("admin_notification_deliveries")
+        .upsert(comptes, { onConflict: "campaign_id,recipient_id,channel" });
+      if (error) return;
+    }
+    if (adresses.length) {
+      const { error } = await supabase
+        .from("admin_notification_deliveries")
+        .upsert(adresses, { onConflict: "campaign_id,email,channel" });
+      if (error) return;
+    }
   }
 }
 
@@ -205,7 +247,19 @@ export async function sendNotification(formData: FormData): Promise<ActionResult
   const emailSubject = String(formData.get("email_subject") ?? "").trim() || null;
   const emailBody = String(formData.get("email_body") ?? "").trim() || null;
   const emailBodyHtml = String(formData.get("email_body_html") ?? "").trim() || null;
-  if (!title || !body || channels.length === 0) return fail(i18n.t("Titre, message et canal requis."));
+  /**
+   * ⚠️ **Le corps n'est obligatoire que pour la notification.**
+   *
+   * Il l'etait pour tout le monde, si bien qu'un courriel bati sur un modele
+   * — dont les blocs portent deja le texte — ne pouvait pas partir sans
+   * qu'on remplisse en plus un champ dont rien n'allait s'afficher. Une
+   * notification, elle, ne peut pas etre vide : la cloche et l'ecran
+   * verrouille n'auraient rien a montrer.
+   */
+  if (!title || channels.length === 0) return fail(i18n.t("Titre et canal requis."));
+  if (channels.includes("in_app") && !body) {
+    return fail(i18n.t("Le corps du message est requis pour une notification."));
+  }
 
   /**
    * ⚠️ **Une diffusion par courriel seul n'ecrit aucune notification.**
@@ -225,6 +279,94 @@ export async function sendNotification(formData: FormData): Promise<ActionResult
     return fail(i18n.t("Choisissez au moins un canal : notification ou e-mail."));
   }
 
+  /**
+   * ⚠️⚠️ **Les adresses saisies : le seul envoi qui ne vise pas des comptes.**
+   *
+   * Tout le reste de ce fichier part de `profiles` — c'est la cloche, le
+   * push, la langue du destinataire et son nom. Une adresse tapee a la main
+   * n'a rien de tout cela : pas de compte ou deposer une notification, pas
+   * de langue connue, pas de nom a inserer. D'ou les trois regles ci-dessous,
+   * qui sont des **refus francs** plutot que des ajustements silencieux.
+   *
+   * La cible est refusee par `admin_broadcast_notification()` comme par
+   * `admin_broadcast_recipients()` ('unknown_target') : rien ne peut partir
+   * par megarde vers Postgres avec ce type.
+   */
+  let typedRecipients: CampaignRecipient[] | undefined;
+  let typedNotice = "";
+  let typedValue = targetValue;
+
+  if (targetType === "emails") {
+    // 1. Une adresse sans compte ne peut pas recevoir de notification.
+    if (wantsNotification) {
+      return fail(
+        i18n.t("Les adresses saisies ne recoivent que des e-mails : une adresse sans compte n'a pas d'application ou recevoir une notification."),
+      );
+    }
+
+    const parsedList = parseAddressList(targetValue ?? "");
+    if (!parsedList.emails.length) {
+      return fail(i18n.t("Saisissez au moins une adresse e-mail valide."));
+    }
+
+    /**
+     * 2. ⚠️ **Le desabonnement est verifie ici, et il doit l'etre.**
+     * Pour une cible de comptes, c'est `admin_broadcast_recipients()` qui
+     * l'applique en SQL. Cette liste-ci ne passe pas par elle : sans ce
+     * filtre, quelqu'un qui s'est desabonne recevrait a nouveau des que son
+     * adresse serait recollee dans le champ — et le lien de desabonnement
+     * serait un mensonge.
+     */
+    const { data: optouts, error: optoutError } = await supabase
+      .from("admin_email_optouts")
+      .select("email")
+      .in("email", parsedList.emails);
+    if (optoutError && optoutError.code !== "42P01") {
+      return fail(makeErrors(i18n.locale).describeError(optoutError));
+    }
+    const refused = new Set((optouts ?? []).map((row) => String(row.email).toLowerCase()));
+    const kept = parsedList.emails.filter((email) => !refused.has(email));
+    if (!kept.length) {
+      return fail(i18n.t("Toutes les adresses saisies se sont desabonnees : rien n'a ete envoye."));
+    }
+
+    typedRecipients = kept.map((email) => ({
+      // Pas de compte : le lien de desabonnement se signera sur l'adresse,
+      // et la ligne de journal nommera l'adresse.
+      id: null,
+      email,
+      // ⚠️ Langue inconnue, donc celle du produit. La deviner d'apres le
+      // domaine de l'adresse serait une invention.
+      locale: null,
+      // Pas de nom : le gabarit rend alors l'accueil sans nom, prevu pour ca.
+      full_name: null,
+    }));
+    // La campagne garde la liste **reellement visee**, pas le texte tape :
+    // c'est elle que la relance rejouera.
+    typedValue = kept.join(",");
+
+    // 3. Rien de ce qui a ete ecarte n'est taisable.
+    const ecarts = [
+      parsedList.invalid.length
+        ? i18n.t("{0} adresse(s) illisible(s) ignoree(s) : {1}.", {
+            "0": parsedList.invalid.length,
+            "1": parsedList.invalid.slice(0, 5).join(", "),
+          })
+        : "",
+      parsedList.duplicates
+        ? i18n.t("{0} doublon(s) retire(s).", { "0": parsedList.duplicates })
+        : "",
+      refused.size ? i18n.t("{0} desabonne(s) ecarte(s).", { "0": refused.size }) : "",
+      parsedList.overflow
+        ? i18n.t("{0} adresse(s) au-dela du plafond de {1} non servie(s).", {
+            "0": parsedList.overflow,
+            "1": MAX_TYPED_ADDRESSES,
+          })
+        : "",
+    ].filter(Boolean);
+    typedNotice = ecarts.join(" ");
+  }
+
   // ⚠️ Le texte brut du formulaire est **reconstruit** a partir de la mise en
   // forme quand elle existe. Sans cela, un appel direct pourrait envoyer un
   // courriel disant une chose et une notification en disant une autre.
@@ -242,12 +384,16 @@ export async function sendNotification(formData: FormData): Promise<ActionResult
       title,
       body: plainBody,
       targetType,
-      targetValue,
+      // La liste retenue, pas le texte tape : c'est elle que rejouera une
+      // relance, et c'est d'elle que le journal rend compte.
+      targetValue: typedValue,
       channels,
       templateId,
       bodyHtml,
       email: { subject: emailSubject, body: emailBody, bodyHtml: emailBodyHtml },
       count: 0,
+      recipients: typedRecipients,
+      notice: typedNotice,
     });
   }
 
@@ -347,6 +493,8 @@ async function finishCampaign({
   bodyHtml,
   email: ownEmail,
   count,
+  recipients,
+  notice,
 }: {
   supabase: Supabase;
   i18n: AdminI18n;
@@ -355,6 +503,10 @@ async function finishCampaign({
   body: string;
   targetType: string;
   targetValue: string | null;
+  /** Les destinataires deja resolus — seules les adresses saisies en ont. */
+  recipients?: CampaignRecipient[];
+  /** Ce que la saisie a ecarte, a dire a l'ecran. Jamais tu. */
+  notice?: string;
   channels: string[];
   templateId: string | null;
   bodyHtml: string | null;
@@ -371,10 +523,29 @@ async function finishCampaign({
         campaignKey: randomUUID(),
         // Le courriel prend son propre texte quand il en a un.
         title: ownEmail.subject ?? title,
+        /**
+         * ⚠️ **Le titre affiche n'est l'objet que quand le courriel reprend
+         * le texte de la notification.**
+         *
+         * Signale : « le sujet apparait dans le modele ». Le champ servait
+         * a la fois d'objet — la ligne lue dans la boite de reception — et
+         * de titre pose en gros sous l'entete, si bien que le destinataire
+         * lisait deux fois la meme phrase. Or le champ est **libelle**
+         * « Objet de l'e-mail » des que le courriel a son propre texte
+         * (envoi par courriel seul, ou texte dissocie) : ce qu'on y tape
+         * est redige pour une liste de messages, pas pour coiffer une page.
+         *
+         * La regle, qui tient en une ligne : le titre affiche existe
+         * seulement si le courriel porte litteralement le titre de la
+         * notification. Sinon le message s'ouvre sur l'accueil, et le
+         * modele garde la main sur ses propres titres de blocs.
+         */
+        heading: !ownEmail.subject && channels.includes("in_app") ? title : null,
         body: ownEmail.body ?? body,
         bodyHtml: ownEmail.bodyHtml ?? bodyHtml,
         targetType,
         targetValue,
+        recipients,
         templateId,
       })
     : null;
@@ -392,30 +563,78 @@ async function finishCampaign({
   const served = count > 0 ? count : (email?.sent ?? 0);
   const nothingSent = served <= 0;
 
-  const { data, error } = await supabase
-    .from("admin_notification_campaigns")
-    .insert({
-      title,
-      body,
-      target_type: targetType,
-      target_value: targetValue,
-      channels,
-      status: nothingSent ? "failed" : "sent",
-      recipient_count: served,
-      delivered_count: email?.sent ?? 0,
-      failed_count: email?.failed ?? 0,
-      // Quel habillage est parti : le modele peut avoir ete modifie depuis,
-      // mais le journal dit au moins lequel a servi.
-      email_template_id: email?.templateId ?? null,
-      body_html: ownEmail.bodyHtml ?? bodyHtml,
-      // Nul = le courriel a porte le meme objet que la notification.
-      email_subject: ownEmail.subject,
-      error_message: nothingSent ? i18n.t("Aucun destinataire ne correspond a cette cible.") : null,
-      created_by: admin.userId,
-    })
-    .select("id")
-    .single();
-  if (error) return fail(makeErrors(i18n.locale).describeError(error));
+  /**
+   * ⚠️ **Le journal s'ecrit en dernier, et il ne peut plus faire echouer la
+   * diffusion.**
+   *
+   * Mesure sur le projet reel : `email_subject` n'existait pas (migration
+   * `202609300007` non appliquee), et PostgREST rendait `PGRST204`. Comme
+   * cet `insert` vient **apres** `admin_broadcast_notification()` et apres
+   * l'envoi Resend, l'administrateur lisait « echec » sur une diffusion
+   * **deja partie** — et le geste naturel, reappuyer, doublait notification,
+   * push et courriels (`campaignKey` est un `randomUUID()` neuf a chaque
+   * appel : Resend ne dedoublonne rien). C'est la meme regle que
+   * `logAdminAction()`, qui se tait quand sa table est absente : une trace
+   * manquante n'annule pas l'acte trace.
+   *
+   * Les trois colonnes ci-dessous sont celles qu'un projet peut ne pas
+   * avoir. Sur `PGRST204` / `42703` la ligne est reecrite sans elles : le
+   * journal perd un detail plutot que la diffusion sa trace.
+   */
+  const CORE = {
+    title,
+    body,
+    target_type: targetType,
+    target_value: targetValue,
+    channels,
+    status: nothingSent ? "failed" : "sent",
+    recipient_count: served,
+    delivered_count: email?.sent ?? 0,
+    failed_count: email?.failed ?? 0,
+    error_message: nothingSent ? i18n.t("Aucun destinataire ne correspond a cette cible.") : null,
+    created_by: admin.userId,
+  };
+  const OPTIONAL = {
+    // Quel habillage est parti : le modele peut avoir ete modifie depuis,
+    // mais le journal dit au moins lequel a servi.
+    email_template_id: email?.templateId ?? null,
+    body_html: ownEmail.bodyHtml ?? bodyHtml,
+    // Nul = le courriel a porte le meme objet que la notification.
+    email_subject: ownEmail.subject,
+  };
+
+  const write = (payload: Record<string, unknown>) =>
+    supabase.from("admin_notification_campaigns").insert(payload).select("id").single();
+
+  let { data, error } = await write({ ...CORE, ...OPTIONAL });
+  if (error && (error.code === "PGRST204" || error.code === "42703")) {
+    ({ data, error } = await write(CORE));
+  }
+
+  // `!data` autant que `error` : un `insert` filtre par le RLS rend une ligne
+  // absente sans erreur, et la suite deref`erait `data.id`.
+  if (error || !data) {
+    // Rien n'est parti : l'echec du journal est le seul fait a rapporter.
+    if (nothingSent) {
+      return fail(
+        error
+          ? makeErrors(i18n.locale).describeError(error)
+          : i18n.t("Rien n'a ete envoye, et l'operation n'a pas pu etre inscrite au journal."),
+      );
+    }
+    // ⚠️ Sinon la diffusion **a eu lieu**. Le dire, et dire aussi qu'elle
+    // n'est pas journalisee — sans quoi l'ecran invite a la refaire.
+    const summary = email ? emailSummary(i18n, email) : "";
+    return ok(
+      [
+        count > 0 ? i18n.t("Notification envoyee a {0} destinataire(s).", { "0": count }) : "",
+        summary,
+        i18n.t("Attention : l'envoi a bien eu lieu mais n'a pas pu etre inscrit au journal. Ne le relancez pas."),
+      ]
+        .filter(Boolean)
+        .join(" "),
+    );
+  }
 
   if (email?.deliveries.length) await recordDeliveries(supabase, data.id, email.deliveries);
 
@@ -435,7 +654,10 @@ async function finishCampaign({
   const notified =
     count > 0 ? i18n.t("Notification envoyee a {0} destinataire(s).", { "0": count }) : "";
   const summary = email ? emailSummary(i18n, email) : "";
-  return ok([notified, summary].filter(Boolean).join(" "));
+  // ⚠️ `notice` dit ce que la saisie a laisse de cote — adresses illisibles,
+  // doublons, desabonnes, surplus. Le taire ferait lire un envoi partiel
+  // comme un envoi complet.
+  return ok([notified, summary, notice].filter(Boolean).join(" "));
 }
 
 /**
@@ -529,6 +751,10 @@ export async function sendTestNotification(formData: FormData): Promise<ActionRe
         // qu'une diffusion rejouee ne doit pas se doubler.
         campaignKey: `test-${admin.userId}-${Math.floor(Date.now() / 1000)}`,
         title: `[Test] ${mailTitle}`,
+        // ⚠️ Meme regle qu'a la diffusion, sans quoi le test — le seul
+        // garde-fou avant un envoi de masse — montrerait un titre que le
+        // vrai courriel n'aura pas.
+        heading: !emailSubject && wantsNotification ? title : null,
         body: mailBody,
         bodyDoc: mailParsed,
         blocks: chosen.blocks,
@@ -566,6 +792,8 @@ export async function sendTestNotification(formData: FormData): Promise<ActionRe
  */
 export async function previewCampaignEmail(input: {
   title: string;
+  /** Le titre affiche en tete, qui n'est pas l'objet. Voir `CampaignEmail`. */
+  heading?: string | null;
   body: string;
   bodyHtml: string | null;
   templateId: string | null;
@@ -579,6 +807,10 @@ export async function previewCampaignEmail(input: {
 
   const html = await renderCampaignEmail({
     title: input.title.trim() || "—",
+    // ⚠️ L'apercu doit mentir le moins possible : s'il coiffait le message
+    // d'un titre que la diffusion n'enverra pas, il validerait une mise en
+    // page que personne ne recevra.
+    heading: input.heading === undefined ? undefined : (input.heading?.trim() || null),
     body: (parsed ? richToPlainText(parsed) : input.body).trim() || "—",
     bodyDoc: parsed,
     blocks: chosen.blocks,
@@ -609,16 +841,45 @@ export async function retryNotification(campaignId: string): Promise<ActionResul
 
   // La relance rejoue les canaux enregistres, push compris.
   const campaignChannels: string[] = campaign.channels ?? [];
-  const { data: recipients, error: sendError } = await supabase.rpc(
-    "admin_broadcast_notification",
-    {
-      p_title: campaign.title,
-      p_body: campaign.body,
-      p_target_type: campaign.target_type,
-      p_target_value: campaign.target_value,
-      p_push: campaignChannels.includes("push"),
-    },
-  );
+
+  /**
+   * ⚠️ **Une campagne vers des adresses saisies ne repasse pas par Postgres.**
+   *
+   * `admin_broadcast_notification()` n'accepte que les quatre cibles liees a
+   * des comptes et leve `unknown_target` sur celle-ci. Les destinataires sont
+   * donc relus depuis `target_value`, ou l'envoi a enregistre la liste
+   * **reellement visee** — et non le texte tape, qui pouvait contenir des
+   * doublons et des fautes de frappe. Une relance renvoie ce qui etait parti.
+   *
+   * Le desabonnement est re-verifie : quelqu'un a pu se desabonner entre la
+   * premiere tentative et la relance, et le lien doit tenir sa promesse.
+   */
+  const typedTarget = campaign.target_type === "emails";
+  let typedRecipients: CampaignRecipient[] | undefined;
+
+  if (typedTarget) {
+    const parsedList = parseAddressList(campaign.target_value ?? "");
+    const { data: optouts } = await supabase
+      .from("admin_email_optouts")
+      .select("email")
+      .in("email", parsedList.emails);
+    const refused = new Set((optouts ?? []).map((row) => String(row.email).toLowerCase()));
+    const kept = parsedList.emails.filter((email) => !refused.has(email));
+    if (!kept.length) {
+      return fail(i18n.t("Toutes les adresses saisies se sont desabonnees : rien n'a ete envoye."));
+    }
+    typedRecipients = kept.map((email) => ({ id: null, email, locale: null, full_name: null }));
+  }
+
+  const { data: recipients, error: sendError } = typedTarget
+    ? { data: 0, error: null }
+    : await supabase.rpc("admin_broadcast_notification", {
+        p_title: campaign.title,
+        p_body: campaign.body,
+        p_target_type: campaign.target_type,
+        p_target_value: campaign.target_value,
+        p_push: campaignChannels.includes("push"),
+      });
   if (sendError) return fail(makeErrors(i18n.locale).describeError(sendError));
 
   const count = Number(recipients ?? 0);
@@ -632,9 +893,14 @@ export async function retryNotification(campaignId: string): Promise<ActionResul
         // ⚠️ L'objet distinct est rejoue tel quel : une relance doit renvoyer
         // ce qui avait ete envoye, pas le titre de la notification.
         title: campaign.email_subject ?? campaign.title,
+        // Meme regle qu'a l'envoi : le titre affiche n'existe que si le
+        // courriel portait litteralement celui de la notification.
+        heading:
+          !campaign.email_subject && campaignChannels.includes("in_app") ? campaign.title : null,
         body: campaign.body,
         targetType: campaign.target_type,
         targetValue: campaign.target_value,
+        recipients: typedRecipients,
         // La relance rejoue le modele d'origine, pas celui devenu defaut
         // depuis : le destinataire doit recevoir ce qui avait ete decide.
         templateId: campaign.email_template_id ?? null,

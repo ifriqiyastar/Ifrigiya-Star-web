@@ -81,10 +81,12 @@ export function RichTextEditor({
   }, [editor, value]);
 
   return (
-    <div className="overflow-hidden rounded-lg bg-background focus-within:ring-1 focus-within:ring-brand">
+    <div className="@container/editor overflow-hidden rounded-lg">
       <Toolbar editor={editor} disabled={disabled} />
       <EditorContent editor={editor} />
-      <p className="px-3 pb-2 text-[0.625rem] leading-relaxed text-muted-foreground">
+      {/* Posee un cran plus bas que la zone de saisie : collee a elle, la
+          phrase se lisait comme la derniere ligne du message en cours. */}
+      <p className="px-3 pt-2 pb-2.5 text-[0.625rem] leading-relaxed text-muted-foreground">
         {i18n.t("La mise en forme n'apparait que dans l'e-mail. La notification et le push reprennent le meme texte, sans mise en forme.")}
       </p>
     </div>
@@ -147,66 +149,83 @@ function Toolbar({ editor, disabled }: { editor: Editor | null; disabled?: boole
       aria-label={i18n.t("Mise en forme du message")}
       aria-orientation="horizontal"
       onKeyDown={onKeyDown}
-      className="flex flex-wrap items-center gap-0.5 border-b border-border/70 px-1.5 py-1"
+      /* ⚠️ Les quatorze commandes ne tiennent pas sur une ligne sous ~27rem :
+         la barre se replie, et ce repli se regle sur la largeur de
+         **l'editeur** (`@container/editor`), pas sur celle de la fenetre —
+         le meme editeur est plus etroit d'un cran dans le bloc du texte
+         dissocie, ou une media query repondrait a cote. */
+      className="flex flex-wrap items-center gap-x-2.5 gap-y-1 border-b border-border/70 px-1.5 py-1 @min-[27rem]/editor:gap-x-0.5"
     >
-      <Btn first label={i18n.t("Gras")} active={editor.isActive("bold")} disabled={disabled}
-        onClick={() => editor.chain().focus().toggleBold().run()}>
-        <BoldIcon className="size-3.5" />
-      </Btn>
-      <Btn label={i18n.t("Italique")} active={editor.isActive("italic")} disabled={disabled}
-        onClick={() => editor.chain().focus().toggleItalic().run()}>
-        <ItalicIcon className="size-3.5" />
-      </Btn>
-      <Btn label={i18n.t("Barre")} active={editor.isActive("strike")} disabled={disabled}
-        onClick={() => editor.chain().focus().toggleStrike().run()}>
-        <StrikethroughIcon className="size-3.5" />
-      </Btn>
+      <Group>
+        <Btn first label={i18n.t("Gras")} active={editor.isActive("bold")} disabled={disabled}
+          onClick={() => editor.chain().focus().toggleBold().run()}>
+          <BoldIcon className="size-3.5" />
+        </Btn>
+        <Btn label={i18n.t("Italique")} active={editor.isActive("italic")} disabled={disabled}
+          onClick={() => editor.chain().focus().toggleItalic().run()}>
+          <ItalicIcon className="size-3.5" />
+        </Btn>
+        <Btn label={i18n.t("Barre")} active={editor.isActive("strike")} disabled={disabled}
+          onClick={() => editor.chain().focus().toggleStrike().run()}>
+          <StrikethroughIcon className="size-3.5" />
+        </Btn>
+      </Group>
       <Separator />
-      <Btn label={i18n.t("Intertitre")} active={editor.isActive("heading", { level: 2 })} disabled={disabled}
-        onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}>
-        <Heading2Icon className="size-3.5" />
-      </Btn>
-      <Btn label={i18n.t("Liste a puces")} active={editor.isActive("bulletList")} disabled={disabled}
-        onClick={() => editor.chain().focus().toggleBulletList().run()}>
-        <ListIcon className="size-3.5" />
-      </Btn>
-      <Btn label={i18n.t("Liste numerotee")} active={editor.isActive("orderedList")} disabled={disabled}
-        onClick={() => editor.chain().focus().toggleOrderedList().run()}>
-        <ListOrderedIcon className="size-3.5" />
-      </Btn>
+      <Group>
+        <Btn label={i18n.t("Intertitre")} active={editor.isActive("heading", { level: 2 })} disabled={disabled}
+          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}>
+          <Heading2Icon className="size-3.5" />
+        </Btn>
+        <Btn label={i18n.t("Liste a puces")} active={editor.isActive("bulletList")} disabled={disabled}
+          onClick={() => editor.chain().focus().toggleBulletList().run()}>
+          <ListIcon className="size-3.5" />
+        </Btn>
+        <Btn label={i18n.t("Liste numerotee")} active={editor.isActive("orderedList")} disabled={disabled}
+          onClick={() => editor.chain().focus().toggleOrderedList().run()}>
+          <ListOrderedIcon className="size-3.5" />
+        </Btn>
+      </Group>
       <Separator />
-      <Btn label={i18n.t("Poser un lien")} active={editor.isActive("link")} disabled={disabled} onClick={setLink}>
-        <LinkIcon className="size-3.5" />
-      </Btn>
-      <Btn label={i18n.t("Retirer le lien")} disabled={disabled || !editor.isActive("link")}
-        onClick={() => editor.chain().focus().unsetLink().run()}>
-        <UnlinkIcon className="size-3.5" />
-      </Btn>
+      <Group>
+        <Btn label={i18n.t("Poser un lien")} active={editor.isActive("link")} disabled={disabled} onClick={setLink}>
+          <LinkIcon className="size-3.5" />
+        </Btn>
+        <Btn label={i18n.t("Retirer le lien")} disabled={disabled || !editor.isActive("link")}
+          onClick={() => editor.chain().focus().unsetLink().run()}>
+          <UnlinkIcon className="size-3.5" />
+        </Btn>
+      </Group>
       <Separator />
-      {/* ⚠️ Pas les quatre couleurs de la charte ici, mais les seules qui se
-          lisent **en texte** : le blanc disparait sur un fond clair et le
-          gris `#cccccc` y est illisible. Les proposer parce qu'elles sont
-          dans la charte serait offrir deux facons de rendre un message
-          invisible. Un nuancier complet, lui, inviterait a ecrire un
-          courriel en six teintes. */}
-      {TEXT_SWATCHES.map((color) => (
-        <button
-          key={color}
-          type="button"
-          disabled={disabled}
-          title={color}
-          aria-label={i18n.t("Couleur du texte")}
-          tabIndex={-1}
-          onClick={() => editor.chain().focus().setColor(color).run()}
-          className="size-5 shrink-0 rounded border border-border disabled:opacity-40"
-          style={{ backgroundColor: color }}
-        />
-      ))}
-      <Btn label={i18n.t("Couleur par defaut")} disabled={disabled}
-        onClick={() => editor.chain().focus().unsetColor().run()}>
-        <span className="text-[0.625rem] font-bold">A</span>
-      </Btn>
-      <span className="ml-auto flex items-center gap-0.5">
+      <Group>
+        {/* ⚠️ Pas les quatre couleurs de la charte ici, mais les seules qui se
+            lisent **en texte** : le blanc disparait sur un fond clair et le
+            gris `#cccccc` y est illisible. Les proposer parce qu'elles sont
+            dans la charte serait offrir deux facons de rendre un message
+            invisible. Un nuancier complet, lui, inviterait a ecrire un
+            courriel en six teintes. */}
+        {TEXT_SWATCHES.map((color) => (
+          <button
+            key={color}
+            type="button"
+            disabled={disabled}
+            title={color}
+            aria-label={i18n.t("Couleur du texte")}
+            tabIndex={-1}
+            onClick={() => editor.chain().focus().setColor(color).run()}
+            className="size-5 shrink-0 rounded border border-border disabled:opacity-40"
+            style={{ backgroundColor: color }}
+          />
+        ))}
+        <Btn label={i18n.t("Couleur par defaut")} disabled={disabled}
+          onClick={() => editor.chain().focus().unsetColor().run()}>
+          <span className="text-[0.625rem] font-bold">A</span>
+        </Btn>
+      </Group>
+      {/* ⚠️ `ml-auto` seulement quand la barre tient sur une ligne : replie,
+          il envoyait Annuler / Retablir a droite de la **premiere** rangee,
+          loin derriere les couleurs passees a la ligne — l'ordre lu ne suivait
+          plus l'ordre du code et un trou s'ouvrait au milieu. */}
+      <Group className="@min-[27rem]/editor:ml-auto">
         <Btn label={i18n.t("Annuler")} disabled={disabled || !editor.can().undo()}
           onClick={() => editor.chain().focus().undo().run()}>
           <UndoIcon className="size-3.5" />
@@ -215,7 +234,7 @@ function Toolbar({ editor, disabled }: { editor: Editor | null; disabled?: boole
           onClick={() => editor.chain().focus().redo().run()}>
           <RedoIcon className="size-3.5" />
         </Btn>
-      </span>
+      </Group>
     </div>
   );
 }
@@ -223,7 +242,22 @@ function Toolbar({ editor, disabled }: { editor: Editor | null; disabled?: boole
 /** Les teintes proposees pour le texte : la marque, le corps, l'attenue. */
 const TEXT_SWATCHES = [DEFAULT_COLORS.buttonBg, DEFAULT_COLORS.text, "#6b6b6b"] as const;
 
-const Separator = () => <span aria-hidden className="mx-0.5 h-4 w-px bg-border" />;
+/**
+ * Un groupe de commandes. Il **ne se coupe pas** : sans lui, le repli
+ * coupait les trois boutons de style en deux rangees au hasard de la largeur.
+ */
+const Group = ({ className, children }: { className?: string; children: React.ReactNode }) => (
+  <span className={cn("flex items-center gap-0.5", className)}>{children}</span>
+);
+
+/**
+ * Le trait entre deux groupes. ⚠️ Il disparait quand la barre se replie : un
+ * separateur tombe en fin de rangee ne separe plus rien, il pend. L'ecart
+ * `gap-x-2.5` prend alors le relais pour tenir les groupes a distance.
+ */
+const Separator = () => (
+  <span aria-hidden className="hidden h-4 w-px bg-border @min-[27rem]/editor:mx-0.5 @min-[27rem]/editor:block" />
+);
 
 function Btn({
   label,

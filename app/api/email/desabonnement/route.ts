@@ -1,7 +1,11 @@
 import type { NextRequest } from "next/server";
 
 import { EMAIL_COPY, emailLocale } from "@/emails/copy";
-import { verifyUnsubscribeToken } from "@/lib/email/campaign";
+import {
+  normalizeEmail,
+  verifyEmailUnsubscribeToken,
+  verifyUnsubscribeToken,
+} from "@/lib/email/campaign";
 import { createServiceClient } from "@/lib/supabase/service";
 
 /**
@@ -26,6 +30,40 @@ import { createServiceClient } from "@/lib/supabase/service";
  * l'identifiant est signe.
  */
 
+/**
+ * Le desabonnement d'une **adresse saisie**, qui n'a pas de compte.
+ *
+ * ⚠️ Le jeton couvre un autre message que celui d'un compte
+ * (`unsubscribe-email:` contre `unsubscribe:`) : un lien emis pour l'un ne
+ * peut pas servir pour l'autre, meme si les deux valeurs se ressemblaient.
+ *
+ * ⚠️ La ligne est posee **sans `profile_id`**. Si l'adresse appartient par
+ * ailleurs a un compte, elle le couvre quand meme : `admin_broadcast_recipients()`
+ * ecarte sur `profile_id = ... or lower(email) = ...`. Un desabonnement suit
+ * la boite mail, pas le compte qui la declarait.
+ */
+async function unsubscribeEmail(raw: string, token: string) {
+  const email = normalizeEmail(raw);
+  if (!email || !token || !verifyEmailUnsubscribeToken(email, token)) {
+    return { ok: false as const, status: 403 };
+  }
+
+  const supabase = createServiceClient();
+  if (!supabase) return { ok: false as const, status: 503 };
+
+  const { error } = await supabase
+    .from("admin_email_optouts")
+    .upsert({ email, source: "lien_email" }, { onConflict: "email" });
+
+  // ⚠️ La langue du destinataire est inconnue — il n'a pas de profil ou la
+  // lire. Le francais est la langue par defaut du produit ; deviner d'apres
+  // l'en-tete du navigateur donnerait celle de l'appareil, pas celle dans
+  // laquelle le courriel a ete redige.
+  return error
+    ? { ok: false as const, status: 500, locale: "fr" }
+    : { ok: true as const, status: 200, locale: "fr" };
+}
+
 async function unsubscribe(profileId: string, token: string) {
   if (!profileId || !token || !verifyUnsubscribeToken(profileId, token)) {
     return { ok: false as const, status: 403 };
@@ -46,9 +84,17 @@ async function unsubscribe(profileId: string, token: string) {
 
   const { error } = await supabase
     .from("admin_email_optouts")
+    // ⚠️ Le conflit se joue desormais sur l'**adresse**, pas sur le compte :
+    // c'est elle qui porte l'unicite depuis `202611020001`, et c'est la bonne
+    // cle — la meme boite mail ne doit pas se retrouver desabonnee deux fois
+    // parce qu'elle a aussi recu un envoi a la main.
     .upsert(
-      { profile_id: profile.id, email: profile.email, source: "lien_email" },
-      { onConflict: "profile_id" },
+      {
+        profile_id: profile.id,
+        email: normalizeEmail(profile.email),
+        source: "lien_email",
+      },
+      { onConflict: "email" },
     );
 
   return error
@@ -56,16 +102,21 @@ async function unsubscribe(profileId: string, token: string) {
     : { ok: true as const, status: 200, locale: profile.locale as string | null };
 }
 
+/** `?c=` designe un compte, `?e=` une adresse saisie. Jamais les deux. */
+function resolve(params: URLSearchParams) {
+  const token = params.get("t") ?? "";
+  const email = params.get("e");
+  return email ? unsubscribeEmail(email, token) : unsubscribe(params.get("c") ?? "", token);
+}
+
 export async function POST(request: NextRequest) {
-  const params = request.nextUrl.searchParams;
-  const result = await unsubscribe(params.get("c") ?? "", params.get("t") ?? "");
+  const result = await resolve(request.nextUrl.searchParams);
   // Le client de messagerie n'affiche rien : il attend un code, pas une page.
   return new Response(null, { status: result.ok ? 200 : result.status });
 }
 
 export async function GET(request: NextRequest) {
-  const params = request.nextUrl.searchParams;
-  const result = await unsubscribe(params.get("c") ?? "", params.get("t") ?? "");
+  const result = await resolve(request.nextUrl.searchParams);
   const locale = emailLocale("locale" in result ? result.locale : "fr");
   const copy = EMAIL_COPY[locale];
 

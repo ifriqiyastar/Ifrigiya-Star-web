@@ -190,3 +190,201 @@ il existe, sinon il validerait un message que personne ne recevra.
 Le bouton d'envoi reste bloque tant qu'un courriel redige a part n'a pas son
 objet **et** son corps : sans cela il partirait vide.
 
+
+## Trois champs qui mentaient sur ce qu'ils etaient (Nov 2026)
+
+Signale a l'usage, sur un envoi par courriel seul : « Email subject 0 / 120,
+Message body 0 / 120, les deux sont obligatoires — et le sujet apparait dans
+le modele ».
+
+- ⚠️⚠️ **L'objet du courriel etait aussi son titre affiche.** Un seul champ
+  alimentait `Subject:` **et** le `<h1>` pose sous l'entete
+  (`emails/blocks.tsx`, `message.title`) : le destinataire relisait dans le
+  message la ligne qu'il venait de lire dans sa boite de reception. Un objet
+  se redige pour une liste de messages, un titre pour la page qu'on ouvre.
+  `CampaignEmail` prend desormais `heading` a cote de `title`. La regle, posee
+  dans `lib/actions/notifications.ts` : **le titre affiche n'existe que si le
+  courriel reprend litteralement celui de la notification** — donc jamais en
+  courriel seul, jamais en texte dissocie, ou le champ est libelle « Objet de
+  l'e-mail ». `undefined` garde l'ancien comportement, ce qui laisse l'apercu
+  de modele (`lib/email/preview.ts`, textes d'exemple) inchange.
+  ⚠️ Les **quatre** chemins de rendu devaient suivre, sans quoi l'un d'eux
+  montrerait un courriel que personne ne recevra : la diffusion, la relance,
+  l'envoi de test — le seul garde-fou avant un envoi de masse — et l'apercu
+  vivant du composeur, qui transporte `heading` jusqu'au Server Action.
+- ⚠️ **Le corps n'est plus exige que pour la notification.** Il l'etait pour
+  tous les canaux, si bien qu'un courriel bati sur un modele — dont les blocs
+  portent deja le texte — ne pouvait pas partir sans qu'on remplisse en plus
+  un champ dont rien n'allait s'afficher. Une notification, elle, ne peut pas
+  etre vide : la cloche et l'ecran verrouille n'auraient rien a montrer.
+  L'ecran le dit maintenant (« facultatif ») au lieu de le faire decouvrir par
+  un refus apres coup.
+- ⚠️⚠️ **Et le bouton, lui, exigeait toujours un corps.** Premiere correction
+  incomplete : la regle serveur et le libelle disaient « facultatif », le
+  bouton d'envoi restait grise, et c'est le bouton qui tranchait. `ready()`
+  reprend desormais mot pour mot la regle du Server Action — titre, cible
+  quand elle se choisit, corps **seulement si une notification part** — et
+  l'envoi de test suit la meme condition, un test refuse la ou la diffusion
+  passerait ne testant rien d'utile. Les champs du texte dissocie ne bloquent
+  plus non plus : vides, `email_subject` / `email_body` valent `null`, ce qui
+  veut dire « le courriel reprend le texte de la notification » et non « vide ».
+  **C'est le meme piege que les gardes de permission** : un garde-fou plus
+  severe que la regle qu'il represente ne protege de rien, il cache un geste
+  legitime. Verifie en comparant les deux predicats sur les douze
+  combinaisons mode x titre x corps — ils repondent pareil partout.
+- ⚠️ **« 0 / 120 » annoncait une limite qui n'existe pas.** Le compteur du
+  corps mesure `LOCK_SCREEN_BODY_CHARS` — ce que l'ecran verrouille d'un
+  telephone laisse lire. Un courriel n'a pas d'ecran verrouille : le compteur
+  et sa mention de repli disparaissent en mode courriel seul.
+- `tests/campaign-email.test.cjs` garde la separation objet / titre, **verifie
+  par mutation** : remettre `title` dans le bloc message fait tomber le test.
+  Son troisieme cas est le temoin — sans lui, un gabarit qui n'afficherait
+  plus **aucun** titre passerait les deux premiers sans rien prouver. Ce qu'il
+  ne couvre pas : quel appelant passe quoi, la regle ci-dessus vivant dans le
+  Server Action.
+
+## Diffuser vers des adresses sans compte (Nov 2026)
+
+Demande du client : un champ pour taper n'importe quelle adresse, « pas besoin
+qu'elle soit liee a l'application », marketing compris. C'est une **sixieme
+pastille** d'audience, `target_type = 'emails'`, et le texte saisi voyage dans
+`target_value`.
+
+Tout le reste du composeur part de `profiles` — la cloche, le push, la langue
+du destinataire, son nom. Une adresse tapee n'a rien de cela. Les trois
+accroches ont donc ete desserrees par `202611020001`, **sans etre supprimees** :
+un destinataire reste rattache a son compte quand il en a un.
+
+| Accroche | Avant | Maintenant |
+|---|---|---|
+| `admin_notification_campaigns.target_type` | 4 cibles | + `'emails'` |
+| `admin_notification_deliveries.recipient_id` | `not null references profiles` | facultatif, `email` a cote, contrainte « l'un ou l'autre » |
+| `admin_email_optouts.profile_id` | cle primaire | facultatif ; c'est **l'adresse** qui porte l'unicite |
+
+- ⚠️⚠️ **Deux espaces de signature disjoints.** Le jeton d'un compte couvre
+  `unsubscribe:<identifiant>`, celui d'une adresse `unsubscribe-email:<adresse>`.
+  Avec un prefixe commun, un jeton emis pour l'un vaudrait pour l'autre.
+  L'adresse est normalisee **avant** d'etre signee comme avant d'etre stockee,
+  sinon le lien recu refuserait la ligne enregistree. Garde par
+  `tests/campaign-email.test.cjs`, **verifie par mutation**.
+- ⚠️ **Le desabonnement est re-verifie en TypeScript pour cette cible, et
+  uniquement pour elle.** Les cibles de comptes le doivent a
+  `admin_broadcast_recipients()`, qui reste la definition unique de « qui
+  recoit » — la recopier ferait diverger deux definitions. Une liste tapee ne
+  se deduit de rien, donc rien ne peut diverger ; mais sans ce filtre,
+  recoller une adresse desabonnee la rabonnerait, et le lien serait un
+  mensonge. La relance le re-verifie aussi : on a pu se desabonner entre-temps.
+- ⚠️ **`unique` tient les NULL pour distincts.** La contrainte historique
+  `(campaign_id, recipient_id, channel)` ne contraint plus rien des que
+  `recipient_id` est nul : d'ou un second index `(campaign_id, email, channel)`
+  **a cote**, et `recordDeliveries()` qui separe les lignes en deux upserts —
+  PostgREST ne sait viser que des colonnes simples dans `on_conflict`.
+- ⚠️ **La cible est refusee par Postgres** (`unknown_target` dans les deux RPC
+  de diffusion) : rien ne peut partir par megarde par ce chemin. La relance
+  court-circuite donc l'appel et relit les adresses depuis `target_value`, ou
+  l'envoi a enregistre la liste **reellement visee** — pas le texte tape, qui
+  portait doublons et fautes de frappe.
+- ⚠️ **Le couple mode / cible se tient dans les deux sens.** Choisir la
+  pastille basculait bien en « courriel seul », mais rien ne se passait dans
+  l'autre sens : on repassait sur « une notification » en gardant la cible, et
+  l'ecran proposait d'envoyer une notification a des adresses qui n'ont pas
+  d'application — le Server Action l'aurait refuse apres coup, une fois tout
+  le message compose. La pastille **n'apparait qu'en courriel seul**, et
+  revenir a un mode qui porte l'in-app ramene la cible a « tous ». Elle n'est
+  pas grisee : une cible sans aucun sens dans ce mode n'a pas a occuper la
+  barre.
+- **L'in-app est refuse deux fois** : le Server Action le dit en clair, et
+  `notificationOn` porte `targetType !== "emails"` en plus du mode, pour qu'un
+  etat revenu par un autre chemin ne puisse pas emettre `in_app`.
+- **Rien de ce que la saisie ecarte n'est tu** — illisibles (nommees),
+  doublons, desabonnes, surplus — et cela se lit **sous le champ avant
+  d'envoyer**, pas seulement dans le compte rendu : une diffusion ne se
+  rappelle pas. `parseAddressList()` vit dans `lib/email/address-list.ts`, un
+  module **neutre qui n'importe rien**, pour que le nombre affiche et la liste
+  envoyee sortent de la meme analyse.
+- ⚠️ **Plafond de 200** (`MAX_TYPED_ADDRESSES`), dix fois plus bas que
+  `MAX_EMAIL_RECIPIENTS`. Ce champ sert a joindre quelques dizaines de
+  personnes qui attendent le message ; un plafond haut inviterait a coller une
+  liste achetee, que le domaine paierait en reputation — **le meme domaine qui
+  porte les notifications reelles du produit**.
+- Ces destinataires recoivent le courriel **en francais, sans leur nom** : il
+  n'y a pas de profil ou lire l'un ou l'autre, et les deviner serait une
+  invention. L'ecran le dit sous le champ.
+
+## Les champs n'avaient pas de bord (Nov 2026)
+
+Signale a l'usage : « je ne veux pas que ca apparaisse au clic, je veux un
+cadre sur le champ, tous ».
+
+Les champs du composeur etaient des aplats `bg-background` sans contour, poses
+sur des cartes elles-memes noires (`--card: #000000` dans
+`.admin-dashboard-shell`) : rien ne disait ou commencait une zone de saisie ni
+combien il en restait a remplir, et le seul indice arrivait **apres** le clic,
+sous la forme d'un anneau de focus. Un repere qui nait de l'interaction
+n'aide pas a decider ou cliquer.
+
+- ⚠️ **`border-input` ne convient pas ici.** Dans le scope admin `--input`
+  vaut `#000000` et sert de **fond** aux champs — la regle
+  `[data-slot="input"] { background: var(--input) }` de `app/globals.css` —
+  pas de trait. Une bordure `border-input` serait noire sur noir. Le trait
+  visible est `--border` (`#242629`), celui qui detache deja les cartes.
+- Chaque champ passe par `Field` (`notification-composer.tsx`) : un vrai
+  `<fieldset>` dont le `<legend>` porte le libelle. C'est le navigateur qui
+  interrompt la bordure sous la legende — rien n'est simule par un fond
+  opaque — et le libelle reste rattache au champ pour un lecteur d'ecran.
+- Le `aside` — compteur de caracteres, lien « Voir les modeles » — se pose sur
+  la bordure a droite, donc il lui faut le fond **exact** de la surface qui
+  porte le cadre, d'ou la prop `surface` : `card` partout, `background` dans
+  le bloc du texte dissocie, qui est lui-meme sur `bg-background`. Sur le
+  mauvais fond, le trait reapparait derriere le compteur.
+- ⚠️⚠️ **Le cadre ne bouge pas au clic — et `:focus-visible` ne suffit pas a
+  le garantir.** Premiere correction incomplete : le cadre restait colore par
+  `has-[:focus-visible]`, « que la souris ne declenche pas ». Faux pour un
+  champ texte — Chrome fait correspondre `:focus-visible` **aussi au clic**
+  la ou une saisie clavier est attendue (verifie :
+  `input.matches(':focus-visible')` vaut `true` apres un vrai
+  `Input.dispatchMouseEvent`). Un clic repeignait donc le trait en vert, ce
+  qui se lit comme un **second** cadre pose sur le premier. Le trait est
+  desormais fige (`#242629` focus ou non, mesure en `getComputedStyle`) et
+  c'est le **libelle** qui passe au vert (`group-focus-within:text-brand`) :
+  une tabulation reste suivable sans qu'aucun trait ne se redessine.
+- `RichTextEditor` et `AccountPicker` ont perdu leur propre bordure : ils ne
+  servent qu'au composeur, et deux cadres concentriques se lisaient comme une
+  erreur d'alignement. L'editeur entre avec `inset={false}`, ses marges
+  internes etant deja dans `editorProps`.
+- Les trois nouveaux libelles (« Scout Day concerne », « Adresses e-mail »,
+  « Compte destinataire ») existaient jusque-la en `aria-label` seulement :
+  ils sont desormais visibles, donc dans `messages/admin/{fr,en}.json`.
+
+## « Ce n'est pas responsive » : la barre d'outils, et un titre rabote (Nov 2026)
+
+Signale en pointant la ligne « Formatting only shows in the email… », donc le
+champ **Message**. Mesure faite dans Chrome 131 contre le CSS compile du
+projet, dans la coquille a rail de 16rem (recette dans
+[`design-system.md`](design-system.md)) : **rien ne deborde a aucune largeur**,
+`scrollWidth` reste egal a `clientWidth` de 320 a 1600 px. C'est une capture
+d'ecran, pas une mesure de debordement, qui a montre les deux defauts.
+
+- ⚠️ **La barre d'outils de l'editeur se defaisait en se repliant.** Quatorze
+  commandes tiennent sur une ligne au-dela de ~27rem ; en dessous, `ml-auto`
+  envoyait Annuler / Retablir a droite de la **premiere** rangee tandis que les
+  pastilles de couleur passaient a la seconde — l'ordre lu ne suivait plus
+  l'ordre des commandes, un trou s'ouvrait au milieu, et un separateur tombe en
+  fin de rangee pendait sans rien separer. Les commandes sont desormais
+  groupees (`Group`), un groupe ne se coupe plus, `ml-auto` et les separateurs
+  n'existent qu'au-dela du seuil, et l'ecart entre groupes passe a `gap-x-2.5`
+  en mode replie pour tenir lieu de separation.
+- ⚠️⚠️ **Le seuil est une requete de conteneur, pas une media query.**
+  `@container/editor` + `@min-[27rem]/editor:` : le meme editeur est plus
+  etroit d'un cran dans le bloc du texte dissocie (`bg-background p-3`), et
+  plus etroit a 1280 px qu'a 1024 px — la colonne tombe a 8/12 au moment ou
+  `xl` s'allume. Une media query aurait repondu sur la largeur de la fenetre,
+  c'est-a-dire a cote. Mesure : barre sur une rangee (37 px) des 640 px de
+  fenetre, deux rangees (69 px) en dessous, a toutes les largeurs testees.
+- ⚠️⚠️ **« Email » s'affichait « E… » a 1280 px**, et seulement en anglais.
+  La carte de canal avait deja perdu son icone d'etat pour cette raison ; ce
+  n'etait pas assez : « OFF IN THIS MODE » reclame ~170 px la ou la carte en
+  offre 176. Le titre ne se rabote plus — la premiere ligne de la carte se
+  replie (`flex-wrap`) et l'etat passe dessous, pousse a droite par `ml-auto`
+  dans les deux cas. **La longueur d'une traduction fait partie de la mesure** :
+  le francais « Hors mode » tenait, l'anglais non.

@@ -125,7 +125,7 @@ export function AccountPicker({
       <input type="hidden" name="target_value" value={value} />
 
       {selected && !open ? (
-        <div className="flex items-center gap-2 rounded-lg bg-background p-2">
+        <div className="flex items-center gap-2">
           <Initials name={selected.name} />
           <span className="min-w-0 flex-1">
             <span className="block truncate text-xs font-semibold">{selected.name}</span>
@@ -153,7 +153,7 @@ export function AccountPicker({
         </div>
       ) : (
         <div className="relative">
-          <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
+          <SearchIcon className="pointer-events-none absolute top-1/2 left-0 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <input
             role="combobox"
             aria-expanded={open && results.length > 0}
@@ -170,10 +170,10 @@ export function AccountPicker({
             }}
             onKeyDown={onKeyDown}
             placeholder={i18n.t("Chercher un compte par nom ou adresse")}
-            className="h-9 w-full rounded-lg bg-background pr-8 pl-8 text-sm outline-none placeholder:text-muted-foreground focus:ring-1 focus:ring-brand"
+            className="h-7 w-full bg-transparent pr-7 pl-6 text-sm outline-none placeholder:text-muted-foreground"
           />
           {busy ? (
-            <Loader2Icon className="absolute top-1/2 right-3 size-3.5 -translate-y-1/2 animate-spin text-muted-foreground" />
+            <Loader2Icon className="absolute top-1/2 right-0 size-3.5 -translate-y-1/2 animate-spin text-muted-foreground" />
           ) : null}
         </div>
       )}

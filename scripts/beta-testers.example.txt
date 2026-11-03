@@ -1,0 +1,15 @@
+# Les beta testeurs du test ferme Play Store.
+#
+# Une adresse par ligne. Les lignes vides et celles commencant par # sont
+# ignorees, les doublons sont retires, et la forme « Nom <adresse> » collee
+# depuis un tableur est acceptee.
+#
+# Copiez ce fichier en `beta-testers.txt` — qui n'est pas suivi par git :
+# ce sont des adresses personnelles, elles n'ont pas a entrer dans l'historique.
+#
+# ⚠️ Ces memes adresses doivent etre inscrites comme testeurs dans la Play
+# Console (liste ou groupe Google), sinon le lien d'adhesion affiche
+# « indisponible » a qui le clique.
+
+prenom.nom@example.com
+Nom Complet <autre.personne@example.com>

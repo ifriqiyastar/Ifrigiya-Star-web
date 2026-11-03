@@ -39,7 +39,21 @@ import type { RichDoc } from "@/lib/rich-text/server";
  * ouvrirait une injection dans la boite de milliers de gens.
  */
 export type CampaignEmailProps = {
+  /** L'objet du courriel. Sert de preheader, jamais de titre affiche. */
   title: string;
+  /**
+   * Le titre **affiche en tete du message**, qui n'est pas l'objet.
+   *
+   * ⚠️ Les deux etaient un seul champ, et l'objet se retrouvait donc ecrit
+   * en gros a l'interieur du courriel : la ligne lue dans la boite de
+   * reception etait repetee sous l'entete, ce qui a ete signale comme « le
+   * sujet apparait dans le modele ». Un objet se redige pour une liste de
+   * messages, un titre pour la page qu'on ouvre ; ils ne se confondent que
+   * lorsque le courriel reprend mot pour mot le texte de la notification,
+   * et c'est l'appelant qui en decide. `undefined` = l'ancien comportement
+   * (l'objet sert de titre), `null` = aucun titre affiche.
+   */
+  heading?: string | null;
   body: string;
   locale: Locale;
   recipientName?: string | null;
@@ -99,6 +113,7 @@ function readableOn(background: string): string {
 
 export function CampaignEmail({
   title,
+  heading,
   body,
   locale,
   recipientName,
@@ -236,7 +251,7 @@ export function CampaignEmail({
               align={align}
               colors={{ text: inkText, buttonBg, buttonText }}
               fonts={{ body: BODY_FONT, heading: HEADING_FONT }}
-              message={{ title, doc: bodyDoc ?? null, paragraphs }}
+              message={{ title: heading === undefined ? title : (heading ?? ""), doc: bodyDoc ?? null, paragraphs }}
               recipientName={recipientName}
             />
             {copy.signature && !hasBlockSignature ? (

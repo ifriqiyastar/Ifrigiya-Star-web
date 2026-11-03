@@ -47,10 +47,14 @@ Module._load = function (name, ...args) {
 const { render } = require('@react-email/render');
 const { CampaignEmail } = require('../emails/campaign-email.tsx');
 const { EMAIL_COPY, emailLocale, resolveEmailCopy, NAME_TOKEN } = require('../emails/copy.ts');
+const { parseAddressList, MAX_TYPED_ADDRESSES } = require('../lib/email/address-list.ts');
 const {
   unsubscribeToken,
   verifyUnsubscribeToken,
   unsubscribeUrl,
+  emailUnsubscribeToken,
+  verifyEmailUnsubscribeToken,
+  emailUnsubscribeUrl,
   fillTemplate,
   TEMPLATE_SLOTS,
   sanitizeSenderNameForTest,
@@ -348,4 +352,154 @@ test("le bouton de l'habillage s'efface devant celui de la mise en page", async 
     }),
   );
   assert.match(without, CTA);
+});
+
+// ---------------------------------------------------------------------------
+// L'objet n'est pas le titre affiche
+//
+// Signale par le client : « le sujet apparait dans le modele ». Le meme champ
+// servait d'objet — la ligne lue dans la boite de reception — et de titre pose
+// en gros sous l'entete, si bien que le destinataire lisait deux fois la meme
+// phrase. `heading` les separe.
+//
+// ⚠️ CE QUI FAIT ECHOUER CE TEST SI LE DEFAUT REVIENT : rendre a nouveau
+// `title` dans le bloc message (`emails/blocks.tsx`, `message.title`), ou
+// perdre la prop `heading` en chemin — la premiere assertion tombe. Le
+// troisieme cas est le temoin : sans lui, un gabarit qui n'afficherait
+// **jamais** de titre passerait le test sans rien prouver.
+//
+// Ce qu'il ne couvre PAS : quel appelant passe quoi. La regle « le titre
+// affiche n'existe que si le courriel reprend celui de la notification » vit
+// dans `lib/actions/notifications.ts` et n'est pas exercee ici.
+test("l'objet du courriel ne se repete pas en titre dans le message", async () => {
+  const SUBJECT = 'Objet-Qui-Ne-Doit-Pas-Paraitre';
+
+  // 1. `heading: null` — le courriel a son propre objet : aucun titre affiche.
+  const sansTitre = await renderFor({ title: SUBJECT, heading: null });
+  assert.doesNotMatch(
+    sansTitre,
+    new RegExp(`<h1[^>]*>[\\s\\S]*${SUBJECT}`),
+    "l'objet est pose en titre alors que heading vaut null",
+  );
+  // Il reste le preheader : c'est sa place, et elle n'est pas lue dans le corps.
+  assert.match(sansTitre, new RegExp(SUBJECT), 'le preheader a perdu l\'objet');
+
+  // 2. `heading` distinct — c'est lui qu'on lit en tete, pas l'objet.
+  const avecTitre = await renderFor({ title: SUBJECT, heading: 'Titre-Affiche' });
+  assert.match(avecTitre, /<h1[^>]*>[\s\S]*Titre-Affiche/);
+  assert.doesNotMatch(avecTitre, new RegExp(`<h1[^>]*>[\\s\\S]*${SUBJECT}`));
+
+  // 3. Temoin. `heading` absent = l'ancien comportement, l'objet coiffe le
+  //    message. Sans cette assertion, un gabarit ayant perdu son `<h1>` pour
+  //    de bon laisserait les deux premieres passer.
+  const defaut = await renderFor({ title: SUBJECT });
+  assert.match(
+    defaut,
+    new RegExp(`<h1[^>]*>[\\s\\S]*${SUBJECT}`),
+    'le repli (heading absent) ne rend plus de titre : les cas 1 et 2 ne prouvent plus rien',
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Les adresses saisies a la main
+//
+// Elles n'ont pas de compte : ce qui les protege n'est donc plus le RLS ni
+// `admin_broadcast_recipients()`, mais ces deux fonctions. Trois defauts
+// possibles ne se verraient ni a la compilation ni a l'oeil : un doublon part
+// deux fois, un surplus est coupe en silence, et un jeton emis pour un compte
+// desabonne une adresse (ou l'inverse).
+//
+// ⚠️ CE QUI FAIT ECHOUER CES TESTS SI LE DEFAUT REVIENT : retirer la
+// separation de domaine dans `emailUnsubscribeToken` (prefixe `unsubscribe-`
+// contre `unsubscribe-email-`), ou cesser de compter `overflow`/`duplicates`
+// pour se contenter d'un `slice`.
+//
+// Ce qu'ils ne couvrent PAS : le filtre des desabonnes, qui vit dans le Server
+// Action et interroge la base ; ni l'envoi lui-meme.
+test('une saisie libre est lue sans rien perdre en silence', () => {
+  const lu = parseAddressList(
+    'Marie Dupont <MARIE@exemple.com>\nkarim@exemple.com, marie@exemple.com\n\n' +
+      'pas-une-adresse; sans-point@local\tzied@exemple.tn',
+  );
+  // Minuscules, forme « Nom <adresse> » reconnue, separateurs varies.
+  assert.deepEqual(lu.emails, ['marie@exemple.com', 'karim@exemple.com', 'zied@exemple.tn']);
+  // Le doublon est **compte**, pas seulement retire.
+  assert.equal(lu.duplicates, 1);
+  // Les deux fragments illisibles sont nommes, pour pouvoir etre corriges.
+  assert.deepEqual(lu.invalid, ['pas-une-adresse', 'sans-point@local']);
+  assert.equal(lu.overflow, 0);
+
+  // ⚠️ Le plafond ne coupe pas en silence : le surplus se compte.
+  const trop = parseAddressList(
+    Array.from({ length: MAX_TYPED_ADDRESSES + 7 }, (_, i) => `p${i}@exemple.com`).join('\n'),
+  );
+  assert.equal(trop.emails.length, MAX_TYPED_ADDRESSES);
+  assert.equal(trop.overflow, 7);
+
+  // Un `+` dans la partie locale est valide et circule : l'ecarter serait un
+  // faux refus, invisible jusqu'a ce que quelqu'un ne recoive rien.
+  assert.deepEqual(parseAddressList('a+beta@exemple.com').emails, ['a+beta@exemple.com']);
+});
+
+test("le desabonnement d'une adresse ne se confond pas avec celui d'un compte", () => {
+  const ADRESSE = 'Zied@Exemple.TN';
+  const jeton = emailUnsubscribeToken(ADRESSE);
+  assert.ok(jeton, 'aucun jeton emis');
+
+  // La casse est normalisee des deux cotes, sinon le lien recu refuserait la
+  // ligne que la base a enregistree.
+  assert.ok(verifyEmailUnsubscribeToken('zied@exemple.tn', jeton));
+  assert.ok(verifyEmailUnsubscribeToken('  ZIED@EXEMPLE.TN  ', jeton));
+  // Une autre adresse ne passe pas.
+  assert.equal(verifyEmailUnsubscribeToken('autre@exemple.tn', jeton), false);
+
+  // ⚠️⚠️ Separation des domaines de signature. Un jeton emis pour un compte
+  // ne doit pas desabonner une adresse, ni l'inverse — sans quoi connaitre
+  // l'un donnerait l'autre.
+  assert.equal(verifyEmailUnsubscribeToken(ID, unsubscribeToken(ID)), false);
+  assert.equal(verifyUnsubscribeToken(ID, emailUnsubscribeToken(ID)), false);
+
+  // L'adresse voyage encodee : un `+` lu dans une chaine de requete devient
+  // une espace, et le desabonnement porterait alors sur une autre adresse.
+  const url = emailUnsubscribeUrl('a+beta@exemple.com');
+  assert.match(url, /[?&]e=a%2Bbeta%40exemple\.com(&|$)/);
+  assert.equal(new URL(url).searchParams.get('e'), 'a+beta@exemple.com');
+});
+
+// ---------------------------------------------------------------------------
+// Le modele « Invitation beta testeurs »
+//
+// Il existe en DEUX exemplaires : la migration le pose en base, et
+// `emails/apercus/` le rejoue pour `npm run email`. Deux copies du meme
+// contenu derivent toujours, et la derive serait invisible — l'apercu
+// montrerait un courriel que personne ne recoit. Ce test les compare.
+//
+// ⚠️ CE QUI FAIT ECHOUER CE TEST SI LE DEFAUT REVIENT : modifier un texte d'un
+// cote seulement, ou retirer l'invitation du modele pour la remettre dans le
+// message de la campagne — la derniere assertion tombe alors.
+//
+// Ce qu'il ne couvre PAS : que la base porte bien ces blocs. Personne ici ne
+// parle a Postgres ; il compare deux fichiers du depot.
+test('le modele beta dit la meme chose dans la migration et dans l\'apercu', () => {
+  const sql = fs.readFileSync(path.join(root, 'supabase/migrations/202611020002_beta_tester_template.sql'), 'utf8');
+  const depuisSql = normalizeBlocks(JSON.parse(sql.split('$blocks$')[1]));
+  const { BLOCKS: depuisApercu } = require('../emails/apercus/campagne-beta-testeurs.tsx');
+  assert.deepEqual(depuisApercu, depuisSql, "l'apercu et la migration ont diverge");
+
+  // ⚠️ L'invitation doit vivre dans le MODELE, pas dans le message de la
+  // campagne : sinon le courriel s'ouvre sur un titre a remplir et enchaine
+  // sur « trois gestes » sans avoir invite personne. C'est ce qui a ete
+  // signale — « ce n'est pas un e-mail d'invitation ».
+  const textes = depuisSql
+    .filter((b) => b.type === 'text')
+    .map((b) => b.text.fr)
+    .join(' ');
+  assert.match(textes, /invite a essayer/, "le modele n'invite plus personne");
+  assert.match(textes, /joueurs et les recruteurs/, "le modele ne dit plus ce qu'est l'application");
+
+  // Le bloc message reste present — `normalizeBlocks` en garantit un — mais il
+  // ne porte que la note libre : vide, il ne rend rien.
+  assert.equal(depuisSql.filter((b) => b.type === 'message').length, 1);
+  // Et toujours aucun jeton de nom nulle part.
+  assert.doesNotMatch(JSON.stringify(depuisSql), /\{nom\}|__IFQ_NAME__/);
 });
