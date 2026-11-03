@@ -57,3 +57,46 @@ worth knowing:
   the two controls that 0050's revoke still holds for a user and that what a
   player *may* write still works. Migration replayed twice.
 
+
+## « fetch failed » faisait dire a la garde que le compte n'existait pas (Nov 2026)
+
+Remonte par la console du serveur de dev :
+`admin_guard: "TypeError: fetch failed"` depuis `loadAdminGuard`, sur le
+rendu de `AdminLayout`. Rien de casse cote base : sonde faite au meme moment,
+DNS en 66 ms, connexion en 0,5 s, et `admin_guard` repond `42501` a un appel
+anonyme — donc la fonction est bien semee. C'est le lien qui avait saute.
+
+⚠️⚠️ **Le defaut n'est pas la panne, c'est ce que le code en concluait.**
+`loadAdminGuard()` rendait `null` pour *toute* erreur, et `null` veut dire
+« reprends le chemin long ». Ce chemin relit `profiles` **sur le meme lien**,
+echoue pareil, et sa branche d'echec est
+`redirect("/connexion?erreur=compte-introuvable")` : un administrateur se
+retrouvait deconnecte, avec pour explication que son compte n'existe pas,
+parce que le reseau avait coupe une seconde.
+
+**Les deux erreurs se distinguent par leur code, et la forme a ete verifiee
+contre le vrai client, pas supposee** (`@supabase/supabase-js`, un hote qui ne
+resout pas contre le projet reel) :
+
+| | `code` | `message` |
+|---|---|---|
+| transport (hors ligne, lien coupe) | `""` | `TypeError: fetch failed` |
+| PostgREST / Postgres | `42501` | `permission denied for function admin_guard` |
+
+Une erreur PostgREST porte **toujours** un code — un SQLSTATE ou un `PGRST…`.
+`isTransportFailure()` (`lib/auth.ts`) est donc `Boolean(error) && !error.code`.
+
+- Une **fonction absente** se degrade a l'ouverture : c'est la regle du depot,
+  elle vaut pour une migration non appliquee.
+- Un **lien coupe** ne se degrade pas : il n'autorise aucune conclusion, ni
+  sur le role du compte ni sur son existence. La garde jette desormais, avec
+  une phrase sans identifiant technique, et `app/[locale]/admin/error.tsx`
+  l'affiche avec son bouton « reessayer ».
+- ⚠️ Le test est pose **aux deux endroits** : dans `loadAdminGuard()` et dans
+  la relecture de `profiles`, la garde rapide ayant pu rendre `null` pour une
+  raison legitime avant que la base cesse de repondre.
+- ⚠️ Ce que cela ne couvre pas : `AdminLayout` est la mise en page **du meme
+  segment** que `error.tsx`, qui ne rattrape donc pas sa propre couche. Une
+  panne pendant le rendu du layout remonte au-dessus ; dans un Server Action,
+  en revanche, `ActionButton` rattrape le rejet et affiche une alerte — la ou
+  il envoyait l'administrateur sur l'ecran de connexion.

@@ -93,6 +93,34 @@ type AdminGuardRow = AccessRow & {
  * depot : degrader a l'ouverture quand une migration n'est pas appliquee,
  * jamais echouer.
  */
+/**
+ * ⚠️⚠️ **« La base n'a pas repondu » n'est pas « la migration n'est pas
+ * appliquee ».** Une erreur PostgREST porte toujours un code — un SQLSTATE
+ * (`42501`, `42P01`) ou un `PGRST…`. Un echec de transport, lui, n'en a
+ * aucun : `supabase-js` remonte l'erreur d'`undici` telle quelle
+ * (`TypeError: fetch failed`) quand la machine est hors ligne, que le lien
+ * tombe, ou que le projet ne repond pas.
+ *
+ * La difference commande deux conduites opposees. Une fonction absente se
+ * degrade a l'ouverture — c'est la regle du depot. Un lien coupe ne se
+ * degrade pas : il n'autorise **aucune** conclusion, ni sur le role du
+ * compte, ni sur son existence.
+ */
+function isTransportFailure(error: { code?: string } | null): boolean {
+  return Boolean(error) && !error?.code;
+}
+
+/** Ce que l'ecran dit quand la base n'a pas repondu du tout. */
+function databaseUnreachable(detail: string): Error {
+  console.error("base injoignable:", detail);
+  // Pas de nom de table ni de fonction : le lecteur est un administrateur du
+  // client, et l'identifiant ne lui servirait a rien ici — contrairement au
+  // `42501`, ou il nomme la policy manquante.
+  return new Error(
+    "La base de donnees n'a pas repondu. Verifiez la connexion, puis reessayez.",
+  );
+}
+
 const loadAdminGuard = cache(async function loadAdminGuard(): Promise<AdminGuardRow | null> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("admin_guard");
@@ -100,6 +128,13 @@ const loadAdminGuard = cache(async function loadAdminGuard(): Promise<AdminGuard
     // Fonction absente (migration pas passee) ou execution revoquee : on se
     // tait et les appelants reprennent le chemin long.
     if (isMissingRpc(error) || error.code === "42501") return null;
+    // ⚠️ Ne pas rendre `null` ici : le `null` veut dire « reprends le chemin
+    // long », et ce chemin repose sur le meme lien, qui vient de tomber. Il
+    // lirait `profiles`, echouerait pareil, et sa branche d'echec conclut
+    // « compte introuvable » — un administrateur se retrouvait deconnecte,
+    // avec pour explication que son compte n'existe pas, parce que le wifi
+    // avait saute.
+    if (isTransportFailure(error)) throw databaseUnreachable(error.message);
     console.error("admin_guard:", error.message);
     return null;
   }
@@ -287,6 +322,11 @@ export const requireAdmin = cache(async function requireAdmin(): Promise<AdminSe
     .select("id, role, email, full_name, is_active")
     .eq("id", user.id)
     .maybeSingle();
+
+  // ⚠️ Le lien peut tomber **ici** aussi : la garde rapide a pu rendre `null`
+  // pour une raison legitime (migration absente) avant que la base cesse de
+  // repondre. Une absence de reponse ne devient pas un compte supprime.
+  if (error && isTransportFailure(error)) throw databaseUnreachable(error.message);
 
   // Session orpheline (ligne profiles supprimee a la main) : le JWT reste
   // valide cote appareil, il faut donc traiter ce cas explicitement.
