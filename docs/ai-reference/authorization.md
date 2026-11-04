@@ -100,3 +100,36 @@ Une erreur PostgREST porte **toujours** un code — un SQLSTATE ou un `PGRST…`
   panne pendant le rendu du layout remonte au-dessus ; dans un Server Action,
   en revanche, `ActionButton` rattrape le rejet et affiche une alerte — la ou
   il envoyait l'administrateur sur l'ecran de connexion.
+
+## Une coupure d'une requete ne remonte plus a l'ecran (Nov 2026)
+
+Signale en developpement : `TypeError: fetch failed` jete par `requireAdmin()`
+depuis `AdminLayout`, donc la page d'erreur a la place du back-office.
+
+⚠️ **Le diagnostic avant le correctif.** Le projet repondait : `admin_guard`
+sonde juste apres rendait son `42501` attendu en 100 a 850 ms, cinq fois de
+suite, avec la meme adresse et la meme cle. Ce n'etait donc ni une variable
+d'environnement manquante, ni une migration absente, ni une fonction revoquee
+— le lien avait saute le temps d'une requete. Le code faisait exactement ce
+qu'on lui demandait : `isTransportFailure()` refusait de conclure quoi que ce
+soit sur le compte, ce qui est la lecon de la coupure precedente (un
+administrateur deconnecte avec « votre compte n'existe pas » parce que le wifi
+avait saute).
+
+- `onceMore()` (`lib/auth.ts`) rejoue **une** fois, apres 250 ms, les deux
+  lectures de la garde : `admin_guard()` et le repli sur `profiles`.
+- ⚠️ **Deux conditions, et les deux comptent.** Transport seulement — rejouer
+  un refus de Postgres rend le meme refus en payant un aller-retour sur une
+  base qui repond parfaitement — et **lectures** seulement : rejouer une
+  ecriture doublerait un acte.
+- Le chemin heureux ne paie rien : la reprise n'existe que dans la branche
+  d'echec. La regle du depot sur les allers-retours tient.
+- Une seule reprise, pas plus : au-dela, l'ecran attend sans rien dire, et la
+  page d'erreur du back-office — qui porte deja un bouton « Reessayer » —
+  fait mieux l'affaire.
+- Garde par `tests/auth-retry.test.cjs`, **verifie par mutation** : retirer la
+  reprise fait tomber le premier cas, l'etendre aux erreurs SQL fait tomber le
+  troisieme (mesure, les deux). Le dernier cas est le temoin du cout — sans
+  lui, une fonction qui lirait toujours deux fois passerait sans rien prouver.
+  Ce qu'il ne couvre pas : que les deux appelants passent bien par la, verifie
+  a la lecture.

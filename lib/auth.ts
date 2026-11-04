@@ -110,7 +110,44 @@ function isTransportFailure(error: { code?: string } | null): boolean {
   return Boolean(error) && !error?.code;
 }
 
-/** Ce que l'ecran dit quand la base n'a pas repondu du tout. */
+/**
+ * Une seconde chance, et une seule, quand le lien tombe.
+ *
+ * ⚠️ **Une coupure d'une seconde ne doit pas valoir un ecran d'erreur.**
+ * Observe en developpement : `TypeError: fetch failed` sur `admin_guard`
+ * alors que le projet repondait — mesure juste apres — en 100 ms. Le lien
+ * avait saute le temps d'une requete. Sans reprise, le back-office rendait
+ * la page d'erreur et demandait a l'administrateur de cliquer « Reessayer »
+ * pour exactement ce que la machine pouvait refaire seule.
+ *
+ * ⚠️ **Deux conditions, et les deux comptent.** La reprise ne vaut que pour
+ * une panne de **transport** — une erreur SQL rejouee donnerait la meme
+ * erreur, en payant un aller-retour de plus — et les deux appels concernes
+ * sont des **lectures**. Rejouer une ecriture doublerait un acte ; ici il
+ * n'y a rien a doubler.
+ *
+ * Le chemin heureux ne paie rien : la reprise n'existe que dans la branche
+ * d'echec, et la regle du depot sur les allers-retours tient toujours.
+ */
+const TRANSPORT_RETRY_MS = 250;
+
+async function onceMore<T extends { error: { code?: string } | null }>(
+  read: () => PromiseLike<T>,
+): Promise<T> {
+  const first = await read();
+  if (!isTransportFailure(first.error)) return first;
+  await new Promise((resolve) => setTimeout(resolve, TRANSPORT_RETRY_MS));
+  return read();
+}
+
+/**
+ * Expose pour la verification : la reprise est invisible a l'appelant, donc
+ * seule une sonde directe peut montrer qu'elle compte les essais et qu'elle
+ * ne rejoue **pas** une erreur SQL.
+ */
+export const onceMoreForTest = onceMore;
+
+/** Ce que l'ecran dit quand la base n'a pas repondu **deux fois**. */
 function databaseUnreachable(detail: string): Error {
   console.error("base injoignable:", detail);
   // Pas de nom de table ni de fonction : le lecteur est un administrateur du
@@ -123,7 +160,7 @@ function databaseUnreachable(detail: string): Error {
 
 const loadAdminGuard = cache(async function loadAdminGuard(): Promise<AdminGuardRow | null> {
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("admin_guard");
+  const { data, error } = await onceMore(() => supabase.rpc("admin_guard"));
   if (error) {
     // Fonction absente (migration pas passee) ou execution revoquee : on se
     // tait et les appelants reprennent le chemin long.
@@ -317,11 +354,13 @@ export const requireAdmin = cache(async function requireAdmin(): Promise<AdminSe
     };
   }
 
-  const { data: profile, error } = await supabase
-    .from("profiles")
-    .select("id, role, email, full_name, is_active")
-    .eq("id", user.id)
-    .maybeSingle();
+  const { data: profile, error } = await onceMore(() =>
+    supabase
+      .from("profiles")
+      .select("id, role, email, full_name, is_active")
+      .eq("id", user.id)
+      .maybeSingle(),
+  );
 
   // ⚠️ Le lien peut tomber **ici** aussi : la garde rapide a pu rendre `null`
   // pour une raison legitime (migration absente) avant que la base cesse de
