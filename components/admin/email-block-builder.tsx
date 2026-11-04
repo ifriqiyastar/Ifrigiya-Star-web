@@ -25,7 +25,6 @@ import {
   HandIcon,
   ImageIcon,
   Loader2Icon,
-  MailIcon,
   MinusIcon,
   MousePointerClickIcon,
   MoveVerticalIcon,
@@ -182,7 +181,6 @@ export function EmailBlockBuilder({
       }
     });
 
-  const hasMessage = blocks.some((block) => block.type === "message");
 
   const PALETTE = [
     { type: "greeting" as const, icon: HandIcon, label: i18n.t("Formule d'accueil") },
@@ -211,24 +209,14 @@ export function EmailBlockBuilder({
             {item.label}
           </button>
         ))}
-        {!hasMessage ? (
-          <button
-            type="button"
-            disabled={disabled}
-            onClick={() => add("message")}
-            className="inline-flex h-7 items-center gap-1.5 rounded-md bg-warning/15 px-2 text-[0.6875rem] font-semibold text-warning disabled:opacity-40"
-          >
-            <MailIcon className="size-3.5" />
-            {i18n.t("Emplacement du message")}
-          </button>
-        ) : null}
+        {/* ⚠️⚠️ **Plus de bouton « emplacement du message », ni
+            d'avertissement quand il manque.** Une diffusion n'apporte plus
+            de texte au courriel : il n'y a plus rien a loger, et proposer
+            l'emplacement reviendrait a offrir un bloc qui ne rendra jamais
+            rien. Les modeles qui en portent un le gardent — le retirer de
+            force reecrirait leur mise en page a leur insu — et sa carte dit
+            ce qu'il devient. */}
       </div>
-
-      {!hasMessage ? (
-        <p className="border-b border-border bg-warning/10 px-4 py-2 text-[0.6875rem] leading-relaxed text-warning">
-          {i18n.t("Ce modele n'a pas d'emplacement pour le message : il sera ajoute a la fin a l'envoi, pour ne pas le perdre.")}
-        </p>
-      ) : null}
 
       {/* ⚠️ **`id` fixe, et ce n'est pas cosmetique.** dnd-kit derive le
           `aria-describedby` de chaque poignee d'un **compteur de module**
@@ -387,25 +375,26 @@ function SortableBlock({
             })}
           </span>
         ) : null}
-        {/* ⚠️ Le bloc « message » ne se supprime pas : il est l'endroit ou
-            atterrit ce que l'administrateur ecrit a l'envoi. */}
-        {block.type !== "message" ? (
-          <button
-            type="button"
-            disabled={disabled}
-            onClick={() => onRemove(block.id)}
-            aria-label={i18n.t("Supprimer le bloc")}
-            className="flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-destructive/15 hover:text-destructive disabled:opacity-40"
-          >
-            <Trash2Icon className="size-3.5" />
-          </button>
-        ) : null}
+        {/* Le bloc « message » se supprime desormais comme les autres : il
+            n'attend plus aucun texte. */}
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => onRemove(block.id)}
+          aria-label={i18n.t("Supprimer le bloc")}
+          className="flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-destructive/15 hover:text-destructive disabled:opacity-40"
+        >
+          <Trash2Icon className="size-3.5" />
+        </button>
       </div>
 
       <div className="space-y-2 p-2.5">
         {block.type === "message" ? (
-          <p className="text-[0.6875rem] leading-relaxed text-muted-foreground">
-            {i18n.t("Le titre et le texte ecrits au moment de l'envoi se placent ici.")}
+          <p className="rounded-lg bg-warning/10 px-3 py-2 text-[0.6875rem] leading-relaxed text-warning">
+            {/* ⚠️ Un bloc herite, qui ne rend plus rien. Le dire plutot que
+                le supprimer d'office : la mise en page appartient au super
+                administrateur, pas a une migration de code. */}
+            {i18n.t("Cet emplacement recevait le texte ecrit a l'envoi. Les diffusions n'en apportent plus : il ne rend rien, et peut etre supprime.")}
           </p>
         ) : null}
 

@@ -179,13 +179,9 @@ export default async function NotificationsPage({
         scoutDays={scoutDayOptions}
         reach={{ devices: pushReach, activeAccounts: audience.activeAccounts }}
         channels={{
-          // La raison est nommee separement pour chaque canal : ce sont des
-          // gestes differents — appliquer un fichier SQL, renseigner une cle,
-          // ou demander un role.
-          push: {
-            selectable: channelStates.push.selectable,
-            reason: channelReason(channelStates.push.reason),
-          },
+          // La raison est nommee, et pas seulement l'indisponibilite : ce
+          // sont des gestes differents — appliquer un fichier SQL, renseigner
+          // une cle, ou demander un role.
           email: {
             selectable: channelStates.email.selectable,
             reason: channelReason(channelStates.email.reason),
@@ -341,8 +337,25 @@ export default async function NotificationsPage({
                         <p className="truncate text-xs font-semibold text-foreground">
                           {campaign.title}
                         </p>
+                        {/* ⚠️ **Une ligne vide ne dit pas « rien n'est
+                            parti ».** Depuis que le texte d'un courriel vient
+                            de son modele, une diffusion par courriel seul
+                            n'ecrit aucun corps dans le journal : la ligne se
+                            serait resumee a un objet, sans rien dire de ce
+                            qui a ete envoye. On nomme alors le modele —
+                            lisible dans le catalogue — plutot que de laisser
+                            un blanc. */}
                         <p className="mt-1 line-clamp-2 whitespace-normal text-[0.6875rem] leading-relaxed text-muted-foreground">
-                          {campaign.body}
+                          {campaign.body?.trim()
+                            ? campaign.body
+                            : campaign.email_template_id
+                              ? i18n.t("Texte du modele « {0} »", {
+                                  "0":
+                                    catalogue.templates.find(
+                                      (template) => template.id === campaign.email_template_id,
+                                    )?.name ?? i18n.t("modele supprime"),
+                                })
+                              : i18n.t("Texte du modele d'e-mail employe.")}
                         </p>
                         {/* Les canaux tenaient une colonne entiere pour une
                             valeur identique sur toutes les lignes ; ils vivent

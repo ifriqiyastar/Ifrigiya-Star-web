@@ -594,6 +594,11 @@ apercus de l'application ne racontent pas deux choses differentes. L'invite de
 saisie du titre, qui disait elle aussi « Ex : nouvelle session Scout Day a
 Tunis », sert les trois modes et est devenue neutre.
 
+⚠️ **Depasse** : l'exemple a ete retire de l'apercu du modele — voir
+« [L'apercu du modele ne montre plus que le modele](#lapercu-du-modele-ne-montre-plus-que-le-modele-nov-2026) »
+plus bas. Ce qui est dit ici vaut encore pour l'apercu **du composeur**, qui
+garde son exemple et le signale.
+
 ### Le modele doit **inviter**, pas seulement expliquer (Nov 2026)
 
 Signale a la relecture : « ce n'est pas un e-mail d'invitation ». C'etait exact,
@@ -691,3 +696,119 @@ sont vides, et l'accueil de l'habillage revenait alors par la fenetre.
   tomber le test. Son premier cas est le temoin — sans lui, un gabarit qui
   n'afficherait jamais d'accueil passerait sans rien prouver. Ce qu'il ne
   couvre pas : l'ecriture de la colonne et son repli.
+
+## L'apercu du modele ne montre plus que le modele (Nov 2026)
+
+Rediger l'exemple comme un emplacement (« Le titre de votre message », ci-dessus)
+n'avait deplace le probleme qu'a moitie : un emplacement rendu en gros
+caractere au milieu d'une invitation beta reste une phrase que l'oeil lit, et
+sur un ecran dont tout l'objet est de montrer ce que le modele contient,
+c'etait la seule chose fausse a l'image. `renderCampaignPreview()` passe
+desormais un titre et un corps **vides**.
+
+- Rien a prevoir cote rendu : `emails/blocks.tsx` n'ecrit le titre que s'il
+  existe (`message.title ?`) et filtre les paragraphes vides. Le bloc
+  `message` ne rend donc rien du tout — pas de balise vide.
+- **Le nom d'exemple reste** (`SAMPLE_NAME`, un seul champ au lieu de trois).
+  Ce n'est pas du contenu d'emprunt : c'est ce qui montre comment l'accueil de
+  l'habillage resout `{nom}`, c'est-a-dire precisement ce que l'ecran sert a
+  regler.
+- L'emplacement du message n'est pas perdu de vue pour autant : il est nomme
+  juste a cote, dans la carte « Message de la campagne » du compositeur de
+  blocs, qui dit « Le titre et le texte ecrits au moment de l'envoi se placent
+  ici ». La legende sous l'iframe ne promet plus « un message d'exemple ».
+- ⚠️ **Consequence a regarder en face** : un modele qui ne compose rien — le
+  bloc `message` seul, cas d'un modele neuf — s'apercoit avec un blanc au
+  milieu. C'est exact : ce modele-la n'ajoute rien au message. L'habillage,
+  lui, reste entierement visible (en-tete, accueil, signature, bouton, pied),
+  et c'est ce que le formulaire d'en dessous edite.
+- ⚠️ **Les vignettes du catalogue ont du suivre.** Elles appelaient
+  `renderCampaignPreview("fr", detail.resolved.fr)` **sans les blocs** : elles
+  ne montraient donc que l'habillage, et deux modeles au contenu different se
+  ressemblaient trait pour trait. Le defaut etait masque par l'exemple qui
+  remplissait le milieu ; sans lui la vignette serait devenue creuse. Elles
+  recoivent maintenant `detail.template.blocks` — une galerie qui montre les
+  modeles doit montrer ce qui les distingue.
+- L'apercu **du composeur** garde son exemple, et c'est voulu : c'est l'ecran
+  ou le message s'ecrit, le champ est juste a cote, et `previewIsSample`
+  signale deja a l'ecran que ce qu'on regarde n'est pas encore redige.
+- Garde par `tests/campaign-email.test.cjs`, **verifie par mutation** :
+  remettre un titre d'exemple dans `renderCampaignPreview()` fait tomber le
+  test (mesure). Son second cas est le temoin — sans lui, un gabarit qui
+  n'afficherait jamais de titre passerait sans rien prouver. Ce qu'il ne
+  couvre pas : ce que l'ecran affiche autour de l'iframe, ni les vignettes.
+
+## Le modele porte l'objet, et le composeur n'ecrit plus le courriel (Nov 2026)
+
+Suite de la section precedente, et meme logique poussee jusqu'au bout : si
+l'apercu d'un modele ne montre plus que le modele, c'est que le modele est
+cense porter ce que le courriel raconte. Il le pouvait deja pour le corps —
+les blocs `text` sont localises depuis `202609300006` — mais pas pour l'objet,
+et le composeur gardait un champ de corps a cote.
+
+- **Nouvelle colonne `admin_email_template.subject`** (`202611040001`), une
+  valeur par langue comme tout le reste de la table. Nullable et sans defaut :
+  l'absence veut dire « ce modele n'impose pas d'objet ». ⚠️ Aucun defaut
+  livre dans `EMAIL_COPY`, contrairement a tous les autres champs — un objet
+  generique partirait sur des annonces qui n'ont rien a voir entre elles, ce
+  qui est pire que pas d'objet du tout.
+- **`campaignSubject(copy, locale, title, prefix)`** dans `lib/email/campaign.ts`
+  est la regle, en une fonction : l'objet du modele dans la langue du
+  destinataire, le titre de la diffusion en repli, le prefixe par-dessus. Elle
+  est exportee pour etre testable — `sendCampaignEmails()` parle au reseau et
+  ne l'est pas.
+- **L'ecriture degrade colonne par colonne.** `saveEmailTemplate()` lit
+  desormais **quelle** colonne Postgres nomme dans son `42703` et ne retire
+  que celle-la, au lieu de retirer tout le bloc facultatif au premier echec :
+  avec deux colonnes optionnelles (`show_greeting`, `subject`), une migration
+  manquante en aurait fait perdre l'autre, et l'ecran aurait nomme la mauvaise.
+  Le message de succes enumere ce qui n'est pas parti.
+- **Le composeur n'a plus de corps de courriel** : voir
+  [`notifications.md`](notifications.md#le-texte-du-courriel-vit-dans-le-modele-nov-2026)
+  pour ce qui a ete retire de l'ecran et du Server Action, et pourquoi les
+  deux devaient l'etre ensemble.
+- **La carte du bloc « message » dit maintenant la verite** : elle promettait
+  « le titre et le texte ecrits au moment de l'envoi se placent ici », ce qui
+  n'est plus vrai que lorsqu'une notification accompagne le courriel. Un envoi
+  par courriel seul n'apporte aucun texte, et le modele parle seul.
+- ⚠️ **L'apercu du composeur ne complete plus les vides.** `previewCampaignEmail()`
+  remplacait un titre ou un corps vide par un cadratin — qui s'affichait pour
+  de bon, un tiret solitaire en gros caractere la ou le modele ne met rien.
+  En courriel seul, il n'y a plus ni titre ni corps a montrer : l'apercu est
+  le modele, et c'est ce que le destinataire recevra.
+
+## Le pied de page se retire aussi (Nov 2026)
+
+Demande en regardant un apercu : « in mail template i want to be also able to
+edit or remove this section », en citant les quatre lignes du pied.
+
+**L'editer etait deja possible** — `footer_why`, `unsubscribe_label`,
+`unsubscribe_hint` et `rights` ont chacun leur champ, par langue, depuis
+`202609300003`, sous « Signature et pied de page ». Ce qui manquait etait le
+**retrait** : vider les quatre champs ne retire rien, une chaine vide vaut
+« non renseigne » et fait revenir le texte livre (`pick()`). C'est la
+troisieme fois que ce piege se paie, apres le bouton et l'accueil — l'absence
+**est** le defaut, donc seul un booleen peut exprimer « rien ».
+
+- `show_footer` (`202611040002`), un booleen par langue, vrai par defaut,
+  pose a cote de `show_cta` et `show_greeting` et sur la meme mecanique : il
+  **cache**, il n'efface pas. Les quatre champs sont grises quand il est
+  decoche, et recocher les retrouve tels quels.
+- ⚠️ **Le filet part avec le pied.** Le laisser poserait un trait seul sous le
+  message, qui se lit comme un bloc qui n'a pas charge.
+- ⚠️⚠️ **Ce que ce booleen emporte : le lien de desabonnement visible.**
+  L'en-tete `List-Unsubscribe` continue de partir — il est pose dans
+  `lib/email/campaign.ts`, hors du gabarit, et Gmail comme Yahoo en font une
+  condition d'acceptation d'un envoi de masse — mais le lien **dans le corps**
+  disparait, et une annonce adressee a une liste doit le garder. L'ecran le
+  dit **au moment ou l'on decoche**, pas dans une documentation : decouvrir a
+  la reception qu'une annonce est partie sans lien visible serait le decouvrir
+  trop tard. Le choix appartient a l'administrateur ; le refus silencieux ne
+  lui appartenait pas.
+- Le repli d'ecriture tourne maintenant sur **trois** colonnes facultatives
+  (`show_greeting`, `subject`, `show_footer`) : un tour par colonne, chacun
+  ne retirant que celle que Postgres a nommee dans son `42703`.
+- Garde par `tests/campaign-email.test.cjs`, **verifie par mutation** : rendre
+  le pied inconditionnel fait tomber le test (mesure). Son premier cas est le
+  temoin. Ce qu'il ne couvre pas : l'en-tete `List-Unsubscribe`, qui ne
+  traverse pas le gabarit — c'est precisement pourquoi il survit au retrait.

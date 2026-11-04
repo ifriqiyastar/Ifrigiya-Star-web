@@ -166,6 +166,11 @@ d'ecran verrouille.
 deux voies, et proposer d'emblee deux redactions ferait payer a tout le monde
 le prix d'un besoin occasionnel).
 
+⚠️ **Depasse** : la case et le texte dissocie ont ete retires — voir
+« [Le texte du courriel vit dans le modele](#le-texte-du-courriel-vit-dans-le-modele-nov-2026) »
+en fin de fichier. Tout ce qui suit de `email_subject` / `email_body` vaut
+pour l'historique, plus pour le code.
+
 ⚠️ **Ce que porte chaque colonne, apres `202609300007` :**
 
 | colonne | contenu |
@@ -388,3 +393,181 @@ d'ecran, pas une mesure de debordement, qui a montre les deux defauts.
   replie (`flex-wrap`) et l'etat passe dessous, pousse a droite par `ml-auto`
   dans les deux cas. **La longueur d'une traduction fait partie de la mesure** :
   le francais « Hors mode » tenait, l'anglais non.
+
+## Le texte du courriel vit dans le modele (Nov 2026)
+
+Demande apres les deux corrections ci-dessus : « pour le corps du message on
+devrait le mettre dans le modele ». C'etait juste, et pour une raison mesurable
+dans le code d'envoi plutot que dans l'ecran.
+
+⚠️⚠️ **Le courriel rendait deja une variante par langue de destinataire —
+sauf son texte.** `variantOf()` (`lib/email/campaign.ts`) rend un courriel par
+langue reellement presente dans l'audience : l'habillage (`copy[locale]`) et
+les blocs du modele, qui portent leur texte en fr/en/ar, suivent
+`profiles.locale`. L'objet et le corps, eux, etaient **une seule chaine**
+tapee au composeur et posee sur les trois variantes. Un destinataire
+anglophone recevait un habillage anglais autour d'un corps francais. Le champ
+de saisie ne pouvait pas y faire quoi que ce soit : il n'a qu'une langue.
+
+Ce qui a change :
+
+- **Le corps du courriel n'existe plus au composeur.** Le champ « Corps de
+  l'e-mail », la case « le courriel reprend le meme texte » et tout le bloc de
+  texte dissocie sont retires de l'ecran. Ce qu'un courriel raconte se compose
+  en blocs dans `/admin/notifications/modele`, ou chaque bloc porte son texte
+  dans les trois langues.
+- **`email_subject` / `email_body` / `email_body_html` ne sont plus lus**, ni
+  dans `sendNotification()` ni dans `sendTestNotification()`. ⚠️ Les retirer
+  de l'ecran seul n'aurait rien retire : **un Server Action est atteignable par
+  un POST direct**, donc la branche serait restee une fonction accessible que
+  l'interface ne propose plus. La colonne `email_subject` du journal est
+  desormais ecrite a `null`.
+- **L'objet vient du modele, langue par langue** : nouvelle colonne
+  `admin_email_template.subject` (migration `202611040001`), un champ par
+  langue en tete du formulaire d'habillage. `campaignSubject()` choisit
+  l'objet du modele s'il en porte un, et retombe sinon sur le titre de la
+  diffusion.
+- ⚠️ **Le titre de la diffusion reste, et il le faut** : un modele peut
+  n'imposer aucun objet, et sur un projet ou la migration n'est pas passee la
+  colonne n'existe pas du tout. Dans ces deux cas l'objet est celui de la
+  diffusion — c'est-a-dire exactement ce qui partait avant. Rien ne peut
+  partir sans objet.
+- ⚠️ **Le « [Test] » de l'envoi a soi-meme est devenu un prefixe**
+  (`subjectPrefix`). Il coiffait `title` ; depuis que `title` n'est qu'un
+  repli, un test serait parti sous un objet en tout point identique a celui
+  d'une vraie diffusion. Il est pose sur l'objet **reellement** employe.
+- ⚠️ **L'envoi test n'exige plus de corps** quand aucune notification ne part.
+  La condition etait `!title || !body` : le bouton de test serait devenu
+  inutilisable le jour ou le champ a disparu — un refus sur un champ qui
+  n'existe plus, c'est-a-dire sans rien a corriger a l'ecran.
+- **Ce que la diffusion porte encore** : la cible, les canaux, l'objet de
+  repli, et le texte de la **notification** — que nul modele ne peut porter,
+  la cloche et l'ecran verrouille n'en ayant pas. En mode « les deux », ce
+  texte-la est aussi ce que le courriel pose dans le bloc `message` : y
+  renoncer obligerait a creer un modele par annonce.
+- **Ce que ca change pour qui :** editer un modele est reserve au super
+  administrateur (`saveEmailBlocks`), composer une diffusion demande
+  `notifications.manage`. Rediger le contenu d'un courriel devient donc un
+  geste de super administrateur. C'est une decision produit, prise
+  explicitement — elle a ete posee avant d'ecrire une ligne.
+- Garde par `tests/campaign-email.test.cjs`, **verifie par mutation** :
+  ignorer `copy[locale].subject` fait tomber le test, supprimer le repli
+  aussi (mesure, les deux). Ses deux derniers cas sont les temoins. Ce qu'il
+  ne couvre pas : que Resend recoive bien cet objet — personne n'appelle
+  `sendCampaignEmails()` dans les tests, elle parle au reseau.
+
+### Un canal eteint par le mode ne s'affiche plus (Nov 2026)
+
+Signale sur les deux modes simples : « in a notification and in an email,
+remove both of those ». L'etape « Canaux de diffusion » montrait les trois
+cartes quel que soit le mode, et celles que le mode avait eteintes portaient
+« Hors mode » — l'e-mail sur « une notification », l'in-app et le push sur
+« un e-mail ».
+
+- Elles n'apprenaient rien : **le mode est le premier choix de l'ecran**, deux
+  sections plus haut, et c'est lui qui decide des canaux. Une carte grisee ne
+  faisait que repeter ce choix, en occupant jusqu'aux deux tiers de l'etape.
+- Premiere correction, **incomplete** : ne rendre une carte que si le mode la
+  concerne. Restaient « In-app — Toujours » sur le mode notification et
+  « Email — Toujours » sur le mode courriel — c'est-a-dire exactement la meme
+  repetition, avec l'etat « Toujours » au lieu de « Hors mode ». Signale aussi
+  sec : « while selecting a notification tab it is still there ».
+- ⚠️ **Les cartes sont parties entierement**, et `ChannelCard` avec elles.
+  L'etape ne porte plus que ce qui **n'est pas** decide par le mode : le push,
+  qui se decoche, en une case a cocher avec sa portee en dessous, et le modele
+  du courriel. Plus les deux avertissements, qui disent chacun quelque chose
+  (« sans push, personne ne sera alerte sur son telephone » ; le canal e-mail
+  indisponible).
+- Le titre de l'etape suit le mode : « Canaux de diffusion » quand un canal se
+  choisit encore, « Envoi par e-mail » en courriel seul, ou elle ne porte que
+  le modele.
+- ⚠️ **Les champs caches n'ont jamais dependu des cartes** : `channels` part
+  de `notificationOn` / `pushOn` / `emailOn`, et le Server Action le lit
+  inchange. Retirer l'affichage n'a donc rien retire a l'envoi — c'est ce qui
+  rendait le retrait sur.
+- Le libelle « OFF IN THIS MODE », qui reclamait ~170 px dans une carte qui
+  en offre 176 (voir la section sur la barre d'outils), n'existe plus : la
+  mesure qui l'avait motive n'a plus d'objet.
+
+### Et la case du push avec elles (Nov 2026)
+
+Demande dans la foulee : « remove this check box ». Retirer les cartes une a
+une avait fini par vider l'etape — il n'y restait qu'une case « Push mobile »
+et sa portee.
+
+- **Le push n'est plus un choix.** C'etait deja la moitie de la verite : le
+  schema ne sait pas envoyer un push sans ecrire la notification, c'est son
+  ecriture qui le declenche. L'ecran laissait seulement **retirer** le push
+  d'une notification qui partait quand meme. `pushOn` vaut desormais
+  `notificationOn`, et `channels` porte toujours les deux ensemble.
+- **L'etape 4 ne subsiste que pour le courriel** — le modele, qui se choisit
+  vraiment — et ne s'affiche que lorsqu'un courriel part. ⚠️ Un titre d'etape
+  au-dessus de rien serait pire que l'etape supprimee : les champs caches
+  `channels` sont sortis de la `section`, pour que son rendu puisse dependre
+  de ce qu'elle a a montrer sans jamais toucher a ce qui est envoye.
+- **Le refus « courriel indisponible » est sorti de l'etape aussi** : un
+  courriel qui ne peut pas partir n'est pas un reglage d'envoi, c'est un refus
+  a lire avant d'essayer.
+- ⚠️ **Une sonde serveur en moins a chaque ouverture.** `fetchChannelStates()`
+  appelait `admin_broadcast_notification` uniquement pour savoir si le push
+  se laissait decocher. Plus personne ne lit cette reponse : l'appel est
+  retire, et le type rendu ne porte plus que `email`. Une migration manquante
+  se signale la ou elle gene — a l'envoi, ou le Server Action nomme deja le
+  fichier a appliquer.
+- **Ce qui n'est pas perdu** : le nombre d'appareils joignables, qui tenait
+  dans la carte du push, vit toujours dans « Portee reelle » en regard de
+  l'ecran, avec sa barre et sa mise en garde (« la remise effective d'un push
+  n'est pas mesuree »).
+- Sept cles de dictionnaire sont sorties des deux fichiers avec les cartes.
+
+## Une section par canal (Nov 2026)
+
+Signale en regardant le mode « les deux » : « in both there is no place for
+mail ». C'etait exact, et ce n'etait pas un oubli d'affichage.
+
+⚠️⚠️ **Deux canaux partageaient deux champs, sans que rien ne le dise.**
+L'etape « Message » portait un titre et un corps ; le titre etait celui de la
+notification **et** l'objet du courriel **et** le titre affiche sous son
+entete, le corps etait celui de la notification **et** le texte pose dans le
+bloc `message` du modele. En mode « les deux », le courriel n'avait donc aucun
+champ a lui : il empruntait tout.
+
+L'ecran porte maintenant **une section par canal**, et chacune ne montre que
+le sien :
+
+| Section | Contenu | Quand |
+|---|---|---|
+| **La notification** | Titre (64) · Corps | un canal in-app part |
+| **L'e-mail** | Objet · Modele | un courriel part |
+
+- La numerotation suit : en mode simple il n'y a qu'une section (3), en mode
+  « les deux » il y en a deux (3 et 4).
+- **L'objet** : en courriel seul le champ **est** `title` — aucune
+  notification ne part, le seul titre de la diffusion est cet objet. En mode
+  « les deux » il s'ajoute, facultatif (`email_subject`), et vide il laisse le
+  titre de la notification servir de repli. L'ordre complet :
+  objet du modele (par langue) → `email_subject` → `title`.
+- ⚠️⚠️ **Le courriel ne porte plus aucun texte de la diffusion** : `heading`
+  et `body` partent a `null` / `""` sur **les trois** chemins — diffusion,
+  envoi test, relance. Separer les sections sans separer ce qui part aurait
+  seulement deplace l'ambiguite.
+- ⚠️ **Consequence assumee sur la relance** : une campagne d'**avant**
+  relancee repart sans le texte qu'elle posait en ligne (son objet, lui, est
+  conserve). C'est le meme arbitrage que le modele, que la relance a toujours
+  rejoue **tel qu'il est aujourd'hui** faute d'instantane ; une relance qui
+  enverrait un courriel que le composeur ne sait plus produire serait plus
+  difficile a expliquer.
+- ⚠️⚠️ **L'editeur riche a disparu avec l'emprunt.** La mise en forme ne
+  servait **qu'au courriel** — seul des trois canaux a savoir rendre du gras ;
+  la cloche et l'ecran verrouille affichent du texte nu. Le courriel ne
+  reprend plus ce texte, donc le gras n'arrivait plus chez personne : une
+  barre d'outils qui ne change rien a l'arrivee promet une mise en page
+  imaginaire. Le champ est une zone de saisie simple, `body_html` n'est plus
+  ni envoye ni lu, et `components/admin/rich-text-editor.tsx` a ete supprime
+  (Tiptap reste, le blog s'en sert).
+- ⚠️ **Le bloc « message » des modeles n'est plus impose** : il n'a plus rien
+  a accueillir, et l'ajouter de force poserait un bloc vide partout. Il reste
+  **accepte** a la lecture — les modeles enregistres en portent un, et le
+  supprimer a la normalisation reecrirait leur mise en page a leur insu — sa
+  carte dit qu'il ne rend plus rien, et il se supprime maintenant comme les
+  autres. Garde par `tests/campaign-email.test.cjs`, verifie par mutation.

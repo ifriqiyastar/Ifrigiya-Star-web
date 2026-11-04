@@ -300,28 +300,40 @@ export function CampaignEmail({
             <Section style={{ padding: "0 24px 20px" }} />
           )}
 
-          <Hr style={{ borderColor: RULE, margin: 0 }} />
+          {/* ⚠️ **Le filet part avec le pied.** Le laisser sur un modele sans
+              pied poserait un trait seul sous le message, qui se lit comme un
+              bloc qui n'a pas charge.
+              ⚠️⚠️ Ce que `showFooter` emporte : le **lien de desabonnement
+              visible**. L'en-tete `List-Unsubscribe` part quand meme — il est
+              pose dans `lib/email/campaign.ts`, hors du gabarit — mais une
+              annonce adressee a une liste doit garder le lien dans le corps.
+              L'ecran d'edition le dit au moment ou l'on decoche. */}
+          {copy.showFooter ? (
+            <>
+              <Hr style={{ borderColor: RULE, margin: 0 }} />
 
-          <Section style={{ padding: "18px 24px 24px" }}>
-            <Text style={{ color: MUTED, fontFamily: BODY_FONT, fontSize: "12px", lineHeight: "1.6", margin: "0 0 6px", textAlign: align }}>
-              {copy.footerWhy}
-            </Text>
-            {unsubscribeUrl ? (
-              <>
-                <Text style={{ fontFamily: BODY_FONT, fontSize: "12px", lineHeight: "1.6", margin: "0 0 4px", textAlign: align }}>
-                  <Link href={unsubscribeUrl} style={{ color: MUTED, textDecoration: "underline" }}>
-                    {copy.unsubscribeLabel}
-                  </Link>
+              <Section style={{ padding: "18px 24px 24px" }}>
+                <Text style={{ color: MUTED, fontFamily: BODY_FONT, fontSize: "12px", lineHeight: "1.6", margin: "0 0 6px", textAlign: align }}>
+                  {copy.footerWhy}
                 </Text>
-                <Text style={{ color: MUTED, fontFamily: BODY_FONT, fontSize: "11px", lineHeight: "1.6", margin: "0 0 10px", textAlign: align }}>
-                  {copy.unsubscribeHint}
+                {unsubscribeUrl ? (
+                  <>
+                    <Text style={{ fontFamily: BODY_FONT, fontSize: "12px", lineHeight: "1.6", margin: "0 0 4px", textAlign: align }}>
+                      <Link href={unsubscribeUrl} style={{ color: MUTED, textDecoration: "underline" }}>
+                        {copy.unsubscribeLabel}
+                      </Link>
+                    </Text>
+                    <Text style={{ color: MUTED, fontFamily: BODY_FONT, fontSize: "11px", lineHeight: "1.6", margin: "0 0 10px", textAlign: align }}>
+                      {copy.unsubscribeHint}
+                    </Text>
+                  </>
+                ) : null}
+                <Text style={{ color: "#9a9a9a", fontFamily: BODY_FONT, fontSize: "11px", margin: 0, textAlign: align }}>
+                  {copy.rights}
                 </Text>
-              </>
-            ) : null}
-            <Text style={{ color: "#9a9a9a", fontFamily: BODY_FONT, fontSize: "11px", margin: 0, textAlign: align }}>
-              {copy.rights}
-            </Text>
-          </Section>
+              </Section>
+            </>
+          ) : null}
         </Container>
       </Body>
     </Html>

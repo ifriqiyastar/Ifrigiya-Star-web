@@ -243,6 +243,10 @@ export async function saveEmailTemplate(
   // Decoche : aucune ligne d'accueil ne sort. Les deux textes restent en
   // base — recocher les retrouve — donc rien n'est perdu a l'essai.
   const showGreeting = formData.get("show_greeting") === "on";
+  // Decoche : plus de pied de page. ⚠️ Le lien de desabonnement visible part
+  // avec lui — l'ecran le dit au moment du decochage, et l'en-tete
+  // `List-Unsubscribe` continue d'etre pose a l'envoi.
+  const showFooter = formData.get("show_footer") === "on";
   // ⚠️⚠️ **La regle visait la faute silencieuse, elle attrapait aussi un choix
   // deliberé.** Un accueil « avec nom » sans le jeton ne montrera jamais de
   // nom : si l'accueil sans nom dit autre chose, c'est un oubli, et le refus
@@ -272,6 +276,15 @@ export async function saveEmailTemplate(
       );
     }
   }
+
+  /**
+   * L'objet du courriel pour cette langue.
+   *
+   * ⚠️ Plafonne a 120 comme le champ du composeur l'etait : au-dela, ce sont
+   * les clients de messagerie qui coupent, et ils coupent sans prevenir.
+   * Vide = ce modele n'impose pas d'objet, la diffusion met le sien.
+   */
+  const subject = text(formData, "subject")?.slice(0, 120) ?? null;
 
   const ctaUrl = text(formData, "cta_url");
   if (ctaUrl && !/^https?:\/\/\S+$/i.test(ctaUrl)) {
@@ -329,22 +342,45 @@ export async function saveEmailTemplate(
       .upsert(payload, { onConflict: "template_id,locale" })
       .select("locale");
 
-  let { data, error } = await write({ ...fields, show_greeting: showGreeting });
-  // ⚠️ Degrade a l'ouverture, comme partout ici : sur un projet ou
-  // `202611030001` n'est pas passe, la colonne n'existe pas (`42703`) et tout
-  // le reste de la page serait refuse avec elle. On reecrit sans elle et on
-  // le dit — plutot que de laisser croire que l'accueil a ete retire.
-  const missingColumn = error?.code === "42703" && /show_greeting/.test(error.message);
-  if (missingColumn) ({ data, error } = await write(fields));
+  /**
+   * ⚠️ **Degrade colonne par colonne, et le dit.** Deux colonnes peuvent
+   * manquer a un projet qui n'a pas pris les dernieres migrations :
+   * `show_greeting` (`202611030001`), `subject` (`202611040001`) et
+   * `show_footer` (`202611040002`). Les retirer ensemble au premier `42703`
+   * ferait perdre l'une a cause de l'autre, et l'ecran annoncerait la
+   * mauvaise. On lit donc **quelle** colonne Postgres nomme, on la retire,
+   * et on recommence.
+   */
+  const OPTIONAL = { show_greeting: showGreeting, subject, show_footer: showFooter };
+  let payload: Record<string, unknown> = { ...fields, ...OPTIONAL };
+  const dropped: string[] = [];
+  let { data, error } = await write(payload);
+  // Un tour par colonne facultative : chaque passage en retire exactement une.
+  for (const column of Object.keys(OPTIONAL)) {
+    if (!(error?.code === "42703" && error.message.includes(column))) continue;
+    dropped.push(column);
+    payload = Object.fromEntries(Object.entries(payload).filter(([key]) => key !== column));
+    ({ data, error } = await write(payload));
+  }
 
   if (error) return fail(makeErrors(i18n.locale).describeError(error));
   if (!data?.length) return fail(i18n.t("Enregistrement refuse par la base de donnees."));
 
   await logAdminAction("update_email_template", "email_template", templateId, { locale });
   revalidatePath("/[locale]/admin", "layout");
+  // ⚠️ Nommer ce qui n'a PAS ete enregistre, en clair et sans nom de colonne :
+  // « enregistre » sur un objet qui n'est pas parti en base serait le genre
+  // de mensonge qu'on ne decouvre qu'a l'envoi suivant.
+  const MISSED: Record<string, string> = {
+    show_greeting: i18n.t("le choix d'afficher ou non la formule d'accueil"),
+    subject: i18n.t("l'objet du courriel"),
+    show_footer: i18n.t("le choix d'afficher ou non le pied de page"),
+  };
   return ok(
-    missingColumn
-      ? i18n.t("Modele enregistre, sauf le choix d'afficher ou non la formule d'accueil : la base de donnees n'a pas encore ete mise a jour.")
+    dropped.length
+      ? i18n.t("Modele enregistre, sauf {0} : la base de donnees n'a pas encore ete mise a jour.", {
+          "0": dropped.map((column) => MISSED[column]).join(", "),
+        })
       : i18n.t("Modele d'e-mail enregistre."),
   );
 }

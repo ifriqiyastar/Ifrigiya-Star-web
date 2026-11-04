@@ -238,23 +238,27 @@ export async function sendNotification(formData: FormData): Promise<ActionResult
   const targetValue = String(formData.get("target_value") ?? "").trim() || null;
   const channels = formData.getAll("channels").map(String);
   const templateId = String(formData.get("email_template") ?? "").trim() || null;
-  const bodyHtml = String(formData.get("body_html") ?? "").trim() || null;
   /**
-   * ⚠️ Le courriel peut porter son propre texte. Absents, ces champs
-   * signifient « le meme que la notification » — et non « pas de courriel »,
-   * que seul `channels` dit.
+   * ⚠️⚠️ **Le courriel n'a plus de TEXTE propre, seulement un objet.**
+   *
+   * `email_body` et `email_body_html` ne sont plus lus — ni ici, ni a
+   * l'ecran. Un Server Action est atteignable par un POST direct, donc les
+   * retirer de l'interface seule aurait garde accessible une fonction
+   * qu'elle ne propose plus ; et ce texte n'avait qu'une langue, alors que
+   * l'envoi rend une variante par langue de destinataire. Ce qu'un courriel
+   * raconte se compose dans son modele, en blocs, dans les trois langues.
+   *
+   * `email_subject` reste : en mode « les deux », la section « L'e-mail »
+   * porte son propre objet, facultatif. Vide, l'objet du modele s'applique,
+   * puis le titre de la notification. En courriel seul, le champ « Objet »
+   * **est** `title` — aucune notification ne part.
    */
   const emailSubject = String(formData.get("email_subject") ?? "").trim() || null;
-  const emailBody = String(formData.get("email_body") ?? "").trim() || null;
-  const emailBodyHtml = String(formData.get("email_body_html") ?? "").trim() || null;
   /**
-   * ⚠️ **Le corps n'est obligatoire que pour la notification.**
-   *
-   * Il l'etait pour tout le monde, si bien qu'un courriel bati sur un modele
-   * — dont les blocs portent deja le texte — ne pouvait pas partir sans
-   * qu'on remplisse en plus un champ dont rien n'allait s'afficher. Une
-   * notification, elle, ne peut pas etre vide : la cloche et l'ecran
-   * verrouille n'auraient rien a montrer.
+   * ⚠️ **Le corps n'est obligatoire que pour la notification.** Une
+   * notification ne peut pas etre vide — la cloche et l'ecran verrouille
+   * n'auraient rien a montrer —, un courriel tient entierement dans son
+   * modele.
    */
   if (!title || channels.length === 0) return fail(i18n.t("Titre et canal requis."));
   if (channels.includes("in_app") && !body) {
@@ -367,12 +371,13 @@ export async function sendNotification(formData: FormData): Promise<ActionResult
     typedNotice = ecarts.join(" ");
   }
 
-  // ⚠️ Le texte brut du formulaire est **reconstruit** a partir de la mise en
-  // forme quand elle existe. Sans cela, un appel direct pourrait envoyer un
-  // courriel disant une chose et une notification en disant une autre.
-  const parsed = parseRichText(bodyHtml);
-  const plain = parsed ? richToPlainText(parsed) : "";
-  const plainBody = plain || body;
+  /**
+   * ⚠️ **Plus de mise en forme a reconstruire.** Le champ remontait aussi du
+   * HTML, qu'il fallait reanalyser pour que le courriel et la notification ne
+   * puissent pas dire deux choses differentes. Le courriel ne reprend plus ce
+   * texte : il n'y a plus qu'un canal, et il affiche du texte nu.
+   */
+  const plainBody = body;
 
   if (!wantsNotification) {
     // Courriel seul : rien a ecrire dans `notifications`, donc rien a
@@ -389,8 +394,7 @@ export async function sendNotification(formData: FormData): Promise<ActionResult
       targetValue: typedValue,
       channels,
       templateId,
-      bodyHtml,
-      email: { subject: emailSubject, body: emailBody, bodyHtml: emailBodyHtml },
+      emailSubject,
       count: 0,
       recipients: typedRecipients,
       notice: typedNotice,
@@ -451,8 +455,7 @@ export async function sendNotification(formData: FormData): Promise<ActionResult
       targetValue,
       channels,
       templateId,
-      bodyHtml,
-      email: { subject: emailSubject, body: emailBody, bodyHtml: emailBodyHtml },
+      emailSubject,
       count: Number(legacy.data ?? 0),
     });
   }
@@ -467,8 +470,7 @@ export async function sendNotification(formData: FormData): Promise<ActionResult
     targetValue,
     channels,
     templateId,
-    bodyHtml,
-    email: { subject: emailSubject, body: emailBody, bodyHtml: emailBodyHtml },
+    emailSubject,
     count: Number(recipients ?? 0),
   });
 }
@@ -490,8 +492,7 @@ async function finishCampaign({
   targetValue,
   channels,
   templateId,
-  bodyHtml,
-  email: ownEmail,
+  emailSubject,
   count,
   recipients,
   notice,
@@ -509,9 +510,8 @@ async function finishCampaign({
   notice?: string;
   channels: string[];
   templateId: string | null;
-  bodyHtml: string | null;
-  /** Le texte propre au courriel, ou `null` s'il reprend celui au-dessus. */
-  email: { subject: string | null; body: string | null; bodyHtml: string | null };
+  /** L'objet propre au courriel, quand la diffusion en porte un. */
+  emailSubject: string | null;
   count: number;
 }): Promise<ActionResult> {
   // ⚠️ Le courriel part **apres** la notification, jamais avant : si Resend
@@ -521,28 +521,30 @@ async function finishCampaign({
   const email = channels.includes("email")
     ? await broadcastEmails(supabase, {
         campaignKey: randomUUID(),
-        // Le courriel prend son propre texte quand il en a un.
-        title: ownEmail.subject ?? title,
         /**
-         * ⚠️ **Le titre affiche n'est l'objet que quand le courriel reprend
-         * le texte de la notification.**
-         *
-         * Signale : « le sujet apparait dans le modele ». Le champ servait
-         * a la fois d'objet — la ligne lue dans la boite de reception — et
-         * de titre pose en gros sous l'entete, si bien que le destinataire
-         * lisait deux fois la meme phrase. Or le champ est **libelle**
-         * « Objet de l'e-mail » des que le courriel a son propre texte
-         * (envoi par courriel seul, ou texte dissocie) : ce qu'on y tape
-         * est redige pour une liste de messages, pas pour coiffer une page.
-         *
-         * La regle, qui tient en une ligne : le titre affiche existe
-         * seulement si le courriel porte litteralement le titre de la
-         * notification. Sinon le message s'ouvre sur l'accueil, et le
-         * modele garde la main sur ses propres titres de blocs.
+         * ⚠️ **L'objet de repli, pas l'objet.** Le modele impose le sien,
+         * langue par langue (`campaignSubject()` dans
+         * `lib/email/campaign.ts`) ; entre les deux, l'objet propre a la
+         * diffusion quand sa section « L'e-mail » en porte un ; en dernier
+         * ressort le titre de la notification. Il faut un dernier ressort :
+         * un modele peut n'imposer aucun objet, et sur un projet ou
+         * `202611040001` n'est pas passee la colonne n'existe pas.
          */
-        heading: !ownEmail.subject && channels.includes("in_app") ? title : null,
-        body: ownEmail.body ?? body,
-        bodyHtml: ownEmail.bodyHtml ?? bodyHtml,
+        title: emailSubject ?? title,
+        /**
+         * ⚠️⚠️ **Le courriel ne porte plus aucun texte de la diffusion.**
+         *
+         * Ni titre affiche, ni corps. Les deux venaient de la notification :
+         * son titre se posait en gros sous l'entete, son corps dans le bloc
+         * « message » du modele. Deux canaux partageaient donc deux champs
+         * sans que rien a l'ecran ne le dise, et en mode « les deux » le
+         * courriel n'avait aucun champ a lui. Ils ont chacun leur section
+         * desormais, et ce qu'un courriel raconte vit dans son modele, ou il
+         * est ecrit dans les trois langues.
+         */
+        heading: null,
+        body: "",
+        bodyHtml: null,
         targetType,
         targetValue,
         recipients,
@@ -598,9 +600,10 @@ async function finishCampaign({
     // Quel habillage est parti : le modele peut avoir ete modifie depuis,
     // mais le journal dit au moins lequel a servi.
     email_template_id: email?.templateId ?? null,
-    body_html: ownEmail.bodyHtml ?? bodyHtml,
-    // Nul = le courriel a porte le meme objet que la notification.
-    email_subject: ownEmail.subject,
+    // Nul : plus aucune mise en forme n'est saisie. La notification affiche
+    // du texte nu, et le courriel ne reprend pas ce texte.
+    body_html: null,
+    email_subject: emailSubject,
   };
 
   const write = (payload: Record<string, unknown>) =>
@@ -675,31 +678,29 @@ export async function sendTestNotification(formData: FormData): Promise<ActionRe
   const supabase = await createClient();
   const title = String(formData.get("title") ?? "").trim();
   const body = String(formData.get("body") ?? "").trim();
-  const bodyHtml = String(formData.get("body_html") ?? "").trim() || null;
-  /**
-   * ⚠️ Le courriel peut porter son propre texte. Absents, ces champs
-   * signifient « le meme que la notification » — et non « pas de courriel »,
-   * que seul `channels` dit.
-   */
-  const emailSubject = String(formData.get("email_subject") ?? "").trim() || null;
-  const emailBody = String(formData.get("email_body") ?? "").trim() || null;
-  const emailBodyHtml = String(formData.get("email_body_html") ?? "").trim() || null;
   const channels = formData.getAll("channels").map(String);
   const templateId = String(formData.get("email_template") ?? "").trim() || null;
-  if (!title || !body) return fail(i18n.t("Titre et message requis pour un envoi test."));
-
-  const parsed = parseRichText(bodyHtml);
-  const plainBody = parsed ? richToPlainText(parsed) || body : body;
-  // Le test doit montrer le courriel **tel qu'il partira**, texte propre
-  // compris : sinon il validerait un message que personne ne recevra.
-  const mailParsed = parseRichText(emailBodyHtml ?? bodyHtml);
-  const mailTitle = emailSubject ?? title;
-  const mailBody = mailParsed ? richToPlainText(mailParsed) || (emailBody ?? body) : (emailBody ?? body);
+  // Le test doit montrer l'objet qui partira : celui de la section
+  // « L'e-mail » quand elle en porte un, comme a la diffusion.
+  const emailSubject = String(formData.get("email_subject") ?? "").trim() || null;
 
   // ⚠️ Le test doit reproduire le **mode** choisi. Sur une diffusion par
   // courriel seul, deposer quand meme une notification de test dans sa propre
   // cloche donnerait a verifier un canal qui ne partira pas.
   const wantsNotification = channels.includes("in_app");
+  /**
+   * ⚠️ **Le message n'est exige que si une notification part.** Il l'etait
+   * toujours, et le bouton de test est devenu inutilisable le jour ou le
+   * courriel a cesse d'avoir un corps a saisir : un envoi par courriel seul
+   * n'envoie plus aucun texte depuis cet ecran — tout vient du modele — et
+   * le test se serait refuse sur un champ qui n'existe plus.
+   */
+  if (!title) return fail(i18n.t("Titre et message requis pour un envoi test."));
+  if (wantsNotification && !body) {
+    return fail(i18n.t("Titre et message requis pour un envoi test."));
+  }
+
+  const plainBody = body;
   let served = true;
 
   if (wantsNotification) {
@@ -750,13 +751,21 @@ export async function sendTestNotification(formData: FormData): Promise<ActionRe
         // Une cle par seconde : reappuyer sur « test » doit renvoyer, alors
         // qu'une diffusion rejouee ne doit pas se doubler.
         campaignKey: `test-${admin.userId}-${Math.floor(Date.now() / 1000)}`,
-        title: `[Test] ${mailTitle}`,
+        title: emailSubject ?? title,
+        /**
+         * ⚠️ Le prefixe est pose **sur l'objet effectif**, pas sur `title` :
+         * l'objet vient maintenant du modele quand il en porte un, et
+         * prefixer le repli aurait laisse partir un test sous un objet
+         * identique a celui d'une vraie diffusion.
+         */
+        subjectPrefix: "[Test] ",
         // ⚠️ Meme regle qu'a la diffusion, sans quoi le test — le seul
-        // garde-fou avant un envoi de masse — montrerait un titre que le
-        // vrai courriel n'aura pas.
-        heading: !emailSubject && wantsNotification ? title : null,
-        body: mailBody,
-        bodyDoc: mailParsed,
+        // garde-fou avant un envoi de masse — montrerait un courriel que
+        // personne ne recevra : il ne porte aucun texte de la diffusion,
+        // tout vient de son modele.
+        heading: null,
+        body: "",
+        bodyDoc: null,
         blocks: chosen.blocks,
         recipients: [
           {
@@ -806,12 +815,20 @@ export async function previewCampaignEmail(input: {
   const parsed = parseRichText(input.bodyHtml);
 
   const html = await renderCampaignEmail({
-    title: input.title.trim() || "—",
+    /**
+     * ⚠️ **Ce qui est vide part vide.** Les deux champs retombaient sur un
+     * cadratin, qui s'affichait pour de bon : un tiret solitaire en gros
+     * caractere la ou le modele ne met rien. Depuis que le texte du courriel
+     * vient du modele, l'apercu d'une diffusion par courriel seul n'a ni
+     * titre ni corps a montrer — et c'est exactement ce que le destinataire
+     * recevra.
+     */
+    title: input.title.trim(),
     // ⚠️ L'apercu doit mentir le moins possible : s'il coiffait le message
     // d'un titre que la diffusion n'enverra pas, il validerait une mise en
     // page que personne ne recevra.
     heading: input.heading === undefined ? undefined : (input.heading?.trim() || null),
-    body: (parsed ? richToPlainText(parsed) : input.body).trim() || "—",
+    body: (parsed ? richToPlainText(parsed) : input.body).trim(),
     bodyDoc: parsed,
     blocks: chosen.blocks,
     locale,
@@ -890,21 +907,39 @@ export async function retryNotification(campaignId: string): Promise<ActionResul
   const email = campaignChannels.includes("email")
     ? await broadcastEmails(supabase, {
         campaignKey: `retry-${campaignId}`,
-        // ⚠️ L'objet distinct est rejoue tel quel : une relance doit renvoyer
-        // ce qui avait ete envoye, pas le titre de la notification.
+        /**
+         * L'objet distinct des campagnes **d'avant** est rejoue tel quel :
+         * une relance doit renvoyer ce qui avait ete envoye.
+         *
+         * ⚠️ Il n'est plus qu'un repli, comme a l'envoi : si le modele porte
+         * desormais son propre objet, c'est le sien qui part. Cohérent avec
+         * le reste de la relance, qui rejoue le modele **tel qu'il est
+         * aujourd'hui** — habillage et blocs compris — et non un instantane
+         * du jour de l'envoi, qui n'existe nulle part.
+         */
         title: campaign.email_subject ?? campaign.title,
-        // Meme regle qu'a l'envoi : le titre affiche n'existe que si le
-        // courriel portait litteralement celui de la notification.
-        heading:
-          !campaign.email_subject && campaignChannels.includes("in_app") ? campaign.title : null,
-        body: campaign.body,
+        /**
+         * ⚠️ **Une relance rejoue la regle d'aujourd'hui, pas celle du jour
+         * de l'envoi.** Le courriel ne porte aucun texte de la diffusion :
+         * tout vient du modele. Une campagne **d'avant** relancee repart
+         * donc sans le texte qu'elle posait en ligne — son objet, lui, est
+         * conserve (`email_subject`).
+         *
+         * C'est le prix d'une regle unique, et c'est le meme arbitrage que
+         * le modele : la relance a toujours rejoue le modele **tel qu'il est
+         * aujourd'hui**, habillage et blocs compris, faute d'instantane. Une
+         * relance qui enverrait un courriel que le composeur ne sait plus
+         * produire serait plus difficile a expliquer que celle-ci.
+         */
+        heading: null,
+        body: "",
         targetType: campaign.target_type,
         targetValue: campaign.target_value,
         recipients: typedRecipients,
         // La relance rejoue le modele d'origine, pas celui devenu defaut
         // depuis : le destinataire doit recevoir ce qui avait ete decide.
         templateId: campaign.email_template_id ?? null,
-        bodyHtml: campaign.body_html ?? null,
+        bodyHtml: null,
       })
     : null;
 

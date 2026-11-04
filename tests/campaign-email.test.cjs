@@ -41,6 +41,9 @@ for (const extension of ['.ts', '.tsx']) {
 const load = Module._load;
 Module._load = function (name, ...args) {
   if (name === 'server-only') return {};
+  // `lib/email/preview.ts` lit l'origine de la requete pour les images de
+  // l'apercu. Hors requete, aucune en-tete : il retombe sur `SITE_URL`.
+  if (name === 'next/headers') return { headers: async () => new Headers() };
   return load.call(this, name, ...args);
 };
 
@@ -58,6 +61,7 @@ const {
   fillTemplate,
   TEMPLATE_SLOTS,
   sanitizeSenderNameForTest,
+  campaignSubject,
 } = require('../lib/email/campaign.ts');
 const { LOCALES } = require('../lib/i18n/config.ts');
 const { parseRichText, richToPlainText } = require('../lib/rich-text/server.ts');
@@ -357,12 +361,26 @@ test('la mise en page est reconstruite contre une liste blanche', () => {
   assert.equal(out[2].width, 'full');
 });
 
-test("la mise en page garde toujours un emplacement pour le message", () => {
-  // Sans bloc `message`, ce que l'administrateur ecrit a l'envoi n'aurait
-  // nulle part ou aller et disparaitrait sans un mot.
-  const out = normalizeBlocks([{ id: 'a', type: 'divider' }]);
-  assert.equal(out.at(-1).type, 'message');
-  // Une valeur absurde retombe sur la mise en page par defaut.
+// ⚠️ **L'emplacement du message n'est plus impose, et c'est le changement.**
+// Il l'etait parce qu'une diffusion apportait un texte qui, sans lui, se
+// perdait sans un mot. Elle n'en apporte plus — le courriel est entierement
+// son modele — donc l'ajouter de force poserait un bloc vide dans tous les
+// modeles. Il reste **accepte** : les modeles deja enregistres en portent un,
+// et le supprimer a la normalisation reecrirait leur mise en page a leur insu.
+//
+// ⚠️ CE QUI FAIT ECHOUER CE TEST SI LE DEFAUT REVIENT : remettre le
+// `if (!seenMessage) blocks.push(...)` dans `normalizeBlocks()` — la premiere
+// assertion tombe. Retirer le bloc a la lecture — la deuxieme tombe.
+test("l'emplacement du message n'est ni impose ni efface", () => {
+  const sansMessage = normalizeBlocks([{ id: 'a', type: 'divider' }]);
+  assert.deepEqual(sansMessage.map((block) => block.type), ['divider']);
+
+  // Un modele qui en porte un le garde : sa mise en page lui appartient.
+  const avecMessage = normalizeBlocks([{ id: 'a', type: 'divider' }, { id: 'm', type: 'message' }]);
+  assert.deepEqual(avecMessage.map((block) => block.type), ['divider', 'message']);
+
+  // Une valeur absurde retombe sur la mise en page par defaut, qui le porte
+  // toujours : un projet sans la migration des blocs rend comme avant.
   assert.deepEqual(normalizeBlocks(null), DEFAULT_BLOCKS);
   assert.deepEqual(normalizeBlocks('rien'), DEFAULT_BLOCKS);
   assert.deepEqual(normalizeBlocks([{ type: 'inconnu' }]), DEFAULT_BLOCKS);
@@ -545,4 +563,136 @@ test('le modele beta dit la meme chose dans la migration et dans l\'apercu', () 
   assert.equal(depuisSql.filter((b) => b.type === 'message').length, 1);
   // Et toujours aucun jeton de nom nulle part.
   assert.doesNotMatch(JSON.stringify(depuisSql), /\{nom\}|__IFQ_NAME__/);
+});
+
+// ---------------------------------------------------------------------------
+// L'apercu d'un modele ne contient aucun message d'exemple
+//
+// L'ecran du modele rendait le vrai courriel avec un titre et un corps
+// d'exemple poses dans le bloc `message`. C'etait la seule chose fausse a
+// l'image sur un ecran dont tout l'objet est de montrer ce que le modele
+// contient — et, prise entre des blocs qui portent du vrai texte, cette
+// phrase se lisait comme le texte du modele.
+//
+// ⚠️ CE QUI FAIT ECHOUER CE TEST SI LE DEFAUT REVIENT : remettre un titre ou
+// un corps d'exemple dans `renderCampaignPreview` (`lib/email/preview.ts`).
+// Le `<h1>` reapparait, ou le mot d'exemple se retrouve dans le HTML.
+//
+// Le deuxieme cas est le TEMOIN : sans lui, un gabarit qui n'afficherait
+// jamais de titre passerait le premier sans rien prouver.
+//
+// Ce qu'il ne couvre PAS : ce que l'ecran affiche autour de l'iframe, ni les
+// vignettes du catalogue.
+test("l'apercu d'un modele ne montre que le modele", async () => {
+  const { renderCampaignPreview, renderCampaignEmail } = require('../lib/email/preview.ts');
+  const copy = resolveEmailCopy('fr', null, 'https://exemple.test');
+  const blocs = normalizeBlocks([
+    { id: 't', type: 'text', text: { fr: 'Vous etes invite a essayer l\u2019application.' } },
+    { id: 'm', type: 'message' },
+  ]);
+
+  const apercu = await renderCampaignPreview('fr', copy, blocs);
+  assert.doesNotMatch(apercu, /<h1/i, 'un titre d\u2019exemple est revenu dans l\u2019apercu');
+  assert.doesNotMatch(apercu, /exemple de message|apparaitra ici|titre de votre message/i);
+  assert.match(apercu, /invite a essayer/, 'le contenu propre du modele a disparu');
+  // Le nom, lui, reste : il montre comment l'accueil resout son jeton.
+  assert.match(apercu, /Amine Ben Salah/, "l'accueil ne resout plus le nom");
+
+  // Temoin : le meme rendu, avec un message, affiche bien son titre.
+  const avecMessage = await renderCampaignEmail({
+    title: 'Un vrai titre', body: 'Un vrai corps.', locale: 'fr', copy, blocks: blocs,
+  });
+  assert.match(avecMessage, /<h1/i);
+  assert.match(avecMessage, /Un vrai titre/);
+});
+
+// ---------------------------------------------------------------------------
+// L'objet suit la langue du destinataire
+//
+// L'envoi rend une variante par langue — l'habillage et les blocs du modele
+// suivent `profiles.locale` — mais l'objet etait une seule chaine posee sur
+// les trois : un anglophone recevait un objet francais au-dessus d'un corps
+// anglais. Il vient maintenant du modele, langue par langue.
+//
+// ⚠️ CE QUI FAIT ECHOUER CE TEST SI LE DEFAUT REVIENT : renvoyer `title`
+// sans regarder `copy[locale].subject` dans `campaignSubject()` — le premier
+// cas tombe. Et supprimer le repli — le deuxieme et le troisieme tombent,
+// qui sont les TEMOINS : sans eux, une fonction qui rendrait toujours une
+// chaine vide passerait le premier sans rien prouver.
+//
+// Ce qu'il ne couvre PAS : que Resend recoive bien cet objet. Personne ici
+// n'appelle `sendCampaignEmails()`, qui parle au reseau.
+test("l'objet d'une campagne suit la langue du destinataire", () => {
+  const copy = Object.fromEntries(
+    LOCALES.map((locale) => [
+      locale,
+      resolveEmailCopy(locale, { subject: { fr: 'Objet FR', en: 'Subject EN', ar: 'موضوع' }[locale] }, 'https://exemple.test'),
+    ]),
+  );
+
+  assert.equal(campaignSubject(copy, 'fr', 'Objet de la diffusion'), 'Objet FR');
+  assert.equal(campaignSubject(copy, 'en', 'Objet de la diffusion'), 'Subject EN');
+  assert.equal(campaignSubject(copy, 'ar', 'Objet de la diffusion'), 'موضوع');
+
+  // TEMOIN 1 — un modele sans objet laisse la diffusion imposer le sien.
+  const muet = { fr: resolveEmailCopy('fr', { subject: '   ' }, 'https://exemple.test') };
+  assert.equal(campaignSubject(muet, 'fr', 'Objet de la diffusion'), 'Objet de la diffusion');
+
+  // TEMOIN 2 — migration absente : la colonne n'existe pas, la ligne non
+  // plus. Rien ne doit partir sans objet.
+  assert.equal(campaignSubject(undefined, 'en', 'Objet de la diffusion'), 'Objet de la diffusion');
+  assert.equal(resolveEmailCopy('en', null, 'https://exemple.test').subject, null);
+
+  // Le prefixe du test coiffe l'objet REELLEMENT employe, pas son repli :
+  // sans cela, un envoi test partirait sous l'objet d'une vraie diffusion.
+  assert.equal(campaignSubject(copy, 'en', 'Objet de la diffusion', '[Test] '), '[Test] Subject EN');
+});
+
+// ---------------------------------------------------------------------------
+// Le pied de page se retire, et ce qu'il emporte est connu
+//
+// Vider ses quatre champs ne le retirait pas : une chaine vide vaut « non
+// renseigne » et fait revenir le texte livre. Il fallait un interrupteur,
+// comme pour l'accueil et le bouton.
+//
+// ⚠️ CE QUI FAIT ECHOUER CE TEST SI LE DEFAUT REVIENT : rendre le pied
+// inconditionnel (retirer `copy.showFooter ?` dans `campaign-email.tsx`) — le
+// deuxieme cas tombe. Le premier est le TEMOIN : sans lui, un gabarit qui
+// n'afficherait jamais de pied passerait sans rien prouver.
+//
+// Ce qu'il ne couvre PAS : l'en-tete `List-Unsubscribe`, qui est pose par
+// `sendCampaignEmails()` et ne traverse pas le gabarit — c'est justement
+// pourquoi il survit au retrait du pied, et c'est verifie en lisant le code
+// d'envoi, pas ici.
+test('le pied de page se retire sans emporter les textes', async () => {
+  const site = 'https://exemple.test';
+  const url = `${site}/api/email/desabonnement?c=x&t=y`;
+
+  // TEMOIN — par defaut le pied est la, avec ses quatre textes.
+  const avec = await renderFor({
+    copy: resolveEmailCopy('fr', null, site),
+    unsubscribeUrl: url,
+  });
+  assert.match(avec, /Vous recevez ce message/);
+  assert.match(avec, /Ne plus recevoir/);
+  assert.match(avec, /Tous droits reserves/);
+
+  // Decoche : plus rien du pied, ni le lien, ni le filet qui le precede.
+  const sans = await renderFor({
+    copy: resolveEmailCopy('fr', { show_footer: false }, site),
+    unsubscribeUrl: url,
+  });
+  assert.doesNotMatch(sans, /Vous recevez ce message/);
+  assert.doesNotMatch(sans, /Ne plus recevoir/);
+  assert.doesNotMatch(sans, /Tous droits reserves/);
+  assert.ok(!sans.includes(url), 'le lien de desabonnement est reste dans le corps');
+
+  // ⚠️ Decocher **cache**, il n'efface pas : les textes personnalises sont
+  // toujours en base, et recocher les retrouve tels quels.
+  const row = { show_footer: false, footer_why: 'Parce que vous testez.' };
+  assert.equal(resolveEmailCopy('fr', row, site).footerWhy, 'Parce que vous testez.');
+  assert.equal(resolveEmailCopy('fr', { ...row, show_footer: true }, site).showFooter, true);
+
+  // Migration absente : la colonne n'existe pas, le pied reste affiche.
+  assert.equal(resolveEmailCopy('fr', {}, site).showFooter, true);
 });

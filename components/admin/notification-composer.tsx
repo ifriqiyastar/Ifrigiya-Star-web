@@ -4,7 +4,6 @@ import * as React from "react";
 import {
   BellRingIcon,
   CalendarDaysIcon,
-  CheckIcon,
   Globe2Icon,
   Loader2Icon,
   MailIcon,
@@ -30,7 +29,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { AccountPicker, type Account } from "@/components/admin/account-picker";
 import { NativeSelect } from "@/components/ui/native-select";
-import { RichTextEditor } from "@/components/admin/rich-text-editor";
 import type { ActionResult } from "@/lib/actions/result";
 // ⚠️ Module neutre, qui n'importe rien : un composant client ne peut emprunter
 // ni `lib/actions/*` ni rien qui tire `server-only`. Le decompte affiche et la
@@ -92,12 +90,16 @@ export function NotificationComposer({
   /** `devices` vaut `null` quand la portee push n'est pas mesurable. */
   reach: { devices: number | null; activeAccounts: number };
   /**
-   * Les deux canaux optionnels. `selectable` vient d'une sonde serveur :
-   * une case n'apparait que si le mecanisme existe derriere, et que si
-   * l'administrateur a le droit de la toucher.
+   * Le canal optionnel. `selectable` vient d'une sonde serveur : le mode
+   * « un e-mail » n'est proposable que si le mecanisme existe derriere, et
+   * que si l'administrateur a le droit de s'en servir.
+   *
+   * ⚠️ Le push n'y figure plus : il n'est pas optionnel, il accompagne la
+   * notification. La sonde correspondante a ete retiree de
+   * `fetchChannelStates()` avec lui — un appel dont personne ne lit la
+   * reponse est un aller-retour paye pour rien.
    */
   channels: {
-    push: { selectable: boolean; reason: string };
     email: { selectable: boolean; reason: string };
   };
   /**
@@ -123,12 +125,24 @@ export function NotificationComposer({
   const { dict } = useAdminI18n();
 
   const [title, setTitle] = React.useState(defaults?.title ?? "");
-  // ⚠️ Deux etats pour un seul message : `body` est le texte brut — celui
-  // de la notification in-app et du push — et `bodyHtml` sa mise en forme,
-  // qui ne sert qu'au courriel. Le second produit le premier, jamais
-  // l'inverse : l'editeur remonte les deux a chaque frappe.
+  /**
+   * ⚠️⚠️ **Un seul etat, et du texte brut.** Il y en avait deux : `body`, le
+   * texte de la notification, et `bodyHtml`, sa mise en forme — qui ne
+   * servait **qu'au courriel**, le seul des trois canaux a savoir rendre du
+   * gras. Depuis que le courriel est entierement son modele, cette mise en
+   * forme ne va plus nulle part : la cloche et l'ecran verrouille affichent
+   * du texte nu. Un editeur riche dont le gras n'arrive chez personne est
+   * pire qu'un champ simple — il promet une mise en page a l'aveugle.
+   */
   const [body, setBody] = React.useState(defaults?.body ?? "");
-  const [bodyHtml, setBodyHtml] = React.useState("");
+  /**
+   * L'objet propre au courriel, en mode « les deux ».
+   *
+   * Vide, le courriel prend l'objet de son modele s'il en porte un, puis le
+   * titre de la notification. En courriel seul il n'existe pas : le champ
+   * « Objet » **est** `title`, puisqu'aucune notification ne part.
+   */
+  const [emailSubject, setEmailSubject] = React.useState("");
   const [targetType, setTargetType] = React.useState("all");
   const [targetValue, setTargetValue] = React.useState("");
   // Le push est coche par defaut — c'est le comportement attendu d'une
@@ -143,20 +157,6 @@ export function NotificationComposer({
    * premier choix, et il decide des champs comme des canaux.
    */
   const [mode, setMode] = React.useState<"notification" | "email" | "both">("notification");
-  /**
-   * En mode « les deux », le courriel peut porter son propre texte.
-   *
-   * ⚠️ Coche par defaut, et c'est deliberе : le cas courant est une meme
-   * annonce par deux voies, et proposer d'emblee deux redactions ferait payer
-   * a tout le monde le prix d'un besoin occasionnel. Decoche, on ecrit
-   * l'objet et le corps du courriel a part — un objet de boite de reception
-   * ne se redige pas comme un titre d'ecran verrouille.
-   */
-  const [sameText, setSameText] = React.useState(true);
-  const [emailTitle, setEmailTitle] = React.useState("");
-  const [emailBody, setEmailBody] = React.useState("");
-  const [emailBodyHtml, setEmailBodyHtml] = React.useState("");
-  const [withPush, setWithPush] = React.useState(true);
   const [templateId, setTemplateId] = React.useState(templates[0]?.id ?? "");
   const [previewTab, setPreviewTab] = React.useState<"lock" | "email">("lock");
   // L'apercu suit le mode : en courriel seul, l'ecran verrouille ne montre
@@ -169,34 +169,33 @@ export function NotificationComposer({
   const [previewLocale, setPreviewLocale] = React.useState("fr");
   const [previewHtml, setPreviewHtml] = React.useState("");
   const [previewing, setPreviewing] = React.useState(false);
-  /** Le courriel a-t-il sa propre redaction ? Jamais en mode courriel seul. */
-  const splitText = mode === "both" && !sameText;
-  /** Ce que le courriel portera reellement, quel que soit le mode. */
-  const mailTitle = splitText ? emailTitle : title;
   /**
-   * ⚠️ **Le titre pose en tete du courriel n'est pas son objet.**
+   * ⚠️⚠️ **Le texte du courriel vit dans le modele, plus ici.**
    *
-   * Le champ s'appelle « Objet de l'e-mail » des que le courriel a son
-   * propre texte — courriel seul, ou texte dissocie — et ce qu'on y tape
-   * est redige pour une boite de reception, pas pour coiffer une page. Le
-   * poser aussi en gros dans le message faisait lire deux fois la meme
-   * phrase. Il ne reste donc que lorsque le courriel reprend litteralement
-   * le titre de la notification. Meme regle que le Server Action.
+   * L'ecran portait un « Corps de l'e-mail » distinct de celui de la
+   * notification, et une case « le courriel reprend le meme texte » pour
+   * choisir entre les deux. Les deux ont ete retires : ce qu'un courriel
+   * raconte se compose en blocs dans `/admin/notifications/modele`, ou le
+   * texte existe **dans les trois langues**. Le champ d'ici, lui, ne pouvait
+   * etre ecrit qu'une fois — l'envoi rend pourtant une variante par langue
+   * de destinataire, si bien qu'un anglophone lisait un habillage anglais
+   * autour d'un corps francais.
+   *
+   * Ce qui reste a la charge de la diffusion : la cible, les canaux, et le
+   * texte de la **notification**, que nul modele ne peut porter — la cloche
+   * et l'ecran verrouille n'ont pas de modele.
    */
-  const mailHeading = mode === "both" && !splitText ? title : null;
-  const mailBody = splitText ? emailBody : body;
-  const mailBodyHtml = splitText ? emailBodyHtml : bodyHtml;
-
-  const SAMPLE_TITLE = i18n.t("Titre de la notification");
-  const SAMPLE_BODY = i18n.t("Le message apparaitra ici, tel que le destinataire le lira.");
   /**
-   * L'apercu comporte-t-il de l'exemple ?
+   * ⚠️ **Aucun titre pose en tete du courriel.**
    *
-   * ⚠️ « Ou », pas « et » : avec un titre ecrit et un message encore vide, la
-   * moitie de ce qu'on regarde est un texte d'exemple. Ne rien signaler
-   * laisserait croire que le corps est deja redige.
+   * Signale a l'origine : « le sujet apparait dans le modele ». Le titre de
+   * la notification s'y affichait en gros quand le courriel reprenait son
+   * texte ; il ne le reprend plus, donc il n'y a plus rien a coiffer. Les
+   * titres du courriel sont ceux de ses blocs.
    */
-  const previewIsSample = !mailTitle.trim() || !mailBody.trim();
+  const mailHeading = null;
+  /** L'objet effectif : le sien en mode « les deux », le titre sinon. */
+  const mailSubject = mode === "both" ? emailSubject || title : title;
   // Un canal non selectionnable suit son etat impose : le push part toujours
   // quand on ne peut pas le decocher, l'email jamais quand on ne peut pas le
   // cocher.
@@ -209,7 +208,30 @@ export function NotificationComposer({
    */
   const notificationOn = mode !== "email" && targetType !== "emails";
   const emailOn = mode !== "notification" && channels.email.selectable;
-  const pushOn = notificationOn && (channels.push.selectable ? withPush : true);
+  /**
+   * ⚠️⚠️ **Le courriel ne porte plus aucun texte de la diffusion.**
+   *
+   * Il en reprenait un : en mode « les deux », le titre et le corps de la
+   * notification se posaient dans le bloc « message » du modele. Les deux
+   * canaux partageaient donc deux champs, sans que rien a l'ecran ne le
+   * dise — « there is no place for mail ». Ils ont maintenant chacun leur
+   * section, et la separation va jusqu'au bout : la notification porte son
+   * texte, le courriel porte le sien, qui est celui de son modele — ou il
+   * existe dans les trois langues.
+   */
+  const mailBody = "";
+  const mailBodyHtml = null;
+  /**
+   * ⚠️ **Le push n'est plus un choix : il part avec la notification.**
+   *
+   * Il se decochait, par une case posee dans l'etape des canaux. Elle a ete
+   * retiree avec le reste de cette etape, et c'est coherent avec ce que le
+   * schema fait deja : **c'est l'ecriture de la notification qui declenche le
+   * push**, le couple n'a jamais ete separable dans l'autre sens. Ce qui
+   * reste separable — envoyer une notification sans courriel, ou l'inverse —
+   * est le mode, choisi en tete d'ecran.
+   */
+  const pushOn = notificationOn;
   const [confirming, setConfirming] = React.useState(false);
   const formRef = React.useRef<HTMLFormElement>(null);
   const [testing, startTest] = React.useTransition();
@@ -284,23 +306,17 @@ export function NotificationComposer({
    * ⚠️ **Le bouton doit repondre exactement comme le Server Action.**
    *
    * Il exigeait un corps dans tous les cas, y compris en courriel seul ou
-   * l'ecran venait d'annoncer le champ « facultatif » : le libelle disait
-   * une chose, le bouton grise en disait une autre, et c'est le bouton qui
-   * tranchait. Un garde-fou plus severe que la regle qu'il represente
-   * ne protege de rien — il cache un geste legitime, exactement comme une
-   * permission qui masque un bouton que l'action aurait accepte.
+   * l'ecran n'en montre plus aucun a remplir : le bouton restait grise sans
+   * qu'on puisse voir pourquoi. Un garde-fou plus severe que la regle qu'il
+   * represente ne protege de rien — il cache un geste legitime, exactement
+   * comme une permission qui masque un bouton que l'action aurait accepte.
    *
    * La regle, la meme des deux cotes : un titre, une cible quand elle se
    * choisit, et un corps **seulement si une notification part** — la cloche
-   * et l'ecran verrouille n'auraient rien a montrer. Le courriel, lui, peut
-   * tenir entierement dans les blocs de son modele.
-   *
-   * ⚠️ Les champs du texte dissocie ne bloquent plus non plus : vides, ils
-   * ne partent pas vides — `email_subject`/`email_body` nuls signifient « le
-   * courriel reprend le texte de la notification », et c'est ce que les
-   * invites de saisie annoncent deja.
+   * et l'ecran verrouille n'auraient rien a montrer. Le courriel, lui, tient
+   * entierement dans les blocs de son modele.
    */
-  const needsBody = mode !== "email";
+  const needsBody = notificationOn;
   const ready = Boolean(
     title.trim() && (!needsBody || body.trim()) && (!needsPick || targetValue),
   );
@@ -330,16 +346,19 @@ export function NotificationComposer({
       setPreviewing(true);
       // ⚠️ **Un composeur vide rend quand meme le courriel.** L'onglet
       // refusait tant qu'un titre et un message n'etaient pas tapes, alors
-      // que l'ecran verrouille d'a cote montrait deja son apercu avec des
-      // textes d'exemple : meme etat vide, deux comportements. Or ce qu'on
-      // vient verifier en ouvrant cet onglet, c'est justement l'habillage —
-      // le modele, les couleurs, la mise en page — et rien de tout cela ne
-      // depend de ce qu'on va ecrire.
+      // que l'ecran verrouille d'a cote montrait deja son apercu : meme etat
+      // vide, deux comportements. Or ce qu'on vient verifier en ouvrant cet
+      // onglet, c'est justement le modele — les couleurs, la mise en page,
+      // le texte qu'il porte — et rien de cela ne depend de la diffusion.
+      //
+      // ⚠️ Plus aucun texte d'exemple : ce qui est vide part vide, et c'est
+      // ce que le destinataire recevra. En courriel seul, l'apercu est donc
+      // exactement le modele.
       previewAction({
-        title: mailTitle.trim() || SAMPLE_TITLE,
-        heading: mailHeading?.trim() || null,
-        body: mailBody.trim() || SAMPLE_BODY,
-        bodyHtml: mailBody.trim() ? mailBodyHtml || null : null,
+        title: mailSubject.trim(),
+        heading: mailHeading,
+        body: mailBody.trim(),
+        bodyHtml: mailBodyHtml,
         templateId: templateId || null,
         locale: previewLocale,
       })
@@ -359,9 +378,7 @@ export function NotificationComposer({
       cancelled = true;
       clearTimeout(timer);
     };
-    // `SAMPLE_*` sont des chaines : la comparaison de dependances se fait par
-    // valeur, donc les citer ne relance pas l'effet a chaque rendu.
-  }, [previewTab, previewLocale, mailTitle, mailHeading, mailBody, mailBodyHtml, templateId, previewAction, SAMPLE_TITLE, SAMPLE_BODY]);
+  }, [previewTab, previewLocale, mailSubject, mailHeading, mailBody, mailBodyHtml, templateId, previewAction]);
 
   /**
    * ⚠️ **Le couple mode / cible se tient dans les deux sens.**
@@ -415,7 +432,7 @@ export function NotificationComposer({
         toast.success(result.message);
         setTitle("");
         setBody("");
-        setBodyHtml("");
+        setEmailSubject("");
       } else {
         toast.error(result.message);
       }
@@ -631,193 +648,143 @@ export function NotificationComposer({
               </p>
             </section>
 
-            <section className="space-y-2">
-              <Step number={3} label={i18n.t("Message")} />
-
-              {/* L'objet d'un courriel n'a pas la contrainte d'un titre de
-                  notification, que l'ecran verrouille tronque : le compteur
-                  pose sur la bordure change de plafond avec le mode. */}
-              <Field
-                label={mode === "email" ? i18n.t("Objet de l'e-mail") : i18n.t("Titre de la notification")}
-                htmlFor="notif-title"
-                aside={<Counter value={title.length} max={mode === "email" ? 120 : 64} />}
-              >
-                <input
-                  id="notif-title"
-                  name="title"
-                  required
-                  maxLength={mode === "email" ? 120 : 64}
-                  value={title}
-                  onChange={(event) => setTitle(event.target.value)}
-                  placeholder={i18n.t("Ex : ce que le destinataire lira en premier")}
-                  className="h-7 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-                />
-              </Field>
-
-              <div className="space-y-1.5">
-                {/* Le texte brut voyage dans `FormData` sous le nom que le
-                    Server Action lit depuis toujours ; la mise en forme
-                    l'accompagne a cote, sans le remplacer. */}
-                <input type="hidden" name="body" value={body} />
-                <input type="hidden" name="body_html" value={bodyHtml} />
+            {/* ⚠️⚠️ **Une section par canal, et chacune ne porte que le
+                sien.** Il n'y en avait qu'une, « Message », dont les deux
+                champs servaient les deux canaux a la fois : le titre de la
+                notification etait aussi l'objet du courriel et son titre
+                affiche, le corps de la notification etait aussi le texte du
+                courriel. Rien a l'ecran ne le disait, et en mode « les deux »
+                le courriel n'avait aucun champ a lui — « there is no place
+                for mail ». La separation va jusqu'au bout : ce que porte la
+                notification ne part plus par courriel, et inversement. */}
+            {notificationOn ? (
+              <section className="space-y-2">
+                <Step number={3} label={i18n.t("La notification")} />
                 <Field
-                  inset={false}
+                  label={i18n.t("Titre de la notification")}
+                  htmlFor="notif-title"
+                  aside={<Counter value={title.length} max={64} />}
+                >
+                  <input
+                    id="notif-title"
+                    name="title"
+                    required
+                    maxLength={64}
+                    value={title}
+                    onChange={(event) => setTitle(event.target.value)}
+                    placeholder={i18n.t("Ex : ce que le destinataire lira en premier")}
+                    className="h-7 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                  />
+                </Field>
+                <div className="space-y-1.5">
+                  {/* ⚠️ Une zone de saisie simple, plus un editeur riche. Le
+                      gras ne servait qu'au courriel, qui ne reprend plus ce
+                      texte : la cloche et l'ecran verrouille affichent du
+                      texte nu, et une barre d'outils qui ne change rien a
+                      l'arrivee promet une mise en page imaginaire. */}
+                  <Field
+                    inset={false}
+                    label={i18n.t("Corps du message")}
+                    htmlFor="notif-body"
+                    aside={<Counter value={body.length} max={LOCK_SCREEN_BODY_CHARS} soft />}
+                  >
+                    <textarea
+                      id="notif-body"
+                      name="body"
+                      rows={4}
+                      value={body}
+                      onChange={(event) => setBody(event.target.value)}
+                      placeholder={i18n.t("Detaillez la session, la date et ce que le destinataire doit faire.")}
+                      className="w-full resize-y bg-transparent text-sm leading-relaxed outline-none placeholder:text-muted-foreground"
+                    />
+                  </Field>
+                  <p className="text-[0.6875rem] leading-relaxed text-muted-foreground">
+                    {body.length > LOCK_SCREEN_BODY_CHARS
+                      ? i18n.t("Au-dela d'environ {0} caracteres, la suite est repliee sur l'ecran verrouille : le message reste entier dans l'application.", { "0": LOCK_SCREEN_BODY_CHARS })
+                      : i18n.t("Le texte part tel quel : aucune variable n'est remplacee a l'envoi.")}
+                  </p>
+                </div>
+              </section>
+            ) : null}
+
+            {/* ⚠️⚠️ **L'etape des canaux n'existe plus que pour le courriel.**
+                Elle montrait trois cartes de canal ; les retirer une a une a
+                fini par la vider. Le mode decide deja des canaux, et le push
+                n'en est pas un qu'on choisit — c'est l'ecriture de la
+                notification qui le declenche. Il ne restait que le modele du
+                courriel, qui lui se choisit vraiment : l'etape porte son nom
+                et n'apparait que lorsqu'un courriel part. Un titre d'etape
+                au-dessus de rien serait pire que l'etape supprimee.
+
+                Le nombre d'appareils joignables, qui tenait dans la carte du
+                push, n'est pas perdu : il vit dans « Portee reelle », en
+                regard de l'ecran, avec sa barre et sa mise en garde. */}
+            {/* Les canaux retenus partent dans `FormData` sous le meme nom,
+                comme avant : le Server Action lit `channels` inchange.
+                `in_app` et `push` vont ensemble — ils ne se separent plus a
+                l'ecran, et ils ne se separaient deja pas en base. */}
+            {notificationOn ? <input type="hidden" name="channels" value="in_app" /> : null}
+            {pushOn ? <input type="hidden" name="channels" value="push" /> : null}
+            {emailOn ? <input type="hidden" name="channels" value="email" /> : null}
+
+            {emailOn ? (
+              <section className="space-y-2">
+                <Step
+                  number={notificationOn ? 4 : 3}
+                  label={i18n.t("L'e-mail")}
+                />
+                {/* L'objet n'a pas la contrainte d'un titre de notification,
+                    que l'ecran verrouille tronque : 120 au lieu de 64.
+                    ⚠️ En courriel seul c'est `title` : aucune notification ne
+                    part, donc le seul titre de la diffusion est cet objet.
+                    En mode « les deux » il s'ajoute, facultatif, et vide il
+                    laisse le titre de la notification servir de repli. */}
+                <Field
                   label={
                     <>
-                      {mode === "email" ? i18n.t("Corps de l'e-mail") : i18n.t("Corps du message")}
-                      {/* ⚠️ Dit facultatif plutot que laisse deviner : le champ
-                          etait exige meme pour un courriel bati sur un modele,
-                          dont les blocs portent deja le texte. */}
-                      {mode === "email" ? (
+                      {i18n.t("Objet de l'e-mail")}
+                      {mode === "both" ? (
                         <span className="ml-1.5 font-normal normal-case text-muted-foreground">
                           {i18n.t("(facultatif)")}
                         </span>
                       ) : null}
                     </>
                   }
-                  /* ⚠️ Le compteur mesure ce que l'ecran verrouille d'un
-                     telephone laisse lire. Un courriel n'a pas d'ecran
-                     verrouille : afficher « 0 / 120 » sur un envoi par
-                     courriel seul annoncait une limite qui n'existe pas. */
+                  htmlFor="mail-subject"
                   aside={
-                    mode === "email" ? null : (
-                      <Counter value={body.length} max={LOCK_SCREEN_BODY_CHARS} soft />
-                    )
+                    <Counter value={(mode === "both" ? emailSubject : title).length} max={120} />
                   }
                 >
-                  <RichTextEditor
-                    value={bodyHtml}
-                    onChange={(html, text) => {
-                      setBodyHtml(html);
-                      setBody(text);
-                    }}
-                    placeholder={i18n.t("Detaillez la session, la date et ce que le destinataire doit faire.")}
+                  <input
+                    id="mail-subject"
+                    name={mode === "both" ? "email_subject" : "title"}
+                    required={mode !== "both"}
+                    maxLength={120}
+                    value={mode === "both" ? emailSubject : title}
+                    onChange={(event) =>
+                      mode === "both"
+                        ? setEmailSubject(event.target.value)
+                        : setTitle(event.target.value)
+                    }
+                    placeholder={
+                      mode === "both"
+                        ? title || i18n.t("Ex : ce que le destinataire lira en premier")
+                        : i18n.t("Ex : ce que le destinataire lira en premier")
+                    }
+                    className="h-7 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
                   />
                 </Field>
+                {/* ⚠️ Dire que cet objet peut ne pas servir. Un modele qui
+                    porte le sien l'impose, langue par langue — et il le doit :
+                    celui-ci ne peut etre ecrit qu'une fois, pour des
+                    destinataires qui ne lisent pas tous la meme langue. */}
                 <p className="text-[0.6875rem] leading-relaxed text-muted-foreground">
-                  {mode === "email"
-                    ? i18n.t("Le texte part tel quel : aucune variable n'est remplacee a l'envoi.")
-                    : body.length > LOCK_SCREEN_BODY_CHARS
-                      ? i18n.t("Au-dela d'environ {0} caracteres, la suite est repliee sur l'ecran verrouille : le message reste entier dans l'application.", { "0": LOCK_SCREEN_BODY_CHARS })
-                      : i18n.t("Le texte part tel quel : aucune variable n'est remplacee a l'envoi.")}
+                  {i18n.t("Si le modele choisi porte son propre objet, c'est le sien qui part, dans la langue de chaque destinataire.")}
                 </p>
-              </div>
-            </section>
-
-            {mode === "both" ? (
-              <section className="space-y-2 rounded-lg bg-background p-3">
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={sameText}
-                    onChange={(event) => setSameText(event.target.checked)}
-                    className="size-4 accent-brand"
-                  />
-                  <span className="text-xs font-medium">
-                    {i18n.t("Le courriel reprend le meme texte")}
-                  </span>
-                </label>
-                {splitText ? (
-                  <>
-                    <Field
-                      label={i18n.t("Objet de l'e-mail")}
-                      htmlFor="mail-title"
-                      surface="background"
-                      aside={<Counter value={emailTitle.length} max={120} />}
-                    >
-                      <input
-                        id="mail-title"
-                        maxLength={120}
-                        value={emailTitle}
-                        onChange={(event) => setEmailTitle(event.target.value)}
-                        placeholder={title || i18n.t("Ex : ce que le destinataire lira en premier")}
-                        className="h-7 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
-                      />
-                    </Field>
-                    <Field
-                      inset={false}
-                      surface="background"
-                      label={
-                        <>
-                          {i18n.t("Corps de l'e-mail")}
-                          <span className="ml-1.5 font-normal normal-case text-muted-foreground">
-                            {i18n.t("(facultatif)")}
-                          </span>
-                        </>
-                      }
-                    >
-                      {/* Vide, il ne part pas vide : le courriel reprend
-                          alors le texte de la notification. */}
-                      <RichTextEditor
-                        value={emailBodyHtml}
-                        onChange={(html, text) => {
-                          setEmailBodyHtml(html);
-                          setEmailBody(text);
-                        }}
-                        placeholder={i18n.t("Detaillez la session, la date et ce que le destinataire doit faire.")}
-                      />
-                    </Field>
-                  </>
-                ) : (
-                  <p className="text-[0.625rem] leading-relaxed text-muted-foreground">
-                    {i18n.t("Decochez pour rediger un objet et un corps propres au courriel.")}
-                  </p>
-                )}
-              </section>
-            ) : null}
-
-            <section className="space-y-2">
-              <Step number={4} label={i18n.t("Canaux de diffusion")} />
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                <ChannelCard
-                  icon={BellRingIcon}
-                  title="In-app"
-                  hint={i18n.t("Fil et cloche de l'application. Toujours envoye : c'est lui qui porte le push.")}
-                  state={notificationOn ? "always" : "off"}
-                  stateLabel={notificationOn ? i18n.t("Toujours") : i18n.t("Hors mode")}
-                />
-                <ChannelCard
-                  icon={SmartphoneIcon}
-                  title={i18n.t("Push mobile")}
-                  hint={
-                    reach.devices === null
-                      ? i18n.t("Portee non mesurable sur cette installation")
-                      : i18n.t("{0} compte(s) avec un appareil joignable", { "0": reach.devices })
-                  }
-                  state={!notificationOn ? "off" : channels.push.selectable ? "option" : "always"}
-                  stateLabel={
-                    !notificationOn ? i18n.t("Hors mode") : channels.push.reason || i18n.t("Toujours")
-                  }
-                  checked={pushOn}
-                  onToggle={() => setWithPush((value) => !value)}
-                />
-                <ChannelCard
-                  icon={MailIcon}
-                  title={i18n.t("Email")}
-                  hint={
-                    channels.email.selectable
-                      ? i18n.t("Adresse du compte destinataire")
-                      : channels.email.reason
-                  }
-                  state={emailOn ? "always" : "off"}
-                  stateLabel={emailOn ? i18n.t("Toujours") : i18n.t("Hors mode")}
-                />
-              </div>
-              {/* Les canaux retenus partent dans `FormData` sous le meme nom,
-                  comme avant : le Server Action lit `channels` inchange. */}
-              {notificationOn ? <input type="hidden" name="channels" value="in_app" /> : null}
-              {pushOn ? <input type="hidden" name="channels" value="push" /> : null}
-              {emailOn ? <input type="hidden" name="channels" value="email" /> : null}
-              {/* Le texte propre au courriel ne voyage que s'il existe :
-                  absent, le Server Action reprend celui de la notification. */}
-              {splitText ? (
-                <>
-                  <input type="hidden" name="email_subject" value={emailTitle} />
-                  <input type="hidden" name="email_body" value={emailBody} />
-                  <input type="hidden" name="email_body_html" value={emailBodyHtml} />
-                </>
-              ) : null}
-              {emailOn && templates.length ? (
+                <p className="rounded-lg bg-muted px-3 py-2 text-[0.6875rem] leading-relaxed text-muted-foreground">
+                  {i18n.t("Le texte de ce courriel vient du modele choisi ci-dessous, ou il est ecrit dans les trois langues. Chaque destinataire le recoit dans la sienne.")}
+                </p>
+                {templates.length ? (
                 <Field
                   label={i18n.t("Modele d'e-mail")}
                   htmlFor="notif-template"
@@ -845,18 +812,17 @@ export function NotificationComposer({
                     ))}
                   </NativeSelect>
                 </Field>
-              ) : null}
-              {notificationOn && !pushOn ? (
-                <p className="rounded-lg bg-warning/10 px-3 py-2 text-[0.6875rem] leading-relaxed text-warning">
-                  {i18n.t("Sans push, la notification n'apparaitra que dans l'application : personne ne sera alerte sur son telephone.")}
-                </p>
-              ) : null}
-              {mode === "email" && !channels.email.selectable ? (
-                <p className="rounded-lg bg-destructive/10 px-3 py-2 text-[0.6875rem] leading-relaxed text-destructive">
-                  {channels.email.reason}
-                </p>
-              ) : null}
-            </section>
+                ) : null}
+              </section>
+            ) : null}
+
+            {/* Hors de l'etape : un courriel qui ne peut pas partir n'est pas
+                un reglage d'envoi, c'est un refus a lire avant d'essayer. */}
+            {mode === "email" && !channels.email.selectable ? (
+              <p className="rounded-lg bg-destructive/10 px-3 py-2 text-[0.6875rem] leading-relaxed text-destructive">
+                {channels.email.reason}
+              </p>
+            ) : null}
 
             <div className="flex flex-col items-stretch justify-between gap-2 border-t border-border/70 pt-3 sm:flex-row sm:items-center">
               <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -978,11 +944,6 @@ export function NotificationComposer({
                 <span className="absolute top-2 right-2 z-10 flex items-center gap-1.5 rounded-full bg-card/90 px-2 py-1 text-[0.625rem] text-muted-foreground shadow-sm">
                   <Loader2Icon className="size-3 animate-spin" />
                   {i18n.t("Rendu en cours")}
-                </span>
-              ) : null}
-              {previewIsSample && previewHtml ? (
-                <span className="absolute top-2 left-2 z-10 rounded-full bg-card/90 px-2 py-1 text-[0.625rem] font-semibold text-muted-foreground shadow-sm">
-                  {i18n.t("Exemple")}
                 </span>
               ) : null}
               {previewHtml ? (
@@ -1260,99 +1221,6 @@ function Counter({ value, max, soft }: { value: number; max: number; soft?: bool
       {value} / {max}
     </span>
   );
-}
-
-/**
- * Un canal de diffusion.
- *
- * ⚠️ Trois etats, et la difference est le fond du sujet : `always` est un
- * **fait** (l'in-app et le push partent avec la notification, rien ne les
- * decoche), `option` est un **choix**, `off` est une **absence** dont la
- * raison est ecrite. Les trois se dessinaient auparavant avec la meme case a
- * cocher, qui ne cochait rien.
- */
-function ChannelCard({
-  icon: Icon,
-  title,
-  hint,
-  state,
-  stateLabel,
-  checked,
-  onToggle,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  title: string;
-  hint: string;
-  state: "always" | "option" | "off";
-  stateLabel?: string;
-  checked?: boolean;
-  onToggle?: () => void;
-}) {
-  // ⚠️ L'etat est pose **au-dessus** du descriptif, pas a cote : cote a cote,
-  // « Toujours » et « Indisponible » sont `shrink-0` et prennent leur largeur
-  // sur le texte, qui se faisait raboter bien avant de deborder. Le descriptif
-  // occupe donc sa propre ligne, et il se replie au lieu d'etre coupe.
-  //
-  // ⚠️⚠️ **Et la premiere ligne se replie aussi.** Rabattre l'etat sous le
-  // descriptif avait suffi en francais (« Hors mode »), pas en anglais : « OFF
-  // IN THIS MODE » reclame 170 px la ou la carte en offre 176 a 1280 px — la
-  // largeur ou la colonne tombe a 8/12 — et le titre du canal se lisait « E… ».
-  // Le titre ne se rabote plus : c'est l'etat qui passe a la ligne, pousse a
-  // droite par `ml-auto` dans les deux cas.
-  const body = (
-    <>
-      <span className="flex w-full flex-wrap items-center gap-x-2 gap-y-1">
-        <span className="flex min-w-0 items-center gap-2">
-          <Icon
-            className={cn(
-              "size-4 shrink-0",
-              state === "off" ? "text-muted-foreground" : "text-brand",
-            )}
-          />
-          <span className="truncate text-xs font-semibold">{title}</span>
-        </span>
-        {state === "option" ? (
-          <span
-            aria-hidden
-            className={cn(
-              "ml-auto flex size-4 shrink-0 items-center justify-center rounded border",
-              checked ? "border-brand bg-brand text-brand-foreground" : "border-border",
-            )}
-          >
-            {checked ? <CheckIcon className="size-3" /> : null}
-          </span>
-        ) : (
-          // Pas d'icone a cote de l'etat : les seize pixels qu'elle prend
-          // etaient pris sur le titre du canal, rabote a 1280 px. Le mot
-          // suffit, et l'opacite de la carte dit deja l'absence.
-          <span className="micro-label ml-auto shrink-0 text-muted-foreground">{stateLabel}</span>
-        )}
-      </span>
-      <span className="mt-1 line-clamp-2 text-[0.625rem] leading-relaxed text-muted-foreground">
-        {hint}
-      </span>
-    </>
-  );
-
-  const shell = cn(
-    "flex flex-col items-start rounded-lg bg-background p-3 text-left",
-    state === "off" && "opacity-60",
-  );
-
-  if (state === "option") {
-    return (
-      <button
-        type="button"
-        role="checkbox"
-        aria-checked={checked}
-        onClick={onToggle}
-        className={cn(shell, "transition-colors hover:bg-accent/50")}
-      >
-        {body}
-      </button>
-    );
-  }
-  return <div className={shell}>{body}</div>;
 }
 
 function ReachRow({ label, value, hint }: { label: string; value: string; hint: string }) {

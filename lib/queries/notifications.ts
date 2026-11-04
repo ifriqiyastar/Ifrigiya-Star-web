@@ -58,26 +58,25 @@ const UNAVAILABLE = (reason: ChannelState["reason"]): ChannelState => ({
  * administrateur, comme la validation d'un Scout Day ou d'une publication.
  */
 export async function fetchChannelStates(canChoose: boolean): Promise<{
-  push: ChannelState;
   email: ChannelState;
 }> {
   const supabase = await createClient();
 
-  const [pushProbe, emailProbe] = await Promise.all([
-    supabase.rpc("admin_broadcast_notification", {
-      p_title: "sonde",
-      p_body: "sonde",
-      p_target_type: "__sonde__",
-      p_target_value: null,
-      p_push: true,
-    }),
-    process.env.RESEND_API_KEY
-      ? supabase.rpc("admin_broadcast_recipients", {
-          p_target_type: "__sonde__",
-          p_target_value: null,
-        })
-      : Promise.resolve({ error: null }),
-  ]);
+  /**
+   * ⚠️ **Une seule sonde desormais.** Il y en avait deux, dont une sur
+   * `admin_broadcast_notification` pour savoir si le push se laissait
+   * decocher. Le push n'est plus un choix — il accompagne la notification,
+   * c'est son ecriture qui le declenche — donc plus personne ne lisait cette
+   * reponse : un aller-retour paye a chaque ouverture de l'ecran pour une
+   * valeur jetee. Une migration manquante se signale maintenant la ou elle
+   * gene, a l'envoi, ou le Server Action nomme deja le fichier a appliquer.
+   */
+  const emailProbe = process.env.RESEND_API_KEY
+    ? await supabase.rpc("admin_broadcast_recipients", {
+        p_target_type: "__sonde__",
+        p_target_value: null,
+      })
+    : { error: null };
 
   const absent = (error: { code?: string; message?: string } | null, name: string) =>
     error?.code === "PGRST202" || new RegExp(name, "i").test(error?.message ?? "");
@@ -85,12 +84,6 @@ export async function fetchChannelStates(canChoose: boolean): Promise<{
   // L'ordre des refus compte : dire « droits insuffisants » a quelqu'un dont
   // l'installation n'a pas la migration l'enverrait demander un role qui ne
   // changerait rien.
-  const push = absent(pushProbe.error, "admin_broadcast_notification")
-    ? UNAVAILABLE("migration")
-    : canChoose
-      ? { selectable: true, reason: "" as const }
-      : UNAVAILABLE("permission");
-
   const email = !process.env.RESEND_API_KEY
     ? UNAVAILABLE("unconfigured")
     : absent(emailProbe.error, "admin_broadcast_recipients")
@@ -99,7 +92,7 @@ export async function fetchChannelStates(canChoose: boolean): Promise<{
         ? { selectable: true, reason: "" as const }
         : UNAVAILABLE("permission");
 
-  return { push, email };
+  return { email };
 }
 
 /**
@@ -135,10 +128,20 @@ export type CampaignRow = {
   error_message: string | null;
   created_by: string | null;
   created_at: string;
+  /**
+   * Le modele employe, quand le projet a la colonne.
+   *
+   * ⚠️ Facultative : elle fait partie des trois colonnes qu'un projet peut ne
+   * pas avoir (`OPTIONAL` dans `lib/actions/notifications.ts`), et la lecture
+   * se replie sans elle. Elle sert a dire de quoi parlait une diffusion par
+   * courriel seul — depuis que le texte vient du modele, `body` y est vide.
+   */
+  email_template_id?: string | null;
 };
 
-const CAMPAIGN_COLUMNS =
+const CAMPAIGN_CORE =
   "id, title, body, target_type, target_value, channels, status, recipient_count, error_message, created_by, created_at";
+const CAMPAIGN_COLUMNS = `${CAMPAIGN_CORE}, email_template_id`;
 
 /**
  * Le journal des campagnes, filtre **dans la requete**.
@@ -155,20 +158,30 @@ export async function fetchCampaignJournal(params: {
 }) {
   const supabase = await createClient();
 
-  let query = supabase
-    .from("admin_notification_campaigns")
-    .select(CAMPAIGN_COLUMNS, { count: "exact" });
+  // ⚠️ Degrade a l'ouverture, comme ailleurs : la colonne du modele peut
+  // manquer (`202609300007` non appliquee). Isolee, son absence coute a la
+  // ligne la mention du modele, pas le journal entier.
+  const read = (columns: string) => {
+    let query = supabase
+      .from("admin_notification_campaigns")
+      .select(columns, { count: "exact" });
 
-  if (params.statut) query = query.eq("status", params.statut);
-  if (params.cible) query = query.eq("target_type", params.cible);
-  if (params.q) {
-    const term = orLikeTerm(params.q);
-    query = query.or(`title.ilike.${term},body.ilike.${term}`);
+    if (params.statut) query = query.eq("status", params.statut);
+    if (params.cible) query = query.eq("target_type", params.cible);
+    if (params.q) {
+      const term = orLikeTerm(params.q);
+      query = query.or(`title.ilike.${term},body.ilike.${term}`);
+    }
+
+    return query
+      .order("created_at", { ascending: false })
+      .range((params.page - 1) * CAMPAIGNS_PAGE_SIZE, params.page * CAMPAIGNS_PAGE_SIZE - 1);
+  };
+
+  let { data, count, error } = await read(CAMPAIGN_COLUMNS);
+  if (error?.code === "42703" && error.message.includes("email_template_id")) {
+    ({ data, count, error } = await read(CAMPAIGN_CORE));
   }
-
-  const { data, count, error } = await query
-    .order("created_at", { ascending: false })
-    .range((params.page - 1) * CAMPAIGNS_PAGE_SIZE, params.page * CAMPAIGNS_PAGE_SIZE - 1);
 
   const rows = (data ?? []) as unknown as CampaignRow[];
 

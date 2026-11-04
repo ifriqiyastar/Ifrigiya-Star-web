@@ -106,6 +106,15 @@ export const isHexColor = (value: string) => /^#[0-9a-f]{6}$/i.test(value.trim()
 /** Ce que la base peut remplacer. Toutes les colonnes sont nullables. */
 export type EmailTemplateRow = {
   locale: string;
+  /**
+   * L'objet du courriel pour cette langue.
+   *
+   * ⚠️ Facultative a dessein, comme `show_greeting` : un projet ou
+   * `202611040001` n'est pas passe n'a pas la colonne, et les lectures se
+   * font en `select("*")`. Absente — ou vide — la diffusion impose son
+   * propre objet, c'est-a-dire exactement ce qui se passait avant.
+   */
+  subject?: string | null;
   sender_name: string | null;
   reply_to: string | null;
   greeting_named: string | null;
@@ -117,6 +126,13 @@ export type EmailTemplateRow = {
    * migration manque.
    */
   show_greeting?: boolean | null;
+  /**
+   * ⚠️ Facultative a dessein, comme `show_greeting` : un projet ou
+   * `202611040002` n'est pas passe n'a pas la colonne. Absente, elle vaut
+   * « affiche » — un pied de page ne disparait pas parce qu'une migration
+   * manque, et c'est lui qui porte le lien de desabonnement.
+   */
+  show_footer?: boolean | null;
   show_cta: boolean | null;
   cta_label: string | null;
   cta_url: string | null;
@@ -137,12 +153,33 @@ export type EmailTemplateRow = {
 /** L'habillage effectif d'une langue, defauts et personnalisation fusionnes. */
 export type ResolvedEmailCopy = {
   dir: "ltr" | "rtl";
+  /**
+   * L'objet que ce modele impose dans cette langue, ou `null`.
+   *
+   * ⚠️ **Aucun defaut livre, et c'est voulu.** Les autres champs retombent
+   * sur `EMAIL_COPY` parce qu'un courriel doit bien avoir un pied de page et
+   * un accueil ; un objet generique (« Une annonce d'Ifriqiya Soccer Star »)
+   * serait pire que pas d'objet du tout — il partirait sur des annonces qui
+   * n'ont rien a voir entre elles. `null` veut dire « ce modele n'en impose
+   * pas », et la diffusion met le sien.
+   */
+  subject: string | null;
   senderName: string;
   replyTo: string | null;
   greetingNamed: string;
   greetingPlain: string;
   /** `false` : aucune ligne d'accueil, ni avec nom ni sans. */
   showGreeting: boolean;
+  /**
+   * `false` : aucun pied de page — ni mention, ni lien de desabonnement
+   * visible, ni droits.
+   *
+   * ⚠️ L'en-tete `List-Unsubscribe` part quand meme : il est pose par
+   * `lib/email/campaign.ts`, hors du gabarit, et c'est lui que Gmail et Yahoo
+   * exigent d'un envoi de masse. Ce qui disparait est le lien **dans le
+   * corps**, ce qu'une annonce adressee a une liste doit garder.
+   */
+  showFooter: boolean;
   showCta: boolean;
   ctaLabel: string;
   /** `null` = pas de bouton : ni libelle, ni adresse ou l'envoyer. */
@@ -177,11 +214,13 @@ export function resolveEmailCopy(
     // Le sens de lecture n'est **pas** modifiable : il decoule de la langue,
     // et l'arabe en ltr est illisible. Ce n'est pas une preference.
     dir: base.dir,
+    subject: (row?.subject ?? "").trim() || null,
     senderName: pick(row?.sender_name, DEFAULT_SENDER_NAME),
     replyTo: (row?.reply_to ?? "").trim() || null,
     greetingNamed: pick(row?.greeting_named, base.greetingNamed),
     greetingPlain: pick(row?.greeting_plain, base.greetingPlain),
     showGreeting: row?.show_greeting ?? true,
+    showFooter: row?.show_footer ?? true,
     showCta: row?.show_cta ?? true,
     ctaLabel: pick(row?.cta_label, base.ctaLabel),
     ctaUrl: (row?.cta_url ?? "").trim() || siteUrl,

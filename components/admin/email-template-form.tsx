@@ -6,6 +6,7 @@ import {
   CheckIcon,
   HandIcon,
   Loader2Icon,
+  MailIcon,
   MonitorIcon,
   MousePointerClickIcon,
   PaletteIcon,
@@ -100,6 +101,15 @@ export function EmailTemplateForm({
     greetingOverrides[value] ?? rows[value]?.show_greeting ?? true;
   const setShowGreeting = (value: Locale, next: boolean) =>
     setGreetingOverrides((current) => ({ ...current, [value]: next }));
+  // Et pour le pied de page, meme raison : ses quatre champs vides reprennent
+  // les textes livres, donc seul un interrupteur peut le retirer.
+  const [footerOverrides, setFooterOverrides] = React.useState<
+    Partial<Record<Locale, boolean>>
+  >({});
+  const showFooterFor = (value: Locale) =>
+    footerOverrides[value] ?? rows[value]?.show_footer ?? true;
+  const setShowFooter = (value: Locale, next: boolean) =>
+    setFooterOverrides((current) => ({ ...current, [value]: next }));
   const customisedIn = (value: Locale, field: keyof EmailTemplateRow) =>
     Boolean((rows[value]?.[field] ?? "").toString().trim());
 
@@ -198,6 +208,24 @@ export function EmailTemplateForm({
                 son modele, il lui manque seulement de quoi savoir quelle
                 ligne ecrire. */}
             <input type="hidden" name="locale" value={formLocale} />
+            {/* ⚠️ **L'objet en premier, et dans le modele.** C'est la seule
+                piece du courriel qui ne parlait qu'une langue : l'envoi rend
+                une variante par langue de destinataire, mais l'objet tape au
+                composeur partait tel quel aux trois. Ecrit ici, il suit la
+                langue du compte comme tout le reste. */}
+            <Group icon={MailIcon} title={i18n.t("Objet")}>
+              <Field
+                name="subject"
+                label={i18n.t("Objet du courriel")}
+                hint={i18n.t("Ce que le destinataire lit dans sa boite de reception. Vide : la diffusion impose le sien, et il part dans la meme langue pour tout le monde.")}
+                defaultValue={rows[formLocale]?.subject ?? ""}
+                placeholder={i18n.t("aucun")}
+                changed={customisedIn(formLocale, "subject")}
+                disabled={disabled}
+                className="sm:col-span-2"
+              />
+            </Group>
+
             <Group icon={AtSignIcon} title={i18n.t("Expediteur")}>
               <Field
                 name="sender_name"
@@ -366,13 +394,37 @@ export function EmailTemplateForm({
                 disabled={disabled}
                 rows={2}
               />
+              {/* Decocher **cache** le pied, il n'efface aucun des quatre
+                  textes : recocher les retrouve tels quels. Meme mecanique
+                  que l'accueil et le bouton. */}
+              <label className="flex items-center gap-2 sm:col-span-2">
+                <input
+                  type="checkbox"
+                  name="show_footer"
+                  checked={showFooterFor(formLocale)}
+                  disabled={disabled}
+                  onChange={(event) => setShowFooter(formLocale, event.target.checked)}
+                  className="size-4 accent-brand"
+                />
+                <span className="text-xs font-medium">
+                  {i18n.t("Afficher le pied de page")}
+                </span>
+              </label>
+              {/* ⚠️⚠️ Dit **au moment ou l'on decoche** ce que le pied emporte
+                  avec lui. Decouvrir a la reception qu'une annonce est partie
+                  sans lien de desabonnement serait le decouvrir trop tard. */}
+              {showFooterFor(formLocale) ? null : (
+                <p className="rounded-lg bg-warning/10 px-3 py-2 text-[0.625rem] leading-relaxed text-warning sm:col-span-2">
+                  {i18n.t("Sans pied de page, le lien de desabonnement disparait du message. Les messageries continuent d'en proposer un depuis leur propre interface, mais une annonce adressee a une liste doit garder le lien visible : ne retirez ce pied que sur un message lie au compte.")}
+                </p>
+              )}
               <Field
                 name="footer_why"
                 label={i18n.t("Pourquoi ce message")}
                 defaultValue={rows[formLocale]?.footer_why ?? ""}
                 placeholder={defaults[formLocale].footerWhy}
                 changed={customisedIn(formLocale, "footer_why")}
-                disabled={disabled}
+                disabled={disabled || !showFooterFor(formLocale)}
                 rows={2}
               />
               <Field
@@ -381,7 +433,7 @@ export function EmailTemplateForm({
                 defaultValue={rows[formLocale]?.unsubscribe_label ?? ""}
                 placeholder={defaults[formLocale].unsubscribeLabel}
                 changed={customisedIn(formLocale, "unsubscribe_label")}
-                disabled={disabled}
+                disabled={disabled || !showFooterFor(formLocale)}
               />
               <Field
                 name="unsubscribe_hint"
@@ -389,7 +441,7 @@ export function EmailTemplateForm({
                 defaultValue={rows[formLocale]?.unsubscribe_hint ?? ""}
                 placeholder={defaults[formLocale].unsubscribeHint}
                 changed={customisedIn(formLocale, "unsubscribe_hint")}
-                disabled={disabled}
+                disabled={disabled || !showFooterFor(formLocale)}
                 rows={2}
               />
               <Field
@@ -398,7 +450,7 @@ export function EmailTemplateForm({
                 defaultValue={rows[formLocale]?.rights ?? ""}
                 placeholder={defaults[formLocale].rights}
                 changed={customisedIn(formLocale, "rights")}
-                disabled={disabled}
+                disabled={disabled || !showFooterFor(formLocale)}
                 className="sm:col-span-2"
               />
             </Group>
@@ -463,7 +515,7 @@ export function EmailTemplateForm({
             />
           </div>
           <p className="border-t border-border px-3 py-2 text-[0.625rem] leading-relaxed text-muted-foreground">
-            {i18n.t("Rendu par le meme code que l'envoi, avec un message d'exemple. Il se met a jour apres enregistrement.")}
+            {i18n.t("Rendu par le meme code que l'envoi. Il se met a jour apres enregistrement.")}
           </p>
         </div>
       </div>

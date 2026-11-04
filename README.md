@@ -66,13 +66,22 @@ bloquent les images, soit la plupart par defaut.
 **Notification, e-mail, ou les deux.** Le composeur ouvre sur ce choix. En
 mode « un e-mail », **aucune notification n'est ecrite** : rien dans la cloche,
 rien sur le telephone, seulement le courriel — et l'intitule devient « objet »,
-avec 120 caracteres au lieu des 64 d'un titre d'ecran verrouille. En mode
-« les deux », une case permet de rediger un objet et un corps propres au
-courriel plutot que de reprendre ceux de la notification. Demande la migration
-`202609300007_campaign_email_subject.sql`.
+avec 120 caracteres au lieu des 64 d'un titre d'ecran verrouille.
+
+**Une section par canal.** « La notification » porte son titre et son corps,
+« L'e-mail » porte son objet et son modele ; en mode « les deux », les deux
+sections coexistent et **rien ne passe de l'une a l'autre**. Le texte d'un
+courriel s'ecrit dans son modele, ou il existe dans les trois langues, et
+chaque destinataire le recoit dans la sienne — un champ de saisie unique
+n'aurait pu en servir qu'une. L'objet suit la meme regle
+(`202611040001_email_template_subject.sql`) : celui du composeur ne sert que
+si le modele n'en impose aucun.
 
 ⚠️ Le push reste indissociable de l'in-app — c'est l'ecriture de la
-notification qui le declenche. C'est le **couple** qui est facultatif.
+notification qui le declenche. C'est le **couple** qui est facultatif, et il
+l'est par le mode : le composeur n'a plus de case pour retirer le push d'une
+notification qui part quand meme. Le nombre d'appareils joignables se lit dans
+« Portee reelle », en regard du composeur.
 
 **Avant d'envoyer.** Le bouton « Envoi test » envoie la notification **et le
 vrai courriel** a votre propre compte, par le meme chemin que la diffusion :
@@ -359,6 +368,8 @@ Dans cet ordre, sur le projet Supabase partage. Toutes sont idempotentes.
 | [`202610210001_admin_guard.sql`](supabase/migrations/202610210001_admin_guard.sql) | back-office | `admin_guard()` : `requireAdmin()` + `requirePermission()` + `getAdminAccess()` en une seule lecture, le preambule paye par **chaque page**. **Facultative** au meme titre que 202610140001. |
 | [`202610220001_admin_dashboard_counts.sql`](supabase/migrations/202610220001_admin_dashboard_counts.sql) | back-office | `admin_dashboard_counts()` : les lectures que `/admin` posait a cote de `get_admin_dashboard()`, rendues en une. **Facultative** — sans elle le tableau de bord retombe sur ces requetes, affiche les memes chiffres, et se charge plus lentement. |
 | [`202610230001_admin_dashboard_period.sql`](supabase/migrations/202610230001_admin_dashboard_period.sql) | back-office | La periode du tableau de bord atteint les revenus. Ils venaient d'une vue groupee par **mois** et la page y appliquait une fenetre en **jours** : « 7 derniers jours » consulte apres le 7 du mois ecartait le mois en cours et affichait zero. Le fenetrage descend dans la requete, au pas qui convient (jour / semaine / mois), et la fonction renvoie la borne reelle de la fenetre. **Facultative** — sans elle l'ecran montre les douze derniers mois **et l'annonce**. |
+| [`202611040001_email_template_subject.sql`](supabase/migrations/202611040001_email_template_subject.sql) | back-office | L'objet du courriel vit dans le modele, langue par langue : l'envoi rendait deja une variante par langue de destinataire, mais l'objet partait en francais a tout le monde. **Facultative** — sans elle, l'objet reste celui que la diffusion saisit. |
+| [`202611040002_email_template_footer_toggle.sql`](supabase/migrations/202611040002_email_template_footer_toggle.sql) | back-office | Le pied de page d'un modele se retire, sans effacer ses textes. ⚠️ Il emporte le **lien de desabonnement visible** ; l'en-tete `List-Unsubscribe` part quand meme, et l'ecran previent au decochage. **Facultative** — sans elle le pied reste affiche. |
 
 ### Validation des retraits de contenu
 

@@ -332,6 +332,33 @@ const chunk = <T,>(items: T[], size: number) =>
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
+ * L'objet d'une campagne, dans la langue d'un destinataire.
+ *
+ * ⚠️ **C'etait la derniere piece du courriel qui ne parlait qu'une langue.**
+ * L'envoi rend deja une variante par langue — l'habillage et les blocs du
+ * modele suivent `profiles.locale` — mais l'objet etait une seule chaine
+ * posee sur les trois : un anglophone lisait un objet francais au-dessus
+ * d'un corps anglais. Il vient desormais du modele (`subject`, une valeur
+ * par langue, migration `202611040001`).
+ *
+ * ⚠️ **`title` reste le repli, et il en faut un** : un modele peut n'imposer
+ * aucun objet, et sur un projet ou la migration n'est pas passee la colonne
+ * n'existe pas du tout. Dans ces deux cas on envoie ce que la diffusion a
+ * fourni — c'est-a-dire exactement ce qui partait avant.
+ *
+ * Le prefixe est pose **apres** ce choix, pour que le « [Test] » de l'envoi
+ * a soi-meme coiffe l'objet reellement employe et non son repli.
+ */
+export function campaignSubject(
+  copy: Partial<Record<Locale, ResolvedEmailCopy>> | undefined,
+  locale: Locale,
+  title: string,
+  prefix?: string,
+): string {
+  return `${prefix ?? ""}${(copy?.[locale]?.subject ?? "").trim() || title}`;
+}
+
+/**
  * Diffuse une campagne par courriel.
  *
  * ⚠️ **Un message par destinataire, jamais un `to` collectif.** Mettre mille
@@ -353,6 +380,7 @@ export async function sendCampaignEmails({
   copy,
   bodyDoc,
   blocks,
+  subjectPrefix,
 }: {
   /** Identifiant stable de la diffusion : sert de cle d'idempotence. */
   campaignKey: string;
@@ -375,6 +403,15 @@ export async function sendCampaignEmails({
   bodyDoc?: RichDoc | null;
   /** La mise en page du modele choisi. */
   blocks?: EmailBlock[];
+  /**
+   * Ce qui prefixe l'objet, quelle que soit sa provenance.
+   *
+   * ⚠️ Existe pour le « [Test] » de l'envoi a soi-meme. Le prefixer sur
+   * `title` ne suffirait plus : depuis que le modele impose son propre
+   * objet, `title` n'est qu'un repli, et un test serait parti sous un objet
+   * en tout point identique a celui d'une vraie diffusion.
+   */
+  subjectPrefix?: string;
 }): Promise<CampaignEmailResult> {
   const apiKey = emailChannelKey();
   const empty: CampaignEmailResult = {
@@ -393,6 +430,8 @@ export async function sendCampaignEmails({
   const targets = recipients.slice(0, MAX_EMAIL_RECIPIENTS);
   const skipped = recipients.length - targets.length;
 
+  const subjectFor = (locale: Locale) => campaignSubject(copy, locale, title, subjectPrefix);
+
   // Un rendu par variante reellement utilisee, pas un par destinataire.
   const variants = new Map<string, Rendered>();
   const variantOf = async (locale: Locale, named: boolean, withUnsubscribe: boolean) => {
@@ -400,7 +439,7 @@ export async function sendCampaignEmails({
     const cached = variants.get(key);
     if (cached) return cached;
     const resolvedCopy = copy?.[locale] ?? resolveEmailCopy(locale, null, SITE_URL);
-    const rendered = await renderVariant(locale, named, title, heading, body, withUnsubscribe, resolvedCopy, bodyDoc ?? null, blocks);
+    const rendered = await renderVariant(locale, named, subjectFor(locale), heading, body, withUnsubscribe, resolvedCopy, bodyDoc ?? null, blocks);
     variants.set(key, rendered);
     return rendered;
   };
@@ -422,7 +461,7 @@ export async function sendCampaignEmails({
         from: `${sanitizeSenderName(resolvedCopy.senderName)} <${EMAIL_ADDRESS}>`,
         ...(resolvedCopy.replyTo ? { replyTo: resolvedCopy.replyTo } : {}),
         to: [recipient.email],
-        subject: title,
+        subject: subjectFor(locale),
         html: rendered.html,
         text: rendered.text,
         ...(topicId ? { topicId } : {}),

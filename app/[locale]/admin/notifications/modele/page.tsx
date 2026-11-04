@@ -52,7 +52,16 @@ export default async function EmailTemplatesPage() {
     await Promise.all(
       catalogue.templates.map(async (template) => {
         const detail = catalogue.details.get(template.id);
-        const html = detail ? await renderCampaignPreview("fr", detail.resolved.fr) : "";
+        // ⚠️ **Les blocs, pas seulement l'habillage.** La vignette les
+        // omettait : elle ne montrait donc de chaque modele que l'en-tete,
+        // l'accueil et le pied, et deux modeles au contenu different se
+        // ressemblaient trait pour trait. Invisible tant qu'un message
+        // d'exemple remplissait le milieu — depuis qu'il a ete retire, la
+        // vignette aurait ete creuse. C'est le corps compose qui distingue
+        // un modele d'un autre, c'est lui que la galerie doit montrer.
+        const html = detail
+          ? await renderCampaignPreview("fr", detail.resolved.fr, detail.template.blocks)
+          : "";
         return [template.id, html] as const;
       }),
     ),

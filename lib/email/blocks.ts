@@ -60,6 +60,15 @@ export type EmailBlock =
   | { id: string; type: "spacer"; size: "s" | "m" | "l" };
 
 /** Le corps par defaut : ce que rend un modele qui n'a rien compose. */
+/**
+ * La mise en page d'un modele qui n'en a pas.
+ *
+ * ⚠️ Toujours le bloc `message` : c'est ce qui fait qu'un projet sans la
+ * migration des blocs rend exactement ce qu'il rendait — un courriel ou le
+ * texte de la campagne occupe tout le corps. Les campagnes d'aujourd'hui
+ * n'en apportent plus, et un tel modele rend alors un habillage seul, ce qui
+ * est exact : il ne compose rien.
+ */
 export const DEFAULT_BLOCKS: EmailBlock[] = [{ id: "message", type: "message" }];
 
 const MAX_BLOCKS = 40;
@@ -158,10 +167,20 @@ export function normalizeBlocks(value: unknown): EmailBlock[] {
     // Tout autre `type` est ignore : c'est la liste blanche.
   }
 
+  /**
+   * ⚠️⚠️ **Le bloc `message` n'est plus impose.**
+   *
+   * Il l'etait parce que le texte d'une campagne devait avoir un endroit ou
+   * se poser : sans lui, il disparaissait sans un mot. Une diffusion
+   * n'apporte plus de texte au courriel — ce qu'il raconte vit dans ses
+   * blocs, en trois langues — donc l'emplacement n'a plus rien a accueillir,
+   * et l'ajouter de force poserait un bloc vide dans tous les modeles.
+   *
+   * ⚠️ Il reste **accepte** a la lecture : les modeles enregistres en
+   * portent un (le modele beta de `202611020002`, par exemple), et le
+   * supprimer a la normalisation reecrirait leur mise en page a leur insu.
+   * Vide, il ne rend rien (`emails/blocks.tsx`).
+   */
   if (!blocks.length) return DEFAULT_BLOCKS;
-  // ⚠️ Le message doit avoir un endroit ou aller. Sans bloc `message`, le
-  // texte de la campagne n'aurait nulle part ou se poser et disparaitrait
-  // sans un mot — on le remet a la fin.
-  if (!seenMessage) blocks.push({ id: "message", type: "message" });
   return blocks;
 }

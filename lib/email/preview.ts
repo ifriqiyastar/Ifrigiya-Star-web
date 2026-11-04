@@ -12,36 +12,33 @@ import type { EmailBlock } from "@/lib/email/blocks";
 import type { RichDoc } from "@/lib/rich-text/server";
 
 /**
- * Le message d'exemple de l'apercu, dans la langue montree.
+ * Le nom d'exemple de l'apercu, dans la langue montree.
  *
- * ⚠️ **Un texte qui se lit comme un emplacement, pas comme une annonce.**
- * L'exemple etait une session Scout Day, redigee comme un vrai message : sur
- * un catalogue qui porte desormais une invitation aux beta testeurs et des
- * annonces marketing, chaque modele s'apercevait donc en Scout Day, et le
- * modele semblait parler de ce dont il ne parle pas. Or ces deux lignes ne
- * sont **pas** le modele : elles tiennent la place du titre et du message
- * que la campagne apportera, et les blocs du modele — eux — portent bien son
- * contenu propre. Un emplacement doit se donner pour ce qu'il est.
+ * ⚠️ **Un nom, et plus de message.** L'apercu posait aussi un titre et un
+ * texte d'exemple dans le bloc `message` du modele. Sur un ecran dont tout
+ * l'objet est de montrer ce que le modele contient, ces deux lignes etaient
+ * la seule chose fausse a l'image — et, prises entre des blocs qui portent
+ * du vrai texte, elles se lisaient comme le texte du modele. On a d'abord
+ * essaye de les rediger comme un emplacement (« Le titre de votre
+ * message »), ce qui n'a deplace le probleme qu'a moitie : un emplacement
+ * rendu en gros caractere au milieu d'une invitation beta reste une phrase
+ * que l'oeil lit. L'apercu ne montre donc plus que le modele.
  *
- * La formulation est celle du composeur (`SAMPLE_BODY`), pour que les deux
- * apercus de l'application ne racontent pas deux choses differentes.
+ * Rien a prevoir cote rendu : `emails/blocks.tsx` n'ecrit le titre que s'il
+ * existe et filtre les paragraphes vides, donc le bloc ne rend rien. Un
+ * modele qui ne compose rien s'apercoit alors avec un blanc au milieu — et
+ * c'est exact, ce modele-la n'ajoute rien au message. L'emplacement, lui,
+ * est deja nomme juste a cote, dans la carte « Message de la campagne » du
+ * compositeur de blocs.
+ *
+ * Le nom reste : ce n'est pas du contenu d'emprunt, c'est ce qui montre
+ * comment l'accueil de l'habillage resout `{name}` — c'est-a-dire ce que
+ * l'ecran sert precisement a regler.
  */
-const SAMPLE: Record<Locale, { title: string; body: string; name: string }> = {
-  fr: {
-    title: "Le titre de votre message",
-    body: "Le message apparaitra ici, tel que le destinataire le lira.\nUn retour a la ligne devient un nouveau paragraphe.",
-    name: "Amine Ben Salah",
-  },
-  en: {
-    title: "Your message title",
-    body: "The message will appear here, as the recipient will read it.\nA line break becomes a new paragraph.",
-    name: "Amine Ben Salah",
-  },
-  ar: {
-    title: "عنوان رسالتك",
-    body: "ستظهر الرسالة هنا، كما سيقرأها المستلم.\nكل سطر جديد يصبح فقرة جديدة.",
-    name: "أمين بن صالح",
-  },
+const SAMPLE_NAME: Record<Locale, string> = {
+  fr: "Amine Ben Salah",
+  en: "Amine Ben Salah",
+  ar: "أمين بن صالح",
 };
 
 /**
@@ -84,14 +81,15 @@ export async function renderCampaignPreview(
   copy: ResolvedEmailCopy,
   blocks?: EmailBlock[],
 ): Promise<string> {
-  const sample = SAMPLE[locale];
   return renderCampaignEmail({
-    title: sample.title,
-    body: sample.body,
+    // Vides a dessein : cet ecran montre le modele, pas une campagne. Le
+    // bloc `message` ne rend alors rien, et `heading` suit le titre.
+    title: "",
+    body: "",
     locale,
     copy,
     blocks,
-    recipientName: sample.name,
+    recipientName: SAMPLE_NAME[locale],
   });
 }
 
@@ -129,7 +127,7 @@ export async function renderCampaignEmail({
       bodyDoc: bodyDoc ?? null,
       blocks,
       locale,
-      recipientName: recipientName ?? SAMPLE[locale].name,
+      recipientName: recipientName ?? SAMPLE_NAME[locale],
       // Un jeton factice : signer un vrai lien pour un apercu mettrait dans
       // le HTML de la page un lien qui desabonne pour de bon.
       unsubscribeUrl: `${SITE_URL}/api/email/desabonnement?c=apercu&t=apercu`,
