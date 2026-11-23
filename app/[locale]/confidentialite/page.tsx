@@ -39,6 +39,11 @@ export default async function PrivacyPage() {
       lead={t.lead}
     >
       <LegalSection title={t.controllerTitle}>
+        <p>{t.controllerBody1}</p>
+        <p>{t.controllerBody2}</p>
+        {/* ⚠️ L'encart ne porte plus QUE ce qui manque réellement : adresse
+            complète et immatriculation. L'identité, le contact et le droit
+            applicable sont fournis depuis le 2026-11-23. */}
         <LegalTodo label={t.todoLabel}>{t.controllerTodo}</LegalTodo>
       </LegalSection>
 
@@ -74,6 +79,12 @@ export default async function PrivacyPage() {
         <LegalRows rows={t.providersRows} />
         <p>{t.providersNote}</p>
         <p>{t.providersNoSale}</p>
+        {/* ⚠️ La région est RELEVÉE, pas supposée : `supabase projects list`
+            rend `"region":"eu-west-1"` pour ce projet. Ne pas y écrire le
+            nom de l'hébergeur d'un AUTRE site du studio — une mention
+            d'hébergement fausse dans une politique de confidentialité fait
+            retirer une application, pas seulement refuser. */}
+        <p>{t.hostingBody}</p>
         <LegalTodo label={t.todoLabel}>{t.hostingTodo}</LegalTodo>
       </LegalSection>
 
@@ -106,7 +117,7 @@ export default async function PrivacyPage() {
       <LegalSection title={t.rightsTitle}>
         <p>{t.rightsBody1}</p>
         <p>{t.rightsBody2}</p>
-        <LegalTodo label={t.todoLabel}>{t.contactTodo}</LegalTodo>
+        <p>{t.contactBody}</p>
       </LegalSection>
 
       <LegalSection title={t.securityTitle}>

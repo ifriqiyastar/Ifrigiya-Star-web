@@ -37,6 +37,8 @@ export default async function TermsPage() {
       lead={t.lead}
     >
       <LegalSection title={t.operatorTitle}>
+        <p>{t.operatorBody1}</p>
+        <p>{t.operatorBody2}</p>
         <LegalTodo label={t.todoLabel}>{t.operatorTodo}</LegalTodo>
       </LegalSection>
 
@@ -93,6 +95,7 @@ export default async function TermsPage() {
       </LegalSection>
 
       <LegalSection title={t.lawTitle}>
+        <p>{t.lawBody}</p>
         <LegalTodo label={t.todoLabel}>{t.lawTodo}</LegalTodo>
       </LegalSection>
 
