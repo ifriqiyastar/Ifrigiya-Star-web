@@ -455,7 +455,9 @@
     "retentionTitle": "Durée de conservation",
     "retentionTodo": "Ce point n'est pas encore arbitré. Doivent être fixées puis écrites ici : la durée de conservation d'un compte inactif, celle des messages, celle des pièces d'identité après validation (l'usage étant de les supprimer dès la vérification effectuée), et celle des signalements et journaux de modération. Une durée annoncée est un engagement : ne rien inventer.",
     "minorsTitle": "Mineurs",
-    "minorsTodo": "L'application s'adresse à de jeunes joueurs et peut recevoir des inscriptions de mineurs. Doivent être définis puis décrits ici : l'âge minimum, le mode de recueil du consentement du représentant légal, et les éventuelles restrictions de messagerie entre un adulte et un mineur.",
+    "minorsBody1": "L'application n'accepte aucune inscription en dessous de 16 ans : la date de naissance est contrôlée côté serveur, et une date inférieure est refusée à la création du profil sportif. Nous ne collectons donc sciemment aucune donnée concernant un enfant de moins de 16 ans. Si vous estimez qu'un tel compte existe malgré tout, signalez-le nous et nous le supprimerons.",
+    "minorsBody2": "Les joueurs de 16 et 17 ans sont mineurs : l'activation de leur compte exige le consentement d'un représentant légal. Nous conservons à ce titre le nom du représentant, son lien avec le joueur, ses coordonnées et la date du consentement, pour la durée de vie du compte et afin de pouvoir prouver que le consentement a bien été recueilli.",
+    "minorsBody3": "La messagerie directe entre un professionnel et un joueur mineur est bloquée côté serveur, dans les deux sens. Un professionnel peut consulter le profil d'un joueur mineur et l'évaluer lors d'une détection ; il ne peut pas le contacter par messagerie.",
     "rightsTitle": "Vos droits",
     "rightsBody1": "Vous pouvez demander l'accès à vos données, leur rectification, leur effacement, leur portabilité, ainsi que la limitation ou l'opposition à leur traitement. Vous pouvez aussi retirer à tout moment les autorisations accordées (notifications, appareil photo, micro, galerie) depuis les réglages de votre téléphone.",
     "rightsBody2": "Une partie de ces droits s'exerce directement dans l'application : modifier votre profil, le rendre invisible, supprimer vos photos, vos vidéos et vos publications.",
@@ -495,7 +497,9 @@
       "Nous pouvons refuser, suspendre ou clore un compte dont les informations sont fausses, dont les justificatifs ne peuvent être vérifiés, ou qui enfreint ces règles."
     ],
     "ageTitle": "Âge et mineurs",
-    "ageTodo": "L'âge minimum d'inscription et le mode de recueil du consentement du représentant légal d'un mineur ne sont pas encore arrêtés. Ils doivent être fixés puis écrits ici, en cohérence avec la section « Mineurs » de la politique de confidentialité.",
+    "ageBody1": "L'inscription est réservée aux personnes âgées de 16 ans révolus. Une date de naissance inférieure à cet âge est refusée à la création du profil sportif.",
+    "ageBody2": "Si vous avez 16 ou 17 ans, vous êtes mineur : votre compte ne peut être activé qu'après que nous ayons recueilli le consentement d'un représentant légal (parent ou tuteur). Tant que ce consentement n'est pas enregistré, le compte reste en attente et n'est pas visible des professionnels.",
+    "ageBody3": "Aucun échange de messages directs n'est possible entre un professionnel et un joueur mineur, dans un sens comme dans l'autre.",
     "conductTitle": "Ce qui est interdit",
     "conductItems": [
       "Se faire passer pour quelqu'un d'autre, ou prétendre à une qualité professionnelle que l'on n'a pas.",

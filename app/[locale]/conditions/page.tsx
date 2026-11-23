@@ -49,8 +49,12 @@ export default async function TermsPage() {
         <LegalList items={t.accountItems} />
       </LegalSection>
 
+      {/* ⚠️ Arbitré le 2026-11-23 et APPLIQUÉ côté base : voir le commentaire
+          de la section « Mineurs » de la politique de confidentialité. */}
       <LegalSection title={t.ageTitle}>
-        <LegalTodo label={t.todoLabel}>{t.ageTodo}</LegalTodo>
+        <p>{t.ageBody1}</p>
+        <p>{t.ageBody2}</p>
+        <p>{t.ageBody3}</p>
       </LegalSection>
 
       <LegalSection title={t.conductTitle}>

@@ -91,8 +91,16 @@ export default async function PrivacyPage() {
         <LegalTodo label={t.todoLabel}>{t.retentionTodo}</LegalTodo>
       </LegalSection>
 
+      {/* ⚠️ N'est plus un « à compléter » depuis le 2026-11-23 : le régime des
+          mineurs a été arbitré et il est APPLIQUÉ côté base — plancher de
+          16 ans (migration 0133), consentement d'un représentant légal avant
+          activation, et messagerie professionnel ↔ mineur coupée dans les deux
+          sens (0132). Ce texte décrit donc ce que le serveur fait réellement,
+          et doit suivre toute évolution de ces trois règles. */}
       <LegalSection title={t.minorsTitle}>
-        <LegalTodo label={t.todoLabel}>{t.minorsTodo}</LegalTodo>
+        <p>{t.minorsBody1}</p>
+        <p>{t.minorsBody2}</p>
+        <p>{t.minorsBody3}</p>
       </LegalSection>
 
       <LegalSection title={t.rightsTitle}>

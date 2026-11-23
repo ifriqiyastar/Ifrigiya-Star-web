@@ -455,7 +455,9 @@
     "retentionTitle": "Retention periods",
     "retentionTodo": "This point has not been decided yet. The following must be set and then written here: how long an inactive account is kept, how long messages are kept, how long identity documents are kept after validation (the usual practice being to delete them as soon as verification is done), and how long reports and moderation logs are kept. A stated period is a commitment: do not invent one.",
     "minorsTitle": "Minors",
-    "minorsTodo": "The app is aimed at young players and may receive sign-ups from minors. The following must be defined and then described here: the minimum age, how a legal guardian's consent is obtained, and any messaging restrictions between an adult and a minor.",
+    "minorsBody1": "The app accepts no registration below the age of 16: the date of birth is checked server-side, and a lower date is refused when the sporting profile is created. We therefore do not knowingly collect any data about a child under 16. If you believe such an account exists nonetheless, report it to us and we will delete it.",
+    "minorsBody2": "Players aged 16 and 17 are minors: activating their account requires the consent of a legal guardian. For that purpose we retain the guardian's name, their relationship to the player, their contact details and the date of consent, for the lifetime of the account and in order to prove that consent was obtained.",
+    "minorsBody3": "Direct messaging between a professional and a minor player is blocked server-side, in both directions. A professional may view a minor player's profile and evaluate them at a detection event; they cannot contact them by message.",
     "rightsTitle": "Your rights",
     "rightsBody1": "You can request access to your data, its correction, its erasure, its portability, as well as restriction of or objection to its processing. You can also withdraw at any time the permissions you granted (notifications, camera, microphone, gallery) from your phone's settings.",
     "rightsBody2": "Some of these rights can be exercised directly in the app: edit your profile, make it invisible, delete your photos, videos and posts.",
@@ -495,7 +497,9 @@
       "We may refuse, suspend or close an account whose information is false, whose documents cannot be verified, or which breaches these rules."
     ],
     "ageTitle": "Age and minors",
-    "ageTodo": "The minimum sign-up age and the way a minor's legal guardian's consent is obtained have not been settled yet. They must be defined and then written here, consistently with the “Minors” section of the privacy policy.",
+    "ageBody1": "Registration is restricted to people aged 16 or over. A date of birth below that age is refused when the sporting profile is created.",
+    "ageBody2": "If you are 16 or 17 you are a minor: your account can only be activated once we have obtained the consent of a legal guardian (parent or guardian). Until that consent is recorded the account stays pending and is not visible to professionals.",
+    "ageBody3": "No direct messaging is possible between a professional and a minor player, in either direction.",
     "conductTitle": "What is not allowed",
     "conductItems": [
       "Impersonating someone else, or claiming a professional capacity you do not have.",
